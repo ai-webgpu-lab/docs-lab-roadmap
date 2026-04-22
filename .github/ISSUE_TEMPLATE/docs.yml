@@ -1,0 +1,44 @@
+name: Docs
+description: 운영 문서, ADR, 비교 보고서, 가이드 정리
+title: "[docs] "
+labels: ["docs"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: 문서 목적
+      placeholder: 어떤 의사결정을 돕는 문서인지
+    validations:
+      required: true
+
+  - type: input
+    id: repo
+    attributes:
+      label: 대상 저장소
+      placeholder: docs-lab-roadmap
+    validations:
+      required: true
+
+  - type: textarea
+    id: audience
+    attributes:
+      label: 대상 독자
+      placeholder: maintainers, contributors, reviewers 등
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 다룰 범위
+      placeholder: 포함 주제, 제외 주제, 갱신해야 할 기존 문서
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done 기준
+      placeholder: 문서 위치, 필수 섹션, 검토자, 연결 이슈/ADR
+    validations:
+      required: true

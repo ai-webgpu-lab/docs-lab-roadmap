@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "repo": "exp-llm-chat-runtime-shootout",
+    "commit": "a1b2c3d",
+    "timestamp": "2026-04-22T10:30:00+09:00",
+    "owner": "alice",
+    "track": "llm",
+    "scenario": "webllm-q4f16-chat-warm-worker",
+    "notes": "동일 프롬프트 5회 평균"
+  },
+  "environment": {
+    "browser": {
+      "name": "Chrome",
+      "version": "146"
+    },
+    "os": {
+      "name": "macOS",
+      "version": "15.4"
+    },
+    "device": {
+      "name": "MacBook Pro",
+      "class": "laptop",
+      "cpu": "Apple M3 Pro",
+      "memory_gb": 18,
+      "power_mode": "plugged"
+    },
+    "gpu": {
+      "adapter": "Apple M3 Pro GPU",
+      "required_features": [],
+      "limits": {
+        "maxStorageBufferBindingSize": 134217728
+      }
+    },
+    "backend": "webgpu",
+    "fallback_triggered": false,
+    "worker_mode": "worker",
+    "cache_state": "warm"
+  },
+  "workload": {
+    "kind": "llm-chat",
+    "name": "local-chat",
+    "input_profile": "512tok prompt / 128tok output",
+    "model_id": "Qwen2.5-0.5B-Instruct-q4f16",
+    "quantization": "q4f16",
+    "context_tokens": 512,
+    "output_tokens": 128
+  },
+  "metrics": {
+    "common": {
+      "time_to_interactive_ms": 420,
+      "init_ms": 1830,
+      "success_rate": 1,
+      "peak_memory_note": "브라우저 작업 관리자 기준 안정",
+      "error_type": ""
+    },
+    "llm": {
+      "ttft_ms": 820,
+      "prefill_tok_per_sec": 510,
+      "decode_tok_per_sec": 37.2,
+      "turn_latency_ms": 4260
+    }
+  },
+  "status": "success",
+  "artifacts": {
+    "screenshots": [
+      "./reports/screenshots/chat-warm-run1.png"
+    ],
+    "raw_logs": [
+      "./reports/logs/chat-warm-run1.ndjson"
+    ],
+    "deploy_url": "https://example.pages.dev",
+    "related_issue": "#21",
+    "related_pr": "#34"
+  }
+}

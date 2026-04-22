@@ -1,0 +1,42 @@
+name: Infrastructure
+description: 공통 유틸, 스키마, CI, 조직 운영 인프라 작업
+title: "[infra] "
+labels: ["infra"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: 목표
+      placeholder: 이 작업이 해결해야 하는 운영/인프라 문제
+    validations:
+      required: true
+
+  - type: input
+    id: repo
+    attributes:
+      label: 대상 저장소
+      placeholder: shared-bench-schema
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 범위
+      placeholder: 포함 범위, 제외 범위, 영향 받는 저장소
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done 기준
+      placeholder: 검증 조건, 적용 저장소 수, 문서 반영 여부
+    validations:
+      required: true
+
+  - type: textarea
+    id: refs
+    attributes:
+      label: 참고 문서/저장소
+      placeholder: 관련 ADR, repo, workflow, 스키마 링크

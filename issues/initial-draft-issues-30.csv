@@ -1,0 +1,31 @@
+﻿title,repo,type,priority,track,summary
+[infra] 공통 결과 스키마와 validation 스크립트 추가,shared-bench-schema,infra,P0,Infra,스키마와 validation 스크립트 추가
+[infra] WebGPU capability 수집 유틸 구현,shared-webgpu-capability,infra,P0,Infra,브라우저/GPU/feature/limits 정규화
+[infra] 실험 저장소 공통 템플릿 정리,.github,infra,P0,Infra,"이슈 템플릿, PR 템플릿, RESULTS 템플릿"
+[infra] GitHub Actions 기본 CI 구축,shared-github-actions,infra,P1,Infra,reusable workflow 작성
+[docs] 조직 운영 규칙과 분기 리듬 문서화,docs-lab-roadmap,docs,P1,Docs,운영 리듬과 promote 기준 문서화
+[exp] three.js WebGPU core baseline scene 구현,exp-three-webgpu-core,experiment,P1,Graphics,three.js 기준선 scene 구현
+[exp] Babylon.js WebGPU core baseline scene 구현,exp-babylon-webgpu-core,experiment,P1,Graphics,Babylon.js 기준선 scene 구현
+[exp] PlayCanvas WebGPU core scene 및 워크플로우 기록,exp-playcanvas-webgpu-core,experiment,P1,Graphics,PlayCanvas scene 및 workflow 기록
+[exp] three.js 기반 블랙홀 raymarching 1차 구현,exp-blackhole-three-singularity,experiment,P1,Blackhole,블랙홀 장면 1차 구현
+[exp] raw WebGPU 블랙홀 from-scratch baseline 구현,exp-blackhole-webgpu-fromscratch,experiment,P2,Blackhole,raw WebGPU 기준선
+[bench] 블랙홀 렌더링 shootout 시나리오 정의,bench-blackhole-render-shootout,benchmark,P1,Benchmark,블랙홀 비교 시나리오 정의
+[exp] N-body WebGPU 기준선 구현,exp-nbody-webgpu-core,experiment,P2,Blackhole,N-body compute baseline
+[exp] fluid / particle compute stress baseline 구현,exp-fluid-webgpu-core,experiment,P2,Blackhole,fluid/particle stress baseline
+[exp] 브라우저 임베딩 throughput baseline 구현,exp-embeddings-browser-throughput,experiment,P0,ML,임베딩 처리량 측정
+[exp] local vector index와 semantic search 연결,exp-embeddings-browser-throughput,experiment,P1,ML,semantic search 연결
+[exp] 브라우저 reranker baseline 구현,exp-reranker-browser,experiment,P1,ML,reranker baseline
+[exp] WebLLM 최소 채팅 데모 구현,exp-llm-chat-runtime-shootout,experiment,P0,LLM,WebLLM 채팅 기준선
+[exp] Transformers.js 채팅 경로 추가,exp-llm-chat-runtime-shootout,experiment,P0,LLM,Transformers.js 채팅 비교
+[exp] LLM main thread vs worker 모드 비교,exp-llm-worker-ux,experiment,P1,LLM,main vs worker 비교
+[exp] Whisper file transcription baseline 구현,exp-stt-whisper-webgpu,experiment,P0,Audio,Whisper file transcription
+[exp] microphone streaming STT 추가,exp-stt-whisper-webgpu,experiment,P1,Audio,mic streaming STT
+[exp] PDF 기반 브라우저 RAG end-to-end 구현,exp-rag-browser-pipeline,experiment,P0,LLM,PDF RAG E2E
+[exp] 브라우저 VLM 멀티모달 baseline 구현,exp-vlm-browser-multimodal,experiment,P2,Multimodal,VLM baseline
+[exp] 브라우저 diffusion baseline 구현,exp-diffusion-webgpu-browser,experiment,P2,Multimodal,Diffusion baseline
+[exp] 브라우저 에이전트 task baseline 구현,exp-browser-agent-local,experiment,P2,Agent,브라우저 agent baseline
+[bench] runtime shootout 공통 시나리오 정의,bench-runtime-shootout,benchmark,P0,Benchmark,런타임 공통 비교축
+[bench] model load / cache 재사용 측정기 구현,bench-model-load-and-cache,benchmark,P0,Benchmark,모델 로드/캐시 측정
+[bench] worker isolation / UI jank 측정기 구현,bench-worker-isolation-and-ui-jank,benchmark,P0,Benchmark,worker/UI jank 측정
+[bench] WebGPU vs WASM parity 검증 시나리오 작성,bench-webgpu-vs-wasm-parity,benchmark,P1,Benchmark,정확도 parity 검증
+[app] Local Chat Arena 초안 생성,app-local-chat-arena,integration,P1,Integration,채팅 런타임 비교 앱

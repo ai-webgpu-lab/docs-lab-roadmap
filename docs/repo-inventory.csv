@@ -1,0 +1,55 @@
+repo,category,purpose,priority_group
+.github,org,조직 공통 템플릿,P0
+tpl-webgpu-vanilla,template,raw WebGPU/최소 재현 템플릿,P0
+tpl-webgpu-react,template,React 기반 실험 템플릿,P0
+shared-webgpu-capability,shared,capability 수집 유틸,P0
+shared-bench-schema,shared,공통 결과 스키마,P0
+shared-github-actions,shared,공통 CI,P1
+docs-lab-roadmap,docs,로드맵/ADR/보고서,P0
+exp-three-webgpu-core,graphics,three.js 기준선,P1
+exp-babylon-webgpu-core,graphics,Babylon.js 기준선,P1
+exp-playcanvas-webgpu-core,graphics,PlayCanvas 기준선,P1
+exp-pixi-webgpu-2d,graphics,PixiJS WebGPU 2D 기준선,P2
+exp-luma-webgpu-viz,graphics,luma.gl 시각화 기준선,P2
+exp-deckgl-webgpu-readiness,graphics,deck.gl WebGPU readiness 점검,P2
+exp-blackhole-three-singularity,blackhole,three.js 기반 블랙홀,P1
+exp-blackhole-kerr-engine,blackhole,과학형 블랙홀 엔진,P2
+exp-blackhole-webgpu-fromscratch,blackhole,raw WebGPU 블랙홀,P2
+exp-nbody-webgpu-core,blackhole,N-body compute baseline,P2
+exp-fluid-webgpu-core,blackhole,fluid/particle stress,P2
+exp-three-webgpu-particles-stress,blackhole,three.js particle/VFX stress,P2
+exp-embeddings-browser-throughput,ml,임베딩 처리량,P0
+exp-reranker-browser,ml,reranker baseline,P1
+exp-rag-browser-pipeline,llm,브라우저 RAG E2E,P0
+exp-ort-webgpu-baseline,llm,ORT-Web WebGPU 기준선,P1
+exp-webllm-browser-chat,llm,WebLLM 최소 채팅 기준선,P1
+exp-llm-chat-runtime-shootout,llm,런타임별 로컬 채팅 비교,P0
+exp-llm-worker-ux,llm,worker UX 실험,P1
+exp-stt-whisper-webgpu,audio,Whisper STT,P0
+exp-voice-assistant-local,audio,로컬 음성 비서,P2
+exp-vlm-browser-multimodal,multimodal,VLM baseline,P2
+exp-diffusion-webgpu-browser,multimodal,Diffusion baseline,P2
+exp-browser-agent-local,agent,브라우저 agent baseline,P2
+bench-runtime-shootout,benchmark,런타임 비교,P0
+bench-embeddings-latency-quality,benchmark,임베딩 지연/품질 비교,P1
+bench-reranker-latency,benchmark,reranker 지연 비교,P1
+bench-rag-endtoend,benchmark,RAG end-to-end 비교,P1
+bench-llm-prefill-decode,benchmark,LLM prefill/decode 비교,P1
+bench-model-load-and-cache,benchmark,모델 로드/캐시 비교,P0
+bench-stt-streaming-latency,benchmark,STT 스트리밍 지연 비교,P1
+bench-voice-roundtrip,benchmark,음성 roundtrip 비교,P2
+bench-worker-isolation-and-ui-jank,benchmark,worker/UI jank 측정,P0
+bench-multimodal-latency,benchmark,멀티모달 지연 비교,P2
+bench-diffusion-browser-shootout,benchmark,브라우저 diffusion 비교,P2
+bench-agent-step-latency,benchmark,agent step latency 비교,P2
+bench-webgpu-vs-wasm-parity,benchmark,정확도 parity,P1
+bench-blackhole-render-shootout,benchmark,블랙홀 비교,P1
+bench-compute-stress-suite,benchmark,compute stress,P2
+bench-atomics-and-memory,benchmark,atomics/memory 벤치,P2
+bench-texture-upload-and-streaming,benchmark,texture upload/streaming 벤치,P2
+bench-renderer-shootout,benchmark,렌더러 비교,P1
+app-private-rag-lab,app,로컬 RAG 데모,P1
+app-local-chat-arena,app,로컬 채팅 런타임 비교,P1
+app-voice-agent-lab,app,음성 비서 쇼케이스,P2
+app-browser-image-lab,app,이미지/VLM 쇼케이스,P2
+app-blackhole-observatory,app,블랙홀 쇼케이스,P2

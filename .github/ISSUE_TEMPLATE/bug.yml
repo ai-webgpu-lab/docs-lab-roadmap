@@ -1,0 +1,42 @@
+name: Bug
+description: 브라우저/런타임/실험 오류 보고
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: repo
+    attributes:
+      label: 저장소
+      placeholder: exp-stt-whisper-webgpu
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: Chrome 146 / macOS 15.4 / M3 Pro
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 방법
+      placeholder: 어떤 입력/설정에서 발생했는지
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 결과
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 결과
+    validations:
+      required: true

@@ -1,0 +1,57 @@
+name: Experiment
+description: 새 실험 제안
+title: "[exp] "
+labels: ["experiment"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: 목표
+      placeholder: 이 실험으로 확인하려는 핵심 질문
+    validations:
+      required: true
+
+  - type: dropdown
+    id: track
+    attributes:
+      label: 트랙
+      options:
+        - Graphics
+        - Blackhole
+        - ML
+        - LLM
+        - Audio
+        - Multimodal
+        - Agent
+        - Benchmark
+        - Integration
+    validations:
+      required: true
+
+  - type: input
+    id: repo
+    attributes:
+      label: 대상 저장소
+      placeholder: exp-llm-chat-runtime-shootout
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 범위
+      placeholder: 포함/제외 범위 정리
+    validations:
+      required: true
+
+  - type: textarea
+    id: kpis
+    attributes:
+      label: KPI
+      placeholder: 측정할 지표 목록
+    validations:
+      required: true
+
+  - type: textarea
+    id: refs
+    attributes:
+      label: 참고 저장소/문서
+      placeholder: GitHub repo, 논문, 공식 문서
