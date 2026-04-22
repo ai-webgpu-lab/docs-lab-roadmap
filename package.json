@@ -1,0 +1,12 @@
+{
+  "name": "ai-webgpu-lab-ops",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:capture-p0": "bash tests/test-capture-p0-baseline-results.sh",
+    "test:render-results": "bash tests/test-render-results-summary.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.59.1"
+  }
+}

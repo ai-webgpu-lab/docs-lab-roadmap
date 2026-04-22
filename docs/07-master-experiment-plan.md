@@ -217,7 +217,8 @@
 
 ## 현재 P0 Baseline 구현 상태
 - 2026-04-22 기준 repo-specific Pages baseline이 있는 저장소: `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`, `bench-runtime-shootout`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`
-- 위 5개 워크로드 저장소의 baseline은 deterministic browser harness이며, 실제 runtime/model integration과 `reports/raw/*.json` 실측 축적이 다음 단계다
+- 2026-04-22 기준 7개 주간 추적 workload 저장소는 headless Chromium baseline capture를 통해 첫 `reports/raw/*.json`, `reports/screenshots/*.png`, `reports/logs/*.log`, `RESULTS.md`를 보유한다
+- 현재 raw result는 deterministic browser harness baseline이므로, 다음 단계는 실제 runtime/model integration과 multi-browser/device 반복 측정이다
 - `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`는 코드/문서 기준 저장소로 usable baseline 상태
 
 ## 트랙별 핵심 질문

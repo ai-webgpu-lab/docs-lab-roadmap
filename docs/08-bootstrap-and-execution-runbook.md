@@ -6,6 +6,7 @@
 ## 사전 조건
 - `gh` 로그인 완료
 - `jq`, `python3`, `rg`, `git` 설치 완료
+- `node`, `npm` 설치 완료
 - `docs/repo-inventory.csv`와 `issues/initial-draft-issues-30.csv`가 최신 상태
 - GitHub organization `ai-webgpu-lab`에 저장소 생성 권한 보유
 
@@ -23,9 +24,13 @@ bash scripts/validate-lab-planning.sh
 
 ### 2. 로컬 부트스트랩 렌더링 확인
 ```bash
+npm install
+npx playwright install chromium
 bash tests/test-validate-lab-planning.sh
 bash tests/test-bootstrap-org-repos.sh
 bash tests/test-bootstrap-org-repos-full-inventory.sh
+bash tests/test-render-results-summary.sh
+bash tests/test-capture-p0-baseline-results.sh
 bash tests/test-seed-org-issues.sh
 ```
 
@@ -33,6 +38,8 @@ bash tests/test-seed-org-issues.sh
 - 계획 검증 테스트 통과
 - 샘플 인벤토리 렌더링 통과
 - 전체 인벤토리 렌더링 통과
+- raw result summary 렌더링 테스트 통과
+- P0 browser harness capture smoke test 통과
 - 시드 이슈 dry-run 출력 통과
 
 ### 3. GitHub 조직 반영
@@ -43,6 +50,7 @@ bash scripts/bootstrap-org-repos.sh --refresh-generated --refresh-readme --no-sy
 bash scripts/sync-org-labels.sh
 bash scripts/sync-org-repo-topics.sh
 bash scripts/seed-org-issues.sh
+bash scripts/seed-p0-baseline-results.sh --push
 ```
 
 통과 기준:
@@ -53,6 +61,7 @@ bash scripts/seed-org-issues.sh
 - demo 대상 저장소가 GitHub Pages `workflow` source로 설정됨
 - 기존 저장소 README가 최신 상세 포맷으로 갱신됨
 - 기존 저장소 baseline probe 자산이 최신 공통 포맷으로 갱신됨
+- 7개 P0 workload 저장소에 첫 raw JSON, screenshot, log, `RESULTS.md`가 반영됨
 
 ## Phase Gate
 ### Phase 0 — Organization Bootstrap
@@ -79,6 +88,7 @@ bash scripts/seed-org-issues.sh
 ## 주간 운영 기준
 ### Week 1
 - 저장소 생성, 템플릿 배포, 첫 raw JSON 경로 확보
+- `scripts/seed-p0-baseline-results.sh` 기준 첫 baseline raw result seed
 
 ### Week 2
 - embeddings/LLM baseline과 cold/warm 측정 확보

@@ -37,8 +37,11 @@
 - `.github/CODEOWNERS` — 기본 리뷰 책임자
 - `.github/ISSUE_TEMPLATE/` — 조직 공통 이슈 폼 초안
 - `scripts/bootstrap-org-repos.sh` — 인벤토리 기준 전체 저장소 부트스트랩 스크립트
+- `scripts/capture-p0-baseline-results.mjs` — P0 workload Pages harness를 headless Chromium으로 실행해 raw JSON, 스크린샷, 로그, `RESULTS.md`를 갱신하는 스크립트
 - `scripts/seed-org-issues.sh` — 초기 draft issue CSV를 실제 GitHub issue로 시드하는 스크립트
+- `scripts/seed-p0-baseline-results.sh` — 7개 P0 workload 저장소를 clone/update한 뒤 baseline 결과를 실제 저장소에 커밋/푸시하는 오케스트레이션 스크립트
 - `scripts/validate-lab-planning.sh` — 인벤토리/이슈/실행 계획 문서 정합성 검증 스크립트
+- `scripts/render-results-summary.mjs` — `reports/raw/*.json`를 기반으로 저장소별 `RESULTS.md`를 다시 쓰는 스크립트
 - `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
 - `scripts/sync-org-repo-topics.sh` — 저장소 인벤토리 기준 토픽 동기화 스크립트
 
@@ -56,13 +59,18 @@
 
 ## 사용 방법
 ```bash
+npm install
+npx playwright install chromium
 bash scripts/validate-lab-planning.sh
 bash scripts/bootstrap-org-repos.sh
 bash scripts/bootstrap-org-repos.sh --refresh-readme --no-sync
 bash scripts/bootstrap-org-repos.sh --refresh-generated --refresh-readme --no-sync
 bash scripts/seed-org-issues.sh
+bash scripts/seed-p0-baseline-results.sh --push
 bash scripts/sync-org-labels.sh
 bash scripts/sync-org-repo-topics.sh
+bash tests/test-render-results-summary.sh
+bash tests/test-capture-p0-baseline-results.sh
 bash tests/test-validate-lab-planning.sh
 bash tests/test-bootstrap-org-repos.sh
 bash tests/test-bootstrap-org-repos-full-inventory.sh
@@ -75,3 +83,4 @@ bash tests/test-seed-org-issues.sh
 실제 앱 빌드가 필요한 저장소는 이후 각 저장소에서 build 단계와 artifact 경로를 교체해야 합니다.
 기존 저장소의 README를 새 상세 포맷으로 다시 쓰려면 `--refresh-readme` 옵션을 사용합니다.
 기존 저장소의 baseline probe와 생성 자산까지 다시 쓰려면 `--refresh-generated` 옵션을 함께 사용합니다.
+7개 P0 workload 저장소의 첫 raw 결과는 `scripts/seed-p0-baseline-results.sh`로 headless Chromium baseline을 캡처해 `reports/raw/`, `reports/screenshots/`, `reports/logs/`, `RESULTS.md`까지 한 번에 갱신할 수 있습니다.
