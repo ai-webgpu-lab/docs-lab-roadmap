@@ -1,7 +1,38 @@
 const FIXED_PROMPT = "Explain why browser AI benchmark comparisons need shared prompts, fixed output budgets, cache-state notes, and worker-mode visibility.";
 
+const EXECUTION_MODES = {
+  webgpu: {
+    id: "webgpu",
+    label: "WebGPU",
+    backend: "webgpu",
+    fallbackTriggered: false,
+    initMultiplier: 1,
+    prefillMultiplier: 1,
+    decodeMultiplier: 1,
+    workerMode: "mixed"
+  },
+  fallback: {
+    id: "fallback",
+    label: "Wasm Fallback",
+    backend: "wasm",
+    fallbackTriggered: true,
+    initMultiplier: 1.8,
+    prefillMultiplier: 2.1,
+    decodeMultiplier: 2.35,
+    workerMode: "main"
+  }
+};
+
+function resolveExecutionMode() {
+  const requested = new URLSearchParams(window.location.search).get("mode");
+  return EXECUTION_MODES[requested] || EXECUTION_MODES.webgpu;
+}
+
+const executionMode = resolveExecutionMode();
+
 const state = {
   startedAt: performance.now(),
+  executionMode,
   environment: buildEnvironment(),
   profiles: null,
   active: false,
@@ -80,10 +111,14 @@ function buildEnvironment() {
       memory_gb: navigator.deviceMemory || undefined,
       power_mode: "unknown"
     },
-    gpu: { adapter: "profile-driven", required_features: [], limits: {} },
-    backend: "mixed",
-    fallback_triggered: false,
-    worker_mode: "mixed",
+    gpu: {
+      adapter: executionMode.fallbackTriggered ? "wasm-fallback-simulated" : "synthetic-webgpu-profile",
+      required_features: executionMode.fallbackTriggered ? [] : ["shader-f16"],
+      limits: {}
+    },
+    backend: executionMode.backend,
+    fallback_triggered: executionMode.fallbackTriggered,
+    worker_mode: executionMode.workerMode,
     cache_state: "warm"
   };
 }
@@ -103,6 +138,15 @@ async function loadProfiles() {
 
 function tokenize(text) {
   return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function deriveExecutionProfile(profile) {
+  return {
+    ...profile,
+    initDelayMs: Math.round(profile.initDelayMs * executionMode.initMultiplier),
+    prefillDelayMs: Math.round(profile.prefillDelayMs * executionMode.prefillMultiplier),
+    decodeDelayMs: Math.round(profile.decodeDelayMs * executionMode.decodeMultiplier)
+  };
 }
 
 async function simulateProfile(profile) {
@@ -154,15 +198,17 @@ async function runBenchmark() {
   const profiles = await loadProfiles();
   const results = [];
 
-  for (const profile of profiles) {
-    log(`Benchmarking ${profile.label}.`);
+  for (const baseProfile of profiles) {
+    const profile = deriveExecutionProfile(baseProfile);
+    log(`Benchmarking ${baseProfile.label} in ${executionMode.label} mode.`);
     const result = await simulateProfile(profile);
     results.push(result);
-    log(`${profile.label} complete: TTFT ${round(result.ttftMs, 2)} ms, decode ${round(result.decodeTokPerSec, 2)} tok/s.`);
+    log(`${baseProfile.label} ${executionMode.label} complete: TTFT ${round(result.ttftMs, 2)} ms, decode ${round(result.decodeTokPerSec, 2)} tok/s.`);
   }
 
   results.sort((left, right) => profileScore(right) - profileScore(left));
   state.run = {
+    executionMode: executionMode.id,
     fixedPromptTokens: tokenize(FIXED_PROMPT).length,
     profiles: results,
     winner: results[0]
@@ -188,9 +234,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "benchmark",
-      scenario: winner ? `runtime-benchmark-${winner.profile.id}` : "runtime-benchmark-pending",
+      scenario: winner ? `runtime-benchmark-${winner.profile.id}-${executionMode.id}` : "runtime-benchmark-pending",
       notes: run
-        ? run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")
+        ? `${run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")}; executionMode=${executionMode.id}; backend=${executionMode.backend}`
         : "Run the fixed-scenario runtime benchmark."
     },
     environment: state.environment,
@@ -227,10 +273,10 @@ function buildResult() {
 
 function renderStatus() {
   const badges = state.active
-    ? ["Benchmark running", "Fixed prompt active"]
+    ? [`${executionMode.label} benchmark running`, "Fixed prompt active"]
     : state.run
       ? [`Winner ${state.run.winner.profile.label}`, `${round(state.run.winner.decodeTokPerSec, 2)} tok/s`]
-      : ["Profiles ready", "Awaiting run"];
+      : [`${executionMode.label} profiles ready`, "Awaiting run"];
   elements.statusRow.innerHTML = "";
   for (const text of badges) {
     const node = document.createElement("span");
@@ -239,19 +285,19 @@ function renderStatus() {
     elements.statusRow.appendChild(node);
   }
   elements.summary.textContent = state.run
-    ? `Winner: ${state.run.winner.profile.label}, TTFT ${round(state.run.winner.ttftMs, 2)} ms, decode ${round(state.run.winner.decodeTokPerSec, 2)} tok/s.`
-    : "Run the full benchmark to compare all profiles under the same prompt, context, and output budget.";
+    ? `Winner: ${state.run.winner.profile.label} on ${executionMode.label}, TTFT ${round(state.run.winner.ttftMs, 2)} ms, decode ${round(state.run.winner.decodeTokPerSec, 2)} tok/s.`
+    : `Run the full benchmark to compare all profiles under the same prompt, context, and output budget. Mode=${executionMode.label}.`;
 }
 
 function renderMetrics() {
   const winner = state.run ? state.run.winner : null;
   const cards = [
     ["Winner", winner ? winner.profile.label : "pending"],
+    ["Execution", executionMode.label],
     ["Winner TTFT", winner ? `${round(winner.ttftMs, 2)} ms` : "pending"],
     ["Winner Prefill", winner ? `${round(winner.prefillTokPerSec, 2)} tok/s` : "pending"],
     ["Winner Decode", winner ? `${round(winner.decodeTokPerSec, 2)} tok/s` : "pending"],
-    ["Profiles", state.run ? String(state.run.profiles.length) : "pending"],
-    ["Prompt Tokens", state.run ? String(state.run.fixedPromptTokens) : "pending"]
+    ["Profiles", state.run ? String(state.run.profiles.length) : "pending"]
   ];
   elements.metricGrid.innerHTML = "";
   for (const [label, value] of cards) {
@@ -270,6 +316,7 @@ function renderEnvironment() {
     ["CPU", state.environment.device.cpu],
     ["Memory", state.environment.device.memory_gb ? `${state.environment.device.memory_gb} GB` : "unknown"],
     ["Backend", state.environment.backend],
+    ["Execution Mode", executionMode.label],
     ["Worker Mode", state.environment.worker_mode]
   ];
   elements.metaGrid.innerHTML = "";
@@ -305,7 +352,7 @@ function downloadJson() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `bench-runtime-shootout-${state.run ? state.run.winner.profile.id : "pending"}.json`;
+  anchor.download = `bench-runtime-shootout-${state.run ? `${state.run.winner.profile.id}-${executionMode.id}` : "pending"}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
   log("Downloaded runtime benchmark JSON draft.");
@@ -316,6 +363,6 @@ elements.downloadJson.addEventListener("click", downloadJson);
 
 (async function init() {
   await loadProfiles();
-  log("Fixed scenario runtime benchmark ready.");
+  log(`Fixed scenario runtime benchmark ready in ${executionMode.label} mode.`);
   render();
 })();

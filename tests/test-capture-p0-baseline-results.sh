@@ -75,3 +75,28 @@ assert_file "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/logs/01-minimal-
 assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/raw/01-minimal-webgpu-starter.json" "\"commit\": \"template-commit\""
 assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/RESULTS.md" "Minimal WebGPU Starter"
 assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/RESULTS.md" "playwright-chromium"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-embeddings-browser-throughput" \
+  --output-root "${TMP_DIR}/out-embeddings" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput" \
+  --repo-name "exp-embeddings-browser-throughput" \
+  --commit "compare-commit" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/01-cold-index-webgpu.json"
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/02-warm-query-webgpu.json"
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/03-cold-index-fallback.json"
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/04-warm-query-fallback.json"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/01-cold-index-webgpu.json" "\"backend\": \"webgpu\""
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/03-cold-index-fallback.json" "\"fallback_triggered\": true"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "## 8. WebGPU vs Fallback"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "cold cache: docs/s"

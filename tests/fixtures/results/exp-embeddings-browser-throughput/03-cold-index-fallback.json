@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "repo": "exp-embeddings-browser-throughput",
+    "commit": "cmp1234",
+    "timestamp": "2026-04-22T06:00:20.000Z",
+    "owner": "ai-webgpu-lab",
+    "track": "ml",
+    "scenario": "synthetic-embeddings-cold-fallback",
+    "notes": "synthetic fixture; batchSize=3; docs=12; queries=6; cacheState=cold; executionMode=fallback; backend=wasm",
+    "capture_context": {
+      "tool": "playwright-chromium",
+      "browser_name": "Chromium",
+      "browser_version": "146.0",
+      "headless": true,
+      "captured_at": "2026-04-22T06:00:21.000Z",
+      "captured_by": "test-runner"
+    }
+  },
+  "environment": {
+    "browser": {
+      "name": "Chromium",
+      "version": "146.0"
+    },
+    "os": {
+      "name": "Linux",
+      "version": "unknown"
+    },
+    "device": {
+      "name": "Linux x86_64",
+      "class": "desktop-mid",
+      "cpu": "8 threads",
+      "memory_gb": 16,
+      "power_mode": "plugged"
+    },
+    "gpu": {
+      "adapter": "wasm-fallback-simulated",
+      "required_features": [],
+      "limits": {}
+    },
+    "backend": "wasm",
+    "fallback_triggered": true,
+    "worker_mode": "main",
+    "cache_state": "cold"
+  },
+  "workload": {
+    "kind": "embeddings",
+    "name": "synthetic-embedding-throughput",
+    "input_profile": "12-docs-6-queries",
+    "model_id": "synthetic-browser-embedder-v1",
+    "dataset": "docs-fixture-v1"
+  },
+  "metrics": {
+    "common": {
+      "time_to_interactive_ms": 146.2,
+      "init_ms": 154.5,
+      "success_rate": 1,
+      "peak_memory_note": "16 GB reported by browser",
+      "error_type": ""
+    },
+    "embeddings": {
+      "docs_per_sec": 78,
+      "queries_per_sec": 180,
+      "p50_ms": 11.2,
+      "p95_ms": 12.8,
+      "recall_at_10": 0.98,
+      "index_build_ms": 154.5
+    }
+  },
+  "status": "success",
+  "artifacts": {
+    "screenshots": [
+      "./reports/screenshots/03-cold-index-fallback.png"
+    ],
+    "raw_logs": [
+      "./reports/logs/03-cold-index-fallback.log"
+    ],
+    "deploy_url": "https://ai-webgpu-lab.github.io/exp-embeddings-browser-throughput/"
+  }
+}

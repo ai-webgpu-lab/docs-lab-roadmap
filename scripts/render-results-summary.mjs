@@ -60,11 +60,19 @@ const SCENARIO_LABELS = {
   },
   "exp-embeddings-browser-throughput": {
     "synthetic-embeddings-cold": "Cold Index",
-    "synthetic-embeddings-warm": "Warm Query"
+    "synthetic-embeddings-warm": "Warm Query",
+    "synthetic-embeddings-cold-webgpu": "Cold Index / WebGPU",
+    "synthetic-embeddings-warm-webgpu": "Warm Query / WebGPU",
+    "synthetic-embeddings-cold-fallback": "Cold Index / Fallback",
+    "synthetic-embeddings-warm-fallback": "Warm Query / Fallback"
   },
   "exp-llm-chat-runtime-shootout": {
     "runtime-profile-webllm-style": "WebLLM-style",
-    "runtime-profile-transformersjs-style": "Transformers.js-style"
+    "runtime-profile-transformersjs-style": "Transformers.js-style",
+    "runtime-profile-webllm-style-webgpu": "WebLLM-style / WebGPU",
+    "runtime-profile-transformersjs-style-webgpu": "Transformers.js-style / WebGPU",
+    "runtime-profile-webllm-style-fallback": "WebLLM-style / Fallback",
+    "runtime-profile-transformersjs-style-fallback": "Transformers.js-style / Fallback"
   },
   "exp-stt-whisper-webgpu": {
     "file-transcription-readiness": "File Transcription"
@@ -75,7 +83,13 @@ const SCENARIO_LABELS = {
   "bench-runtime-shootout": {
     "runtime-benchmark-webllm-style": "Runtime Benchmark Winner: WebLLM-style",
     "runtime-benchmark-transformersjs-style": "Runtime Benchmark Winner: Transformers.js-style",
-    "runtime-benchmark-ort-webgpu-style": "Runtime Benchmark Winner: ORT WebGPU-style"
+    "runtime-benchmark-ort-webgpu-style": "Runtime Benchmark Winner: ORT WebGPU-style",
+    "runtime-benchmark-webllm-style-webgpu": "Runtime Benchmark Winner: WebLLM-style / WebGPU",
+    "runtime-benchmark-transformersjs-style-webgpu": "Runtime Benchmark Winner: Transformers.js-style / WebGPU",
+    "runtime-benchmark-ort-webgpu-style-webgpu": "Runtime Benchmark Winner: ORT WebGPU-style / WebGPU",
+    "runtime-benchmark-webllm-style-fallback": "Runtime Benchmark Winner: WebLLM-style / Fallback",
+    "runtime-benchmark-transformersjs-style-fallback": "Runtime Benchmark Winner: Transformers.js-style / Fallback",
+    "runtime-benchmark-ort-webgpu-style-fallback": "Runtime Benchmark Winner: ORT WebGPU-style / Fallback"
   },
   "bench-model-load-and-cache": {
     "model-load-cold": "Cold Load",
@@ -198,6 +212,23 @@ function scenarioLabel(repoName, result) {
   return SCENARIO_LABELS[repoName]?.[result.meta.scenario] || result.meta.scenario;
 }
 
+function executionModeLabel(result) {
+  return result.environment?.fallback_triggered ? "Fallback" : "WebGPU";
+}
+
+function formatDelta(current, baseline, digits = 2, unit = "") {
+  const currentNumber = Number(current);
+  const baselineNumber = Number(baseline);
+  if (!Number.isFinite(currentNumber) || !Number.isFinite(baselineNumber)) {
+    return "-";
+  }
+
+  const rounded = round(currentNumber - baselineNumber, digits);
+  const prefix = rounded > 0 ? "+" : "";
+  const suffix = unit ? ` ${unit}` : "";
+  return `${prefix}${rounded}${suffix}`;
+}
+
 function experimentType(repoName, result) {
   if (repoName.startsWith("bench-")) {
     return "benchmark";
@@ -300,7 +331,9 @@ function repoMetricSummary(repoName, results) {
         `- queries_per_sec: ${summarizeRange(results.map((result) => result.metrics.embeddings?.queries_per_sec))}`,
         `- p95_ms: ${summarizeRange(results.map((result) => result.metrics.embeddings?.p95_ms), "ms")}`,
         `- recall_at_10: ${summarizeRange(results.map((result) => result.metrics.embeddings?.recall_at_10))}`,
-        `- index_build_ms: ${summarizeRange(results.map((result) => result.metrics.embeddings?.index_build_ms), "ms")}`
+        `- index_build_ms: ${summarizeRange(results.map((result) => result.metrics.embeddings?.index_build_ms), "ms")}`,
+        `- backends: ${summarizeValues(results.map((result) => result.environment.backend))}`,
+        `- fallback states: ${summarizeValues(results.map((result) => String(result.environment.fallback_triggered)))}`
       ];
     case "exp-llm-chat-runtime-shootout":
     case "bench-runtime-shootout":
@@ -308,7 +341,9 @@ function repoMetricSummary(repoName, results) {
         `- ttft_ms: ${summarizeRange(results.map((result) => result.metrics.llm?.ttft_ms), "ms")}`,
         `- prefill_tok_per_sec: ${summarizeRange(results.map((result) => result.metrics.llm?.prefill_tok_per_sec), "tok/s")}`,
         `- decode_tok_per_sec: ${summarizeRange(results.map((result) => result.metrics.llm?.decode_tok_per_sec), "tok/s")}`,
-        `- turn_latency_ms: ${summarizeRange(results.map((result) => result.metrics.llm?.turn_latency_ms), "ms")}`
+        `- turn_latency_ms: ${summarizeRange(results.map((result) => result.metrics.llm?.turn_latency_ms), "ms")}`,
+        `- backends: ${summarizeValues(results.map((result) => result.environment.backend))}`,
+        `- fallback states: ${summarizeValues(results.map((result) => String(result.environment.fallback_triggered)))}`
       ];
     case "exp-stt-whisper-webgpu":
       return [
@@ -344,6 +379,53 @@ function repoMetricSummary(repoName, results) {
     default:
       return [];
   }
+}
+
+function fallbackComparisonLines(repoName, results) {
+  if (!results.some((result) => result.environment?.fallback_triggered) || !results.some((result) => !result.environment?.fallback_triggered)) {
+    return [];
+  }
+
+  if (repoName === "exp-embeddings-browser-throughput") {
+    const lines = [];
+    for (const cacheState of ["cold", "warm"]) {
+      const webgpu = results.find((result) => result.environment.cache_state === cacheState && !result.environment.fallback_triggered);
+      const fallback = results.find((result) => result.environment.cache_state === cacheState && result.environment.fallback_triggered);
+      if (!webgpu || !fallback) {
+        continue;
+      }
+      lines.push(`- ${cacheState} cache: docs/s webgpu=${formatNumber(webgpu.metrics.embeddings?.docs_per_sec)}, fallback=${formatNumber(fallback.metrics.embeddings?.docs_per_sec)}, delta=${formatDelta(webgpu.metrics.embeddings?.docs_per_sec, fallback.metrics.embeddings?.docs_per_sec)}; queries/s delta=${formatDelta(webgpu.metrics.embeddings?.queries_per_sec, fallback.metrics.embeddings?.queries_per_sec)}; recall delta=${formatDelta(webgpu.metrics.embeddings?.recall_at_10, fallback.metrics.embeddings?.recall_at_10)}`);
+    }
+    return lines;
+  }
+
+  if (repoName === "exp-llm-chat-runtime-shootout") {
+    const lines = [];
+    for (const modelId of uniqueValues(results.map((result) => result.workload?.model_id))) {
+      const webgpu = results.find((result) => result.workload?.model_id === modelId && !result.environment.fallback_triggered);
+      const fallback = results.find((result) => result.workload?.model_id === modelId && result.environment.fallback_triggered);
+      if (!webgpu || !fallback) {
+        continue;
+      }
+      lines.push(`- ${modelId}: decode tok/s webgpu=${formatNumber(webgpu.metrics.llm?.decode_tok_per_sec)}, fallback=${formatNumber(fallback.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(webgpu.metrics.llm?.decode_tok_per_sec, fallback.metrics.llm?.decode_tok_per_sec)}; TTFT delta=${formatDelta(webgpu.metrics.llm?.ttft_ms, fallback.metrics.llm?.ttft_ms, 2, "ms")}; worker ${webgpu.environment.worker_mode} -> ${fallback.environment.worker_mode}`);
+    }
+    return lines;
+  }
+
+  if (repoName === "bench-runtime-shootout") {
+    const webgpu = results.find((result) => !result.environment.fallback_triggered);
+    const fallback = results.find((result) => result.environment.fallback_triggered);
+    if (!webgpu || !fallback) {
+      return [];
+    }
+    return [
+      `- fixed benchmark: webgpu winner=${scenarioLabel(repoName, webgpu)}, fallback winner=${scenarioLabel(repoName, fallback)}`,
+      `- decode tok/s: webgpu=${formatNumber(webgpu.metrics.llm?.decode_tok_per_sec)}, fallback=${formatNumber(fallback.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(webgpu.metrics.llm?.decode_tok_per_sec, fallback.metrics.llm?.decode_tok_per_sec)}`,
+      `- TTFT: webgpu=${formatNumberWithUnit(webgpu.metrics.llm?.ttft_ms, "ms")}, fallback=${formatNumberWithUnit(fallback.metrics.llm?.ttft_ms, "ms")}, delta=${formatDelta(webgpu.metrics.llm?.ttft_ms, fallback.metrics.llm?.ttft_ms, 2, "ms")}`
+    ];
+  }
+
+  return [];
 }
 
 function repoObservations(repoName, results) {
@@ -419,14 +501,14 @@ function repoConclusions(repoName, results) {
     case "exp-embeddings-browser-throughput":
       return [
         "- cold/warm embeddings baseline 결과와 문서화 경로가 처음으로 연결됐다.",
-        "- 다음 단계는 synthetic embedder를 실제 browser runtime으로 치환하고 동일한 결과 파일명을 유지하는 것이다.",
-        "- WebGPU vs fallback 비교는 실제 runtime integration 후 같은 fixture로 추가해야 한다."
+        "- 동일 fixture와 cache state에서 WebGPU vs fallback 비교 경로가 raw JSON과 RESULTS.md 양쪽에 생겼다.",
+        "- 다음 단계는 synthetic embedder를 실제 browser runtime으로 치환하고 동일한 결과 파일명을 유지하는 것이다."
       ];
     case "exp-llm-chat-runtime-shootout":
       return [
         "- runtime readiness 비교가 raw JSON과 RESULTS.md 둘 다에서 반복 가능해졌다.",
-        "- 다음 단계는 WebLLM, Transformers.js, ORT 계열 실제 runtime을 같은 prompt budget으로 연결하는 것이다.",
-        "- worker/main mode 차이는 유지하되 실제 model load와 cache state를 추가 기록해야 한다."
+        "- 같은 prompt budget에서 WebGPU vs fallback compare pair를 두 profile 모두에 대해 남길 수 있게 됐다.",
+        "- 다음 단계는 WebLLM, Transformers.js, ORT 계열 실제 runtime을 같은 prompt budget으로 연결하는 것이다."
       ];
     case "exp-stt-whisper-webgpu":
       return [
@@ -443,8 +525,8 @@ function repoConclusions(repoName, results) {
     case "bench-runtime-shootout":
       return [
         "- fixed-scenario runtime benchmark draft가 raw artifact와 summary 문서 양쪽에서 재현 가능해졌다.",
-        "- 다음 단계는 synthetic profile을 실제 runtime implementation으로 바꾸되 동일한 prompt/output budget을 유지하는 것이다.",
-        "- benchmark summary v1을 만들려면 추가 브라우저와 cache-state 반복 측정이 필요하다."
+        "- fixed benchmark 한 벌에 대해 WebGPU vs fallback 비교 draft도 함께 누적할 수 있게 됐다.",
+        "- 다음 단계는 synthetic profile을 실제 runtime implementation으로 바꾸되 동일한 prompt/output budget을 유지하는 것이다."
       ];
     case "bench-model-load-and-cache":
       return [
@@ -471,6 +553,7 @@ function buildMarkdown(repoName, results, artifacts) {
   const sortedResults = [...results].sort(compareRuns);
   const first = sortedResults[0];
   const last = sortedResults[sortedResults.length - 1];
+  const comparisonLines = fallbackComparisonLines(repoName, sortedResults);
   const status = sortedResults.every((result) => result.status === "success")
     ? "success"
     : sortedResults.some((result) => result.status === "failed")
@@ -539,13 +622,13 @@ function buildMarkdown(repoName, results, artifacts) {
     `- 전원 상태: \`${device.power_mode || "unknown"}\``,
     "",
     "### GPU / 실행 모드",
-    `- adapter: ${gpu.adapter || "unknown"}`,
-    `- backend: \`${first.environment.backend || "unknown"}\``,
-    `- fallback triggered: \`${formatBoolean(first.environment.fallback_triggered)}\``,
+    `- adapter: ${summarizeValues(sortedResults.map((result) => result.environment.gpu?.adapter), gpu.adapter || "unknown")}`,
+    `- backend: \`${summarizeValues(sortedResults.map((result) => result.environment.backend), first.environment.backend || "unknown")}\``,
+    `- fallback triggered: \`${summarizeValues(sortedResults.map((result) => formatBoolean(result.environment.fallback_triggered)), formatBoolean(first.environment.fallback_triggered))}\``,
     `- worker mode: \`${summarizeValues(sortedResults.map((result) => result.environment.worker_mode), "unknown")}\``,
     `- cache state: \`${summarizeValues(sortedResults.map((result) => result.environment.cache_state), "unknown")}\``,
-    `- required features: ${JSON.stringify(gpu.required_features || [])}`,
-    `- limits snapshot: ${JSON.stringify(gpu.limits || {})}`,
+    `- required features: ${summarizeValues(sortedResults.map((result) => JSON.stringify(result.environment.gpu?.required_features || [])), JSON.stringify(gpu.required_features || []))}`,
+    `- limits snapshot: ${summarizeValues(sortedResults.map((result) => JSON.stringify(result.environment.gpu?.limits || {})), JSON.stringify(gpu.limits || {}))}`,
     "",
     "## 4. 워크로드 정의",
     `- 시나리오 이름: ${summarizeValues(workloadValues.scenarios)}`,
@@ -577,10 +660,11 @@ function buildMarkdown(repoName, results, artifacts) {
     "## 7. 관찰",
     ...repoObservations(repoName, sortedResults),
     "",
-    "## 8. 결론",
+    ...(comparisonLines.length ? ["## 8. WebGPU vs Fallback", ...comparisonLines, ""] : []),
+    `## ${comparisonLines.length ? "9" : "8"}. 결론`,
     ...repoConclusions(repoName, sortedResults),
     "",
-    "## 9. 첨부",
+    `## ${comparisonLines.length ? "10" : "9"}. 첨부`,
     `- 스크린샷: ${attachments.screenshots}`,
     `- 로그 파일: ${attachments.logs}`,
     `- raw json: ${attachments.rawJson}`,

@@ -1,7 +1,35 @@
-const CACHE_KEY = "ai-webgpu-lab:embeddings-index:v1";
+const EXECUTION_MODES = {
+  webgpu: {
+    id: "webgpu",
+    label: "WebGPU",
+    backend: "webgpu",
+    fallbackTriggered: false,
+    vectorDimension: 64,
+    perDocDelayMs: 4,
+    queryDelayMs: 2
+  },
+  fallback: {
+    id: "fallback",
+    label: "Wasm Fallback",
+    backend: "wasm",
+    fallbackTriggered: true,
+    vectorDimension: 40,
+    perDocDelayMs: 12,
+    queryDelayMs: 7
+  }
+};
+
+function resolveExecutionMode() {
+  const requested = new URLSearchParams(window.location.search).get("mode");
+  return EXECUTION_MODES[requested] || EXECUTION_MODES.webgpu;
+}
+
+const executionMode = resolveExecutionMode();
+const CACHE_KEY = `ai-webgpu-lab:embeddings-index:v2:${executionMode.id}`;
 
 const state = {
   startedAt: performance.now(),
+  executionMode,
   environment: buildEnvironment(),
   fixture: null,
   cachePresent: false,
@@ -34,11 +62,6 @@ function percentile(values, ratio) {
   const sorted = [...values].sort((a, b) => a - b);
   const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
   return sorted[index];
-}
-
-function average(values) {
-  if (!values.length) return null;
-  return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
 function parseBrowser() {
@@ -96,9 +119,13 @@ function buildEnvironment() {
       memory_gb: navigator.deviceMemory || undefined,
       power_mode: "unknown"
     },
-    gpu: { adapter: "not-applicable", required_features: [], limits: {} },
-    backend: "mixed",
-    fallback_triggered: false,
+    gpu: {
+      adapter: executionMode.fallbackTriggered ? "wasm-fallback-simulated" : "synthetic-webgpu-profile",
+      required_features: executionMode.fallbackTriggered ? [] : ["shader-f16"],
+      limits: {}
+    },
+    backend: executionMode.backend,
+    fallback_triggered: executionMode.fallbackTriggered,
     worker_mode: "main",
     cache_state: "unknown"
   };
@@ -110,7 +137,11 @@ function log(message) {
   renderLogs();
 }
 
-function vectorizeText(text, dimension = 64) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function vectorizeText(text, dimension = executionMode.vectorDimension) {
   const vector = new Float32Array(dimension);
   for (let index = 0; index < text.length; index += 1) {
     const code = text.charCodeAt(index);
@@ -163,10 +194,11 @@ async function buildIndex(documents) {
     for (const doc of batch) {
       const docStartedAt = performance.now();
       const vector = vectorizeText(`${doc.title} ${doc.text}`);
+      await sleep(executionMode.perDocDelayMs);
       perDocMs.push(performance.now() - docStartedAt);
       entries.push({ id: doc.id, title: doc.title, vector });
     }
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await sleep(0);
   }
 
   return {
@@ -177,7 +209,7 @@ async function buildIndex(documents) {
   };
 }
 
-function runQueries(indexEntries, queries) {
+async function runQueries(indexEntries, queries) {
   const queryDurations = [];
   let hits = 0;
 
@@ -188,6 +220,7 @@ function runQueries(indexEntries, queries) {
       .map((entry) => ({ id: entry.id, score: cosineSimilarity(vector, entry.vector) }))
       .sort((left, right) => right.score - left.score)
       .slice(0, 10);
+    await sleep(executionMode.queryDelayMs);
     queryDurations.push(performance.now() - queryStartedAt);
     if (ranked.some((entry) => entry.id === query.expectedId)) hits += 1;
   }
@@ -213,7 +246,7 @@ async function runScenario(mode) {
   let perDocMs = [];
 
   if (!cached || mode === "cold") {
-    log(`${mode} run: building synthetic embedding index.`);
+    log(`${executionMode.label} ${mode} run: building synthetic embedding index.`);
     const built = await buildIndex(fixture.documents);
     indexPayload = { createdAt: new Date().toISOString(), entries: built.entries, batchSize: built.batchSize };
     writeCachedIndex(indexPayload);
@@ -222,14 +255,15 @@ async function runScenario(mode) {
     perDocMs = built.perDocMs;
   } else {
     state.cachePresent = true;
-    log("Warm run: reusing cached embedding index.");
+    log(`${executionMode.label} warm run: reusing cached embedding index.`);
     perDocMs = fixture.documents.map(() => 0);
   }
 
-  const queryStats = runQueries(indexPayload.entries, fixture.queries);
+  const queryStats = await runQueries(indexPayload.entries, fixture.queries);
   const totalMs = indexBuildMs + queryStats.queryDurations.reduce((sum, value) => sum + value, 0);
   const run = {
     scenario: mode,
+    executionMode: executionMode.id,
     batchSize: indexPayload.batchSize || 3,
     documentCount: fixture.documents.length,
     queryCount: fixture.queries.length,
@@ -244,7 +278,7 @@ async function runScenario(mode) {
 
   state.run = run;
   state.activeScenario = "idle";
-  log(`${mode} run complete: docs/s=${round(run.docsPerSec, 2)}, queries/s=${round(run.queriesPerSec, 2)}, recall@10=${round(run.recallAt10, 2)}.`);
+  log(`${executionMode.label} ${mode} run complete: docs/s=${round(run.docsPerSec, 2)}, queries/s=${round(run.queriesPerSec, 2)}, recall@10=${round(run.recallAt10, 2)}.`);
   render();
 }
 
@@ -257,9 +291,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "ml",
-      scenario: run ? `synthetic-embeddings-${run.scenario}` : "synthetic-embeddings-pending",
+      scenario: run ? `synthetic-embeddings-${run.scenario}-${run.executionMode}` : "synthetic-embeddings-pending",
       notes: run
-        ? `synthetic fixture; batchSize=${run.batchSize}; docs=${run.documentCount}; queries=${run.queryCount}; cacheState=${run.scenario}`
+        ? `synthetic fixture; batchSize=${run.batchSize}; docs=${run.documentCount}; queries=${run.queryCount}; cacheState=${run.scenario}; executionMode=${run.executionMode}; backend=${state.environment.backend}`
         : "Run cold and warm synthetic embedding harness."
     },
     environment: state.environment,
@@ -298,13 +332,13 @@ function buildResult() {
 function renderStatus() {
   const badges = [];
   if (state.activeScenario !== "idle") {
-    badges.push({ text: `${state.activeScenario} running` });
+    badges.push({ text: `${executionMode.label} ${state.activeScenario} running` });
     badges.push({ text: "Indexing in progress" });
   } else if (state.run) {
-    badges.push({ text: `${state.run.scenario} complete` });
+    badges.push({ text: `${executionMode.label} ${state.run.scenario} complete` });
     badges.push({ text: state.cachePresent ? "Cache present" : "Cache empty" });
   } else {
-    badges.push({ text: "Fixture ready" });
+    badges.push({ text: `${executionMode.label} fixture ready` });
     badges.push({ text: state.cachePresent ? "Cache present" : "Cache empty" });
   }
 
@@ -316,19 +350,19 @@ function renderStatus() {
     elements.statusRow.appendChild(node);
   }
   elements.summary.textContent = state.run
-    ? `Last run ${state.run.scenario}: ${round(state.run.docsPerSec, 2)} docs/s, ${round(state.run.queriesPerSec, 2)} queries/s, recall@10 ${round(state.run.recallAt10, 2)}.`
-    : "Run cold first to build and persist the document index, then run warm to measure reuse against the same fixture.";
+    ? `Last run ${executionMode.label} ${state.run.scenario}: ${round(state.run.docsPerSec, 2)} docs/s, ${round(state.run.queriesPerSec, 2)} queries/s, recall@10 ${round(state.run.recallAt10, 2)}.`
+    : `Run cold first to build and persist the document index, then run warm to measure reuse against the same fixture. Mode=${executionMode.label}.`;
 }
 
 function renderMetrics() {
   const run = state.run;
   const cards = [
     ["Scenario", run ? run.scenario : "pending"],
+    ["Execution", executionMode.label],
     ["Docs/s", run ? `${round(run.docsPerSec, 2)}` : "pending"],
     ["Queries/s", run ? `${round(run.queriesPerSec, 2)}` : "pending"],
     ["Index Build", run ? `${round(run.indexBuildMs, 2)} ms` : "pending"],
-    ["Recall@10", run ? `${round(run.recallAt10, 2)}` : "pending"],
-    ["Doc P95", run ? `${round(percentile(run.perDocMs.filter((value) => value > 0), 0.95) || 0, 2)} ms` : "pending"]
+    ["Recall@10", run ? `${round(run.recallAt10, 2)}` : "pending"]
   ];
   elements.metricGrid.innerHTML = "";
   for (const [label, value] of cards) {
@@ -347,6 +381,7 @@ function renderEnvironment() {
     ["CPU", state.environment.device.cpu],
     ["Memory", state.environment.device.memory_gb ? `${state.environment.device.memory_gb} GB` : "unknown"],
     ["Backend", state.environment.backend],
+    ["Execution Mode", executionMode.label],
     ["Cache State", state.environment.cache_state]
   ];
   elements.metaGrid.innerHTML = "";
@@ -381,7 +416,7 @@ function downloadJson() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `exp-embeddings-browser-throughput-${state.run ? state.run.scenario : "pending"}.json`;
+  anchor.download = `exp-embeddings-browser-throughput-${state.run ? `${state.run.scenario}-${executionMode.id}` : "pending"}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
   log("Downloaded embeddings throughput JSON draft.");
@@ -399,6 +434,6 @@ elements.downloadJson.addEventListener("click", downloadJson);
 (async function init() {
   await loadFixture();
   state.cachePresent = Boolean(readCachedIndex());
-  log("Embeddings throughput harness ready.");
+  log(`Embeddings throughput harness ready in ${executionMode.label} mode.`);
   render();
 })();

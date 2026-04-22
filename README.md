@@ -39,7 +39,7 @@
 - `scripts/bootstrap-org-repos.sh` — 인벤토리 기준 전체 저장소 부트스트랩 스크립트
 - `scripts/capture-p0-baseline-results.mjs` — P0 workload Pages harness를 headless Chromium으로 실행해 raw JSON, 스크린샷, 로그, `RESULTS.md`를 갱신하는 스크립트
 - `scripts/seed-org-issues.sh` — 초기 draft issue CSV를 실제 GitHub issue로 시드하는 스크립트
-- `scripts/seed-p0-baseline-results.sh` — 7개 P0 workload 저장소를 clone/update한 뒤 baseline 결과를 실제 저장소에 커밋/푸시하는 오케스트레이션 스크립트
+- `scripts/seed-p0-baseline-results.sh` — 9개 browser-visible P0 baseline 저장소를 clone/update한 뒤 baseline 결과를 실제 저장소에 커밋/푸시하는 오케스트레이션 스크립트
 - `scripts/validate-lab-planning.sh` — 인벤토리/이슈/실행 계획 문서 정합성 검증 스크립트
 - `scripts/render-results-summary.mjs` — `reports/raw/*.json`를 기반으로 저장소별 `RESULTS.md`를 다시 쓰는 스크립트
 - `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
@@ -84,3 +84,4 @@ bash tests/test-seed-org-issues.sh
 기존 저장소의 README를 새 상세 포맷으로 다시 쓰려면 `--refresh-readme` 옵션을 사용합니다.
 기존 저장소의 baseline probe와 생성 자산까지 다시 쓰려면 `--refresh-generated` 옵션을 함께 사용합니다.
 `scripts/seed-p0-baseline-results.sh`는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`를 포함한 9개 browser-visible P0 baseline 저장소의 headless Chromium 결과를 캡처해 `reports/raw/`, `reports/screenshots/`, `reports/logs/`, `RESULTS.md`까지 한 번에 갱신할 수 있습니다.
+현재 `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `bench-runtime-shootout`는 동일 harness에서 `?mode=webgpu` / `?mode=fallback` pair를 수집해 `WebGPU vs fallback` 비교 섹션까지 자동 생성합니다.

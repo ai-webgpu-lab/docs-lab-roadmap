@@ -72,7 +72,7 @@ bash scripts/seed-p0-baseline-results.sh --push
 ### Phase 1 — P0 Baseline
 - `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`가 usable baseline 상태
 - `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`, `bench-runtime-shootout`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`가 repo-specific browser harness 확보
-- 위 harness는 deterministic browser baseline이며, 다음 단계는 실제 runtime/model integration과 raw result 축적이다
+- 위 harness는 deterministic browser baseline이며, `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `bench-runtime-shootout`는 `webgpu`/`fallback` compare pair까지 수집 가능하다
 - demo 대상 저장소가 GitHub Pages에서 공통 baseline probe 또는 저장소 전용 화면을 노출함
 
 ### Phase 2 — P1 Expansion

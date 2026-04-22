@@ -1,5 +1,36 @@
+const EXECUTION_MODES = {
+  webgpu: {
+    id: "webgpu",
+    label: "WebGPU",
+    backend: "webgpu",
+    fallbackTriggered: false,
+    initMultiplier: 1,
+    prefillMultiplier: 1,
+    decodeMultiplier: 1,
+    workerOverride: null
+  },
+  fallback: {
+    id: "fallback",
+    label: "Wasm Fallback",
+    backend: "wasm",
+    fallbackTriggered: true,
+    initMultiplier: 1.85,
+    prefillMultiplier: 2.1,
+    decodeMultiplier: 2.35,
+    workerOverride: "main"
+  }
+};
+
+function resolveExecutionMode() {
+  const requested = new URLSearchParams(window.location.search).get("mode");
+  return EXECUTION_MODES[requested] || EXECUTION_MODES.webgpu;
+}
+
+const executionMode = resolveExecutionMode();
+
 const state = {
   startedAt: performance.now(),
+  executionMode,
   environment: buildEnvironment(),
   profiles: null,
   active: false,
@@ -81,10 +112,14 @@ function buildEnvironment() {
       memory_gb: navigator.deviceMemory || undefined,
       power_mode: "unknown"
     },
-    gpu: { adapter: "profile-driven", required_features: [], limits: {} },
-    backend: "mixed",
-    fallback_triggered: false,
-    worker_mode: "unknown",
+    gpu: {
+      adapter: executionMode.fallbackTriggered ? "wasm-fallback-simulated" : "synthetic-webgpu-profile",
+      required_features: executionMode.fallbackTriggered ? [] : ["shader-f16"],
+      limits: {}
+    },
+    backend: executionMode.backend,
+    fallback_triggered: executionMode.fallbackTriggered,
+    worker_mode: executionMode.workerOverride || "worker",
     cache_state: "warm"
   };
 }
@@ -113,6 +148,17 @@ function buildResponseTokens(promptTokens, count) {
     tokens.push(vocabulary[index % vocabulary.length]);
   }
   return tokens;
+}
+
+function deriveExecutionProfile(profile) {
+  return {
+    ...profile,
+    backend: executionMode.backend,
+    workerMode: executionMode.workerOverride || profile.workerMode,
+    initDelayMs: Math.round(profile.initDelayMs * executionMode.initMultiplier),
+    prefillDelayMs: Math.round(profile.prefillDelayMs * executionMode.prefillMultiplier),
+    decodeDelayMs: Math.round(profile.decodeDelayMs * executionMode.decodeMultiplier)
+  };
 }
 
 async function simulateRuntime(profile, prompt) {
@@ -162,20 +208,22 @@ async function simulateRuntime(profile, prompt) {
 async function runProfile(profileId) {
   if (state.active) return;
   const profiles = await loadProfiles();
-  const profile = profiles.find((item) => item.id === profileId);
-  if (!profile) return;
+  const baseProfile = profiles.find((item) => item.id === profileId);
+  if (!baseProfile) return;
 
+  const profile = deriveExecutionProfile(baseProfile);
   state.active = true;
   state.output = "";
   state.environment.worker_mode = profile.workerMode;
-  state.environment.backend = profile.backend;
+  state.environment.backend = executionMode.backend;
+  state.environment.fallback_triggered = executionMode.fallbackTriggered;
   render();
 
-  log(`Running ${profile.label} profile.`);
+  log(`Running ${baseProfile.label} profile in ${executionMode.label} mode.`);
   const run = await simulateRuntime(profile, elements.promptInput.value);
   state.run = run;
   state.active = false;
-  log(`${profile.label} complete: TTFT ${round(run.ttftMs, 2)} ms, decode ${round(run.decodeTokPerSec, 2)} tok/s.`);
+  log(`${baseProfile.label} ${executionMode.label} complete: TTFT ${round(run.ttftMs, 2)} ms, decode ${round(run.decodeTokPerSec, 2)} tok/s.`);
   render();
 }
 
@@ -188,9 +236,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "llm",
-      scenario: run ? `runtime-profile-${run.profile.id}` : "runtime-profile-pending",
+      scenario: run ? `runtime-profile-${run.profile.id}-${executionMode.id}` : "runtime-profile-pending",
       notes: run
-        ? `synthetic runtime profile=${run.profile.label}; promptTokens=${run.promptTokens}; outputTokens=${run.outputTokens}`
+        ? `synthetic runtime profile=${run.profile.label}; promptTokens=${run.promptTokens}; outputTokens=${run.outputTokens}; executionMode=${executionMode.id}; backend=${executionMode.backend}`
         : "Run one runtime readiness profile."
     },
     environment: state.environment,
@@ -227,10 +275,10 @@ function buildResult() {
 
 function renderStatus() {
   const badges = state.active
-    ? ["Profile running", "Streaming output"]
+    ? [`${executionMode.label} profile running`, "Streaming output"]
     : state.run
       ? [`${state.run.profile.label} complete`, `${round(state.run.decodeTokPerSec, 2)} tok/s`]
-      : ["Profiles ready", "Awaiting run"];
+      : [`${executionMode.label} profiles ready`, "Awaiting run"];
   elements.statusRow.innerHTML = "";
   for (const text of badges) {
     const node = document.createElement("span");
@@ -239,18 +287,18 @@ function renderStatus() {
     elements.statusRow.appendChild(node);
   }
   elements.summary.textContent = state.run
-    ? `Last run: ${state.run.profile.label}, TTFT ${round(state.run.ttftMs, 2)} ms, turn latency ${round(state.run.turnLatencyMs, 2)} ms.`
-    : "Run one profile at a time with the shared prompt to compare TTFT, prefill speed, decode speed, and total turn latency.";
+    ? `Last run: ${state.run.profile.label} on ${executionMode.label}, TTFT ${round(state.run.ttftMs, 2)} ms, turn latency ${round(state.run.turnLatencyMs, 2)} ms.`
+    : `Run one profile at a time with the shared prompt to compare TTFT, prefill speed, decode speed, and total turn latency. Mode=${executionMode.label}.`;
 }
 
 function renderMetrics() {
   const run = state.run;
   const cards = [
     ["Profile", run ? run.profile.label : "pending"],
+    ["Execution", executionMode.label],
     ["TTFT", run ? `${round(run.ttftMs, 2)} ms` : "pending"],
     ["Prefill", run ? `${round(run.prefillTokPerSec, 2)} tok/s` : "pending"],
     ["Decode", run ? `${round(run.decodeTokPerSec, 2)} tok/s` : "pending"],
-    ["Turn Latency", run ? `${round(run.turnLatencyMs, 2)} ms` : "pending"],
     ["Worker Mode", state.environment.worker_mode]
   ];
   elements.metricGrid.innerHTML = "";
@@ -270,6 +318,7 @@ function renderEnvironment() {
     ["CPU", state.environment.device.cpu],
     ["Memory", state.environment.device.memory_gb ? `${state.environment.device.memory_gb} GB` : "unknown"],
     ["Backend", state.environment.backend],
+    ["Execution Mode", executionMode.label],
     ["Worker Mode", state.environment.worker_mode]
   ];
   elements.metaGrid.innerHTML = "";
@@ -305,7 +354,7 @@ function downloadJson() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `exp-llm-chat-runtime-shootout-${state.run ? state.run.profile.id : "pending"}.json`;
+  anchor.download = `exp-llm-chat-runtime-shootout-${state.run ? `${state.run.profile.id}-${executionMode.id}` : "pending"}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
   log("Downloaded runtime readiness JSON draft.");
@@ -317,6 +366,6 @@ elements.downloadJson.addEventListener("click", downloadJson);
 
 (async function init() {
   await loadProfiles();
-  log("LLM chat runtime readiness harness ready.");
+  log(`LLM chat runtime readiness harness ready in ${executionMode.label} mode.`);
   render();
 })();

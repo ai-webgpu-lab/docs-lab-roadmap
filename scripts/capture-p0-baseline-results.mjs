@@ -41,32 +41,64 @@ const CAPTURE_CONFIG = {
   "exp-embeddings-browser-throughput": {
     scenarios: [
       {
-        id: "01-cold-index",
-        label: "Cold Index",
+        id: "01-cold-index-webgpu",
+        label: "Cold Index / WebGPU",
+        urlSearch: "?mode=webgpu",
         button: "#run-cold",
-        expectedScenario: "synthetic-embeddings-cold"
+        expectedScenario: "synthetic-embeddings-cold-webgpu"
       },
       {
-        id: "02-warm-query",
-        label: "Warm Query",
+        id: "02-warm-query-webgpu",
+        label: "Warm Query / WebGPU",
+        urlSearch: "?mode=webgpu",
         button: "#run-warm",
-        expectedScenario: "synthetic-embeddings-warm"
+        expectedScenario: "synthetic-embeddings-warm-webgpu"
+      },
+      {
+        id: "03-cold-index-fallback",
+        label: "Cold Index / Fallback",
+        urlSearch: "?mode=fallback",
+        button: "#run-cold",
+        expectedScenario: "synthetic-embeddings-cold-fallback"
+      },
+      {
+        id: "04-warm-query-fallback",
+        label: "Warm Query / Fallback",
+        urlSearch: "?mode=fallback",
+        button: "#run-warm",
+        expectedScenario: "synthetic-embeddings-warm-fallback"
       }
     ]
   },
   "exp-llm-chat-runtime-shootout": {
     scenarios: [
       {
-        id: "01-webllm-style",
-        label: "WebLLM-style",
+        id: "01-webllm-style-webgpu",
+        label: "WebLLM-style / WebGPU",
+        urlSearch: "?mode=webgpu",
         button: "#run-webllm",
-        expectedScenario: "runtime-profile-webllm-style"
+        expectedScenario: "runtime-profile-webllm-style-webgpu"
       },
       {
-        id: "02-transformersjs-style",
-        label: "Transformers.js-style",
+        id: "02-transformersjs-style-webgpu",
+        label: "Transformers.js-style / WebGPU",
+        urlSearch: "?mode=webgpu",
         button: "#run-transformers",
-        expectedScenario: "runtime-profile-transformersjs-style"
+        expectedScenario: "runtime-profile-transformersjs-style-webgpu"
+      },
+      {
+        id: "03-webllm-style-fallback",
+        label: "WebLLM-style / Fallback",
+        urlSearch: "?mode=fallback",
+        button: "#run-webllm",
+        expectedScenario: "runtime-profile-webllm-style-fallback"
+      },
+      {
+        id: "04-transformersjs-style-fallback",
+        label: "Transformers.js-style / Fallback",
+        urlSearch: "?mode=fallback",
+        button: "#run-transformers",
+        expectedScenario: "runtime-profile-transformersjs-style-fallback"
       }
     ]
   },
@@ -93,8 +125,16 @@ const CAPTURE_CONFIG = {
   "bench-runtime-shootout": {
     scenarios: [
       {
-        id: "01-runtime-benchmark",
-        label: "Runtime Benchmark",
+        id: "01-runtime-benchmark-webgpu",
+        label: "Runtime Benchmark / WebGPU",
+        urlSearch: "?mode=webgpu",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "runtime-benchmark-"
+      },
+      {
+        id: "02-runtime-benchmark-fallback",
+        label: "Runtime Benchmark / Fallback",
+        urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenarioPrefix: "runtime-benchmark-"
       }
@@ -304,6 +344,12 @@ function resolveResultSelector(repoConfig, scenario) {
   return scenario.resultSelector || repoConfig.resultSelector || "#result-json";
 }
 
+function resolveScenarioUrl(baseUrl, scenario) {
+  const url = new URL(baseUrl);
+  url.search = scenario.urlSearch || "";
+  return url.toString();
+}
+
 async function readResultPayload(page, repoConfig, scenario) {
   const selector = resolveResultSelector(repoConfig, scenario);
   const payload = await page.locator(selector).textContent();
@@ -365,6 +411,7 @@ function buildLogText({ repoName, scenario, result, captureContext, consoleLines
   const sections = [
     `repo=${repoName}`,
     `scenario=${scenario.label}`,
+    `url_search=${scenario.urlSearch || "(default)"}`,
     `captured_at=${captureContext.captured_at}`,
     `browser=${captureContext.browser_name} ${captureContext.browser_version}`,
     `headless=${captureContext.headless}`,
@@ -433,16 +480,17 @@ async function runCapture(options) {
       consoleLines.push(`[console:${message.type()}] ${message.text()}`);
     });
 
-    await page.goto(serverContext.url, {
-      waitUntil: "load",
-      timeout: options.timeoutMs
-    });
-    await page.locator(repoConfig.resultSelector || "#result-json").waitFor({
-      state: "visible",
-      timeout: options.timeoutMs
-    });
-
     for (const scenario of repoConfig.scenarios) {
+      const consoleStart = consoleLines.length;
+      await page.goto(resolveScenarioUrl(serverContext.url, scenario), {
+        waitUntil: "load",
+        timeout: options.timeoutMs
+      });
+      await page.locator(resolveResultSelector(repoConfig, scenario)).waitFor({
+        state: "visible",
+        timeout: options.timeoutMs
+      });
+
       let previousText = (await readResultPayload(page, repoConfig, scenario)) || "";
       const stopSignal = { done: false };
       const typingTask = scenario.typingSelector
@@ -508,7 +556,7 @@ async function runCapture(options) {
           scenario,
           result,
           captureContext,
-          consoleLines
+          consoleLines: consoleLines.slice(consoleStart)
         }),
         "utf8"
       );
