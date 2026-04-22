@@ -33,6 +33,7 @@
 - `CONTRIBUTING.md` — 문서/조직 변경 작업 규칙
 - `.github/CODEOWNERS` — 기본 리뷰 책임자
 - `.github/ISSUE_TEMPLATE/` — 조직 공통 이슈 폼 초안
+- `scripts/bootstrap-org-repos.sh` — 인벤토리 기준 전체 저장소 부트스트랩 스크립트
 - `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
 - `scripts/sync-org-repo-topics.sh` — 저장소 인벤토리 기준 토픽 동기화 스크립트
 
@@ -44,12 +45,16 @@
 - `docs/04-github-projects-design.md` — GitHub Projects 운영 설계
 - `docs/05-templates-and-results.md` — 템플릿/스키마 설명
 - `docs/06-six-week-execution-plan.md` — 6주 실행 계획
+- `docs/07-master-experiment-plan.md` — 전체 실험/부트스트랩 마스터 계획
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개
 
 ## 사용 방법
 ```bash
+bash scripts/bootstrap-org-repos.sh
 bash scripts/sync-org-labels.sh
 bash scripts/sync-org-repo-topics.sh
+bash tests/test-bootstrap-org-repos.sh
+bash tests/test-bootstrap-org-repos-full-inventory.sh
 ```
 
-위 스크립트들은 `docs/repo-inventory.csv`를 기준으로 현재 존재하는 조직 저장소의 기본 라벨과 GitHub topics를 정렬합니다.
+위 스크립트들은 `docs/repo-inventory.csv`를 기준으로 조직 저장소를 부트스트랩하고, 기본 라벨과 GitHub topics를 정렬합니다.
