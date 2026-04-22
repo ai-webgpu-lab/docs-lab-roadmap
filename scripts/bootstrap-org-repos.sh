@@ -422,6 +422,21 @@ repo_specific_pages_baseline_summary() {
     tpl-webgpu-react)
       echo "no-build React WebGPU starter with capability panel, React mount flow, and live canvas sample"
       ;;
+    exp-embeddings-browser-throughput)
+      echo "synthetic browser embeddings throughput harness with cold/warm cache modes, deterministic vectorization, and query recall checks"
+      ;;
+    exp-llm-chat-runtime-shootout)
+      echo "interactive runtime readiness harness comparing deterministic WebLLM-style and Transformers.js-style chat profiles"
+      ;;
+    exp-stt-whisper-webgpu)
+      echo "file transcription readiness harness with deterministic segment processing, first-partial timing, and WER/CER estimation"
+      ;;
+    exp-rag-browser-pipeline)
+      echo "browser-only RAG pipeline harness with ingest, chunk, embed, retrieve, and citation hit-rate measurement"
+      ;;
+    bench-runtime-shootout)
+      echo "fixed-scenario runtime benchmark comparing deterministic browser-side LLM runtime profiles with shared prompt settings"
+      ;;
     bench-model-load-and-cache)
       echo "cold/warm model load harness with synthetic fixture materialization, Cache Storage, and prepared-artifact reuse"
       ;;

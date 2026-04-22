@@ -103,6 +103,91 @@ node --check "${TMP_DIR}/out-react/tpl-webgpu-react/public/app.js"
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-embeddings-browser-throughput" \
+  --output-root "${TMP_DIR}/out-embeddings" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/index.html"
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/app.js"
+assert_file "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/docs-fixture.json"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/index.html" "Embeddings Throughput Harness"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/app.js" "synthetic-embedding-throughput"
+assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/README.md" "repo-scaffolds/p0/exp-embeddings-browser-throughput/"
+node --check "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-llm-chat-runtime-shootout" \
+  --output-root "${TMP_DIR}/out-llm-shootout" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/index.html"
+assert_file "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/app.js"
+assert_file "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/runtime-profiles.json"
+assert_contains "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/index.html" "LLM Chat Runtime Readiness"
+assert_contains "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/app.js" "runtime-readiness-chat"
+assert_contains "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/README.md" "repo-scaffolds/p0/exp-llm-chat-runtime-shootout/"
+node --check "${TMP_DIR}/out-llm-shootout/exp-llm-chat-runtime-shootout/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-stt-whisper-webgpu" \
+  --output-root "${TMP_DIR}/out-stt" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/index.html"
+assert_file "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/app.js"
+assert_file "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/transcript-fixture.json"
+assert_contains "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/index.html" "File Transcription Readiness"
+assert_contains "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/app.js" "file-transcription-readiness"
+assert_contains "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/README.md" "repo-scaffolds/p0/exp-stt-whisper-webgpu/"
+node --check "${TMP_DIR}/out-stt/exp-stt-whisper-webgpu/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-rag-browser-pipeline" \
+  --output-root "${TMP_DIR}/out-rag" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/index.html"
+assert_file "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/app.js"
+assert_file "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/rag-fixture.json"
+assert_contains "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/index.html" "Browser RAG Pipeline Harness"
+assert_contains "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/app.js" "browser-rag-fixture"
+assert_contains "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/README.md" "repo-scaffolds/p0/exp-rag-browser-pipeline/"
+node --check "${TMP_DIR}/out-rag/exp-rag-browser-pipeline/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "bench-runtime-shootout" \
+  --output-root "${TMP_DIR}/out-runtime-bench" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/index.html"
+assert_file "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/app.js"
+assert_file "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/runtime-benchmark-profiles.json"
+assert_contains "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/index.html" "Fixed Scenario Runtime Shootout"
+assert_contains "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/app.js" "fixed-runtime-shootout"
+assert_contains "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/README.md" "repo-scaffolds/p0/bench-runtime-shootout/"
+node --check "${TMP_DIR}/out-runtime-bench/bench-runtime-shootout/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
   --repo "bench-worker-isolation-and-ui-jank" \
   --output-root "${TMP_DIR}/out-worker-jank" \
   --no-sync \
@@ -151,8 +236,8 @@ assert_dir "${TMP_DIR}/out/bench-runtime-shootout/reports/raw"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "benchmark 저장소"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## 작업 및 갱신 절차"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## 완료 기준"
-assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "AI WebGPU Lab Baseline Probe"
-assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/app.js" "Collect a reproducible browser and device snapshot"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "Fixed Scenario Runtime Shootout"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/app.js" "fixed-runtime-shootout"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/deploy-pages@v4"
 node --check "${TMP_DIR}/out/bench-runtime-shootout/public/app.js"
 
@@ -194,7 +279,7 @@ assert_not_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "sentinel"
 assert_not_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "legacy"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## 저장소 역할"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## GitHub Pages 운영 메모"
-assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "AI WebGPU Lab Baseline Probe"
-assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/app.js" "downloadJson"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "Fixed Scenario Runtime Shootout"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/app.js" "runBenchmark"
 
 echo "bootstrap-org-repos local mode test passed"

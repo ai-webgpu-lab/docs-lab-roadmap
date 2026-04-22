@@ -1,0 +1,14 @@
+{
+  "audioSeconds": 7.4,
+  "reference": "browser speech experiments need explicit fallback notes worker isolation and cold versus warm cache reporting",
+  "segments": [
+    {
+      "text": "browser speech experiments need explicit fallback notes",
+      "processingMs": 42
+    },
+    {
+      "text": "worker isolation and cold versus warm cache reporting",
+      "processingMs": 48
+    }
+  ]
+}

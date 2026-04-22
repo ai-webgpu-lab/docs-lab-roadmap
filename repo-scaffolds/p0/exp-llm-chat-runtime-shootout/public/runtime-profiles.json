@@ -1,0 +1,26 @@
+[
+  {
+    "id": "webllm-style",
+    "label": "WebLLM-style",
+    "backend": "webgpu",
+    "workerMode": "worker",
+    "initDelayMs": 90,
+    "prefillChunk": 16,
+    "prefillDelayMs": 14,
+    "decodeChunk": 3,
+    "decodeDelayMs": 22,
+    "outputTokens": 54
+  },
+  {
+    "id": "transformersjs-style",
+    "label": "Transformers.js-style",
+    "backend": "mixed",
+    "workerMode": "main",
+    "initDelayMs": 60,
+    "prefillChunk": 12,
+    "prefillDelayMs": 11,
+    "decodeChunk": 2,
+    "decodeDelayMs": 17,
+    "outputTokens": 54
+  }
+]

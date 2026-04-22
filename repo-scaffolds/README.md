@@ -32,5 +32,5 @@ repo/
 
 ## Repo-Specific P0 Overrides
 - `repo-scaffolds/p0/<repo>/` 아래 파일은 공통 `public/` baseline 위에 덮어쓰는 저장소 전용 Pages harness다.
-- 현재 전용 baseline이 있는 저장소는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`다.
+- 현재 전용 baseline이 있는 저장소는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`, `bench-runtime-shootout`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`다.
 - 그 외 저장소는 공통 browser/device/WebGPU probe를 유지하고, 실제 workload harness가 생기면 전용 override로 승격한다.

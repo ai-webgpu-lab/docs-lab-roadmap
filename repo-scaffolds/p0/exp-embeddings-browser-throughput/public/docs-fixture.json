@@ -1,0 +1,48 @@
+{
+  "documents": [
+    {
+      "id": "doc-webgpu-ops",
+      "title": "WebGPU Browser Ops",
+      "text": "Browser-side GPU inference needs predictable adapter acquisition, cache reuse, and frame-safe scheduling for repeatable experiments."
+    },
+    {
+      "id": "doc-embeddings-index",
+      "title": "Embeddings Index Build",
+      "text": "Document embeddings are generated in batches, normalized to fixed dimensions, and written into a reusable index for query retrieval."
+    },
+    {
+      "id": "doc-worker-safety",
+      "title": "Worker Safety",
+      "text": "Workers isolate background compute from the main thread, but they still need warm cache behavior and benchmark-friendly telemetry."
+    },
+    {
+      "id": "doc-rag-pipeline",
+      "title": "RAG Pipeline",
+      "text": "A browser RAG baseline ingests local documents, chunks them, embeds each chunk, ranks retrieval candidates, and cites the matched sources."
+    },
+    {
+      "id": "doc-stt-fallback",
+      "title": "Speech Fallback",
+      "text": "Speech transcription experiments need file-level latency, partial-result timing, and a clear fallback path when the preferred runtime is unavailable."
+    },
+    {
+      "id": "doc-runtime-shootout",
+      "title": "Runtime Shootout",
+      "text": "Runtime comparisons should hold prompt size, output length, and cache state constant while measuring TTFT and steady-state decode throughput."
+    }
+  ],
+  "queries": [
+    {
+      "text": "Which document describes building and reusing an embeddings index in batches?",
+      "expectedId": "doc-embeddings-index"
+    },
+    {
+      "text": "Which note explains browser retrieval with chunking and citations?",
+      "expectedId": "doc-rag-pipeline"
+    },
+    {
+      "text": "Which document covers prompt size and decode throughput for runtime comparisons?",
+      "expectedId": "doc-runtime-shootout"
+    }
+  ]
+}
