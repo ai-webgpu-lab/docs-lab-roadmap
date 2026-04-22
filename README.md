@@ -1,6 +1,13 @@
 # AI WebGPU Lab Bootstrap Bundle
 
-이 번들은 현재 세션에서 정리된 내용을 `ai-webgpu-lab` 조직에서 바로 실행할 수 있도록 묶은 부트스트랩 패키지입니다.
+`docs-lab-roadmap`는 `ai-webgpu-lab` 조직의 부트스트랩 문서와 운영 템플릿을 관리하는 기준 저장소입니다. 이 저장소를 기준으로 조직 공통 `.github` 저장소, 개별 실험 저장소, 벤치마크 저장소, 앱 저장소를 초기화하고 운영합니다.
+
+## 현재 역할
+- 조직 운영 개요와 저장소 전략의 source of truth
+- 공통 `README.md` / `RESULTS.md` 템플릿 배포 기준
+- 공통 JSON 결과 스키마와 보고 규칙 보관
+- 초기 issue 초안, GitHub Projects 설계, 6주 실행 계획 관리
+- 조직 메타데이터/토픽 동기화용 스크립트 제공
 
 ## 포함 내용
 - 조직 운영 개요
@@ -14,13 +21,20 @@
 - 이슈 템플릿 / PR 템플릿
 - 기본 저장소 구조 예시
 
-## 추천 시작 순서
-1. `.github` 저장소에 템플릿 반영
-2. `shared-*` 저장소 생성
-3. 우선순위 P0 저장소 생성
+## 추천 반영 순서
+1. `ai-webgpu-lab/.github`에 공통 템플릿과 조직 프로필 반영
+2. `shared-*` 저장소와 템플릿 저장소 상태 점검
+3. 우선순위 P0 저장소 메타데이터와 기본 문서 정렬
 4. GitHub Projects `AI WebGPU Lab — Master` 생성
 5. `issues/initial-draft-issues-30.md`의 항목을 issue로 등록
 6. `docs/06-six-week-execution-plan.md` 기준으로 6주 스프린트 시작
+
+## 운영 보조 파일
+- `CONTRIBUTING.md` — 문서/조직 변경 작업 규칙
+- `.github/CODEOWNERS` — 기본 리뷰 책임자
+- `.github/ISSUE_TEMPLATE/` — 조직 공통 이슈 폼 초안
+- `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
+- `scripts/sync-org-repo-topics.sh` — 저장소 인벤토리 기준 토픽 동기화 스크립트
 
 ## 최상위 문서 안내
 - `docs/00-master-summary.md` — 전체 요약
@@ -32,7 +46,10 @@
 - `docs/06-six-week-execution-plan.md` — 6주 실행 계획
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개
 
-## 참고
-이 번들은 GitHub 조직에 직접 업로드하지는 않습니다. 대신 조직을 바로 구성하고 저장소를 생성할 수 있게 문서와 템플릿을 정리한 오프라인 패키지입니다.
+## 사용 방법
+```bash
+bash scripts/sync-org-labels.sh
+bash scripts/sync-org-repo-topics.sh
+```
 
-생성 일시: 2026-04-22T00:23:40.492231
+위 스크립트들은 `docs/repo-inventory.csv`를 기준으로 현재 존재하는 조직 저장소의 기본 라벨과 GitHub topics를 정렬합니다.
