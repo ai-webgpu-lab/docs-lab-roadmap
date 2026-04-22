@@ -6,6 +6,7 @@
 3. cold/warm 결과는 분리 기록한다.
 4. fallback이 발생하면 반드시 이유를 기록한다.
 5. PR merge 전 `RESULTS.md` 업데이트가 있어야 한다.
+6. demo가 필요한 저장소는 `public/`와 `.github/workflows/deploy-pages.yml`을 통해 GitHub Pages에 배포 가능해야 한다.
 
 ## 공통 메트릭 카테고리
 ### Common
@@ -82,3 +83,11 @@
 - `track`는 raw JSON에서 lowercase slug를 사용한다. 예: `agent`, `integration`, `infra`
 - `backend`, `worker_mode`, `cache_state`는 workload가 아니라 environment 필드다.
 - `context_tokens`, `output_tokens`는 metric이 아니라 workload 필드다.
+
+## GitHub Pages Demo
+- 기본 데모 엔트리 포인트는 `public/index.html`이다.
+- 공통 probe 로직은 `public/app.js`에 위치하며, 브라우저/디바이스/WebGPU baseline을 캡처하고 schema-aligned JSON 초안을 export한다.
+- GitHub Pages 배포는 custom workflow 방식으로 `actions/configure-pages@v5`, `actions/upload-pages-artifact@v4`, `actions/deploy-pages@v4`를 사용한다.
+- 기본 workflow는 `public/`의 baseline probe 정적 artifact를 그대로 배포한다.
+- Vite, React, Wasm bundling 등 실제 build가 필요한 저장소는 첫 runnable baseline 시점에 build job과 artifact path를 저장소별로 교체한다.
+- 공통 probe 페이지는 첫 runnable baseline이 준비되면 저장소 전용 데모 UI나 workload harness로 교체한다.

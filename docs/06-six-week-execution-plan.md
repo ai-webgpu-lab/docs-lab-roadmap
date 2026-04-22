@@ -4,6 +4,8 @@
 6주 안에 브라우저 AI/WebGPU 실험군의 기준선과 비교 가능성을 확보한다.
 
 ## 대상 저장소
+주간 실행 추적 대상은 아래 7개 워크로드 저장소다.
+
 - `exp-embeddings-browser-throughput`
 - `exp-llm-chat-runtime-shootout`
 - `exp-stt-whisper-webgpu`
@@ -11,6 +13,15 @@
 - `bench-runtime-shootout`
 - `bench-model-load-and-cache`
 - `bench-worker-isolation-and-ui-jank`
+
+## 선행 P0 기반 저장소
+아래 5개 저장소는 주간 워크로드 목록에는 넣지 않지만, 6주 실행의 선행 조건으로 먼저 정렬한다.
+
+- `tpl-webgpu-vanilla`
+- `tpl-webgpu-react`
+- `shared-webgpu-capability`
+- `shared-bench-schema`
+- `docs-lab-roadmap`
 
 ## Week 1 — 인프라와 기준선
 - 7개 저장소 생성

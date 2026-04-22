@@ -1,0 +1,4 @@
+title,repo,type,priority,track,summary
+[infra] 공통 결과 스키마 validation 추가,shared-bench-schema,infra,P0,Infra,스키마 validation 스크립트 추가
+[bench] runtime shootout 시나리오 정의,bench-runtime-shootout,benchmark,P0,Benchmark,런타임 비교 시나리오 정의
+[app] Local Chat Arena 초안 생성,app-local-chat-arena,integration,P1,Integration,채팅 런타임 비교 앱

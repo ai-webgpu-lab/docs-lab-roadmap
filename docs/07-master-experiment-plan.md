@@ -5,8 +5,9 @@
 
 ## 이번 라운드에서 실제로 수행하는 범위
 - 조직 인벤토리 기준 저장소 존재 여부 정렬
-- 각 저장소 기본 스캐폴드, 설명, 라벨, 토픽 동기화
+- 각 저장소 기본 스캐폴드, 설명, 라벨, 토픽, GitHub Pages baseline probe 동기화
 - 전체 실험군을 위한 우선순위와 단계별 실행 계획 문서화
+- 인벤토리, 시드 이슈, 실행 계획 문서 간 정합성 자동 검증
 - 부트스트랩 스크립트와 테스트로 반복 가능한 초기화 경로 확보
 
 ## 운영 원칙
@@ -101,6 +102,7 @@
 - 모든 저장소 생성 또는 존재 여부 확인
 - 저장소 설명, 토픽, 라벨 정렬
 - 공통 스캐폴드 반영
+- GitHub Pages baseline probe와 배포 workflow 반영
 - 조직 프로필과 이슈/PR 기본값 반영
 
 완료 기준:
@@ -257,21 +259,25 @@
 - 분기/스프린트 계획
 
 ## 실행 순서
-1. 조직 인벤토리와 스캐폴드가 깨지지 않도록 부트스트랩 스크립트와 테스트를 먼저 고정한다.
-2. P0 저장소에 공통 capability, 결과 스키마, 최소 실행 템플릿을 먼저 공급한다.
-3. P0 실험 저장소에서 cold/warm, worker/fallback 기준선을 먼저 만든다.
-4. 공통 benchmark 저장소로 비교 시나리오를 묶고 데모 저장소는 그 결과를 소비하게 만든다.
-5. P1, P2 확장 저장소는 baseline이 쌓인 뒤 우선순위별로 승격한다.
+1. `bash scripts/validate-lab-planning.sh`로 인벤토리, 시드 이슈, 마스터 플랜, 6주 실행 계획의 정합성을 먼저 검증한다.
+2. 조직 인벤토리와 스캐폴드가 깨지지 않도록 부트스트랩 스크립트와 테스트를 먼저 고정한다.
+3. P0 저장소에 공통 capability, 결과 스키마, 최소 실행 템플릿을 먼저 공급한다.
+4. P0 실험 저장소에서 cold/warm, worker/fallback 기준선을 먼저 만든다.
+5. 공통 benchmark 저장소로 비교 시나리오를 묶고 데모 저장소는 그 결과를 소비하게 만든다.
+6. P1, P2 확장 저장소는 baseline이 쌓인 뒤 우선순위별로 승격한다.
 
 ## 검증 전략
 | 수준 | 검증 대상 | 방법 | 통과 기준 |
 | --- | --- | --- | --- |
+| Planning consistency | 인벤토리, 시드 이슈, 마스터 플랜, 6주 계획 | `bash scripts/validate-lab-planning.sh` | CSV/문서 참조 저장소와 P0 실행 세트가 서로 일치 |
 | Bootstrap unit | 샘플 인벤토리 | `bash tests/test-bootstrap-org-repos.sh` | 샘플 저장소 구조와 핵심 파일 생성 |
 | Bootstrap smoke | 전체 인벤토리 | `bash tests/test-bootstrap-org-repos-full-inventory.sh` | 전체 저장소 수와 대표 파일 정합성 확인 |
 | Script syntax | Bash 스크립트 | `bash -n scripts/bootstrap-org-repos.sh` | 문법 오류 없음 |
 | Org sync | GitHub 조직 반영 | `bash scripts/bootstrap-org-repos.sh` | 모든 저장소 `no changes` 또는 정상 push |
 | Result schema | 결과 JSON | shared schema 검증 | 예제와 실험 결과 JSON 통과 |
 | Manual browser verification | P0 baseline 앱 | Chrome/Edge/Safari Tech Preview 수동 점검 | 실행, fallback, 로그 기록 완료 |
+
+운영자가 실제 순서대로 따를 수 있는 체크리스트는 `docs/08-bootstrap-and-execution-runbook.md`에 둔다.
 
 ## 리스크와 대응
 - 브라우저별 WebGPU 지원 편차: capability 저장소에서 먼저 환경 차이를 수집하고 fallback 경로를 문서화한다.

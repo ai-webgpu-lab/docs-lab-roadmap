@@ -1,13 +1,17 @@
 repo/
   src/
   public/
+    index.html
+    app.js
+    .nojekyll
+  .github/
+    workflows/
+      deploy-pages.yml
   reports/
     raw/
     screenshots/
     logs/
   schemas/
     ai-webgpu-lab-result.schema.json
-  scripts/
-    validate-results.mjs
   RESULTS.md
   README.md
