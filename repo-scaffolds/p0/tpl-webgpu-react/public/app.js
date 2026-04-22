@@ -505,10 +505,10 @@
       }
     }
 
-    function downloadJson() {
+    function buildResult() {
       const avgFrameMs = average(capability.frameSamples);
       const avgFps = avgFrameMs ? 1000 / avgFrameMs : 0;
-      const result = {
+      return {
         meta: {
           repo: "tpl-webgpu-react",
           commit: "bootstrap-generated",
@@ -551,7 +551,10 @@
           deploy_url: "https://ai-webgpu-lab.github.io/tpl-webgpu-react/"
         }
       };
+    }
 
+    function downloadJson() {
+      const result = buildResult();
       const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -565,6 +568,7 @@
     const avgFrameMs = average(capability.frameSamples);
     const avgFps = avgFrameMs ? 1000 / avgFrameMs : null;
     const p95Frame = percentile(capability.frameSamples, 0.95);
+    const resultDraft = buildResult();
     const summary = !("gpu" in navigator)
       ? "This browser does not expose navigator.gpu. The React shell still exports a fallback JSON draft."
       : capability.running
@@ -637,10 +641,10 @@
             h(
               "div",
               { className: "actions" },
-              h("button", { type: "button", onClick: probeCapability }, "Probe Capability"),
-              h("button", { type: "button", onClick: runScene }, "Start React Scene"),
-              h("button", { type: "button", className: "secondary", onClick: downloadJson }, "Download JSON"),
-              h("button", { type: "button", className: "secondary", onClick: resetState }, "Reset")
+              h("button", { id: "probe-capability", type: "button", onClick: probeCapability }, "Probe Capability"),
+              h("button", { id: "run-sample", type: "button", onClick: runScene }, "Start React Scene"),
+              h("button", { id: "download-json", type: "button", className: "secondary", onClick: downloadJson }, "Download JSON"),
+              h("button", { id: "reset-sample", type: "button", className: "secondary", onClick: resetState }, "Reset")
             )
           ),
           h(
@@ -663,7 +667,7 @@
             "section",
             { className: "panel" },
             h("h2", null, "React Canvas Surface"),
-            h("canvas", { ref: canvasRef, width: 960, height: 540, "aria-label": "React WebGPU starter canvas" })
+            h("canvas", { id: "starter-canvas", ref: canvasRef, width: 960, height: 540, "aria-label": "React WebGPU starter canvas" })
           ),
           h(
             "section",
@@ -718,28 +722,7 @@
           "article",
           { className: "panel" },
           h("h2", null, "Schema-Aligned Result Draft"),
-          h(
-            "pre",
-            null,
-            JSON.stringify(
-              {
-                meta: {
-                  repo: "tpl-webgpu-react",
-                  track: "infra",
-                  scenario: "react-webgpu-starter"
-                },
-                environment,
-                summary: {
-                  available: capability.available,
-                  running: capability.running,
-                  adapter: capability.adapter || "pending",
-                  avg_fps: avgFps ? round(avgFps, 2) : null
-                }
-              },
-              null,
-              2
-            )
-          )
+          h("pre", { id: "result-json" }, JSON.stringify(resultDraft, null, 2))
         )
       ),
       h(

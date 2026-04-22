@@ -12,6 +12,32 @@ import { renderResultsSummary } from "./render-results-summary.mjs";
 const execFile = promisify(execFileCallback);
 
 const CAPTURE_CONFIG = {
+  "tpl-webgpu-vanilla": {
+    resultSelector: "#result-json",
+    scenarios: [
+      {
+        id: "01-minimal-webgpu-starter",
+        label: "Minimal WebGPU Starter",
+        expectedScenario: "minimal-webgpu-starter",
+        probeButton: "#probe-capability",
+        runButton: "#run-sample",
+        runWaitMs: 1500
+      }
+    ]
+  },
+  "tpl-webgpu-react": {
+    resultSelector: "#result-json",
+    scenarios: [
+      {
+        id: "01-react-webgpu-starter",
+        label: "React WebGPU Starter",
+        expectedScenario: "react-webgpu-starter",
+        probeButton: "#probe-capability",
+        runButton: "#run-sample",
+        runWaitMs: 1500
+      }
+    ]
+  },
   "exp-embeddings-browser-throughput": {
     scenarios: [
       {
@@ -274,49 +300,53 @@ async function stopStaticServer(server) {
   });
 }
 
-async function waitForResult(page, scenario, previousText, timeoutMs) {
-  await page.waitForFunction(
-    ({ expectedScenario, expectedScenarioPrefix, previousText: previous }) => {
-      const node = document.getElementById("result-json");
-      if (!node) {
-        return false;
-      }
-
-      const text = node.textContent || "";
-      if (!text || text === previous) {
-        return false;
-      }
-
-      try {
-        const parsed = JSON.parse(text);
-        if (parsed.status !== "success") {
-          return false;
-        }
-        if (expectedScenario && parsed.meta?.scenario !== expectedScenario) {
-          return false;
-        }
-        if (expectedScenarioPrefix && !String(parsed.meta?.scenario || "").startsWith(expectedScenarioPrefix)) {
-          return false;
-        }
-        return true;
-      } catch (error) {
-        return false;
-      }
-    },
-    {
-      expectedScenario: scenario.expectedScenario,
-      expectedScenarioPrefix: scenario.expectedScenarioPrefix,
-      previousText
-    },
-    { timeout: timeoutMs }
-  );
+function resolveResultSelector(repoConfig, scenario) {
+  return scenario.resultSelector || repoConfig.resultSelector || "#result-json";
 }
 
-async function parseResultJson(page) {
-  const payload = await page.locator("#result-json").textContent();
+async function readResultPayload(page, repoConfig, scenario) {
+  const selector = resolveResultSelector(repoConfig, scenario);
+  const payload = await page.locator(selector).textContent();
   if (!payload) {
-    throw new Error("Missing #result-json content");
+    throw new Error(`Missing result payload from selector: ${selector}`);
   }
+  return payload;
+}
+
+function matchesExpectedScenario(parsed, scenario) {
+  if (scenario.expectedScenario && parsed.meta?.scenario !== scenario.expectedScenario) {
+    return false;
+  }
+  if (scenario.expectedScenarioPrefix && !String(parsed.meta?.scenario || "").startsWith(scenario.expectedScenarioPrefix)) {
+    return false;
+  }
+  return true;
+}
+
+async function waitForResult(page, repoConfig, scenario, previousText, timeoutMs, acceptedStatuses = ["success"]) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const text = await readResultPayload(page, repoConfig, scenario);
+    if (text && text !== previousText) {
+      try {
+        const parsed = JSON.parse(text);
+        if (acceptedStatuses.includes(parsed.status) && matchesExpectedScenario(parsed, scenario)) {
+          return parsed;
+        }
+      } catch (error) {
+        // Keep polling until the payload is valid JSON.
+      }
+    }
+
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error(`Timed out waiting for ${scenario.label} result`);
+}
+
+async function parseResultJson(page, repoConfig, scenario) {
+  const payload = await readResultPayload(page, repoConfig, scenario);
   return JSON.parse(payload);
 }
 
@@ -381,7 +411,11 @@ async function runCapture(options) {
   const serverContext = await startStaticServer(path.join(repoDir, "public"));
   const browser = await chromium.launch({
     headless: options.headless,
-    args: ["--no-sandbox"]
+    args: [
+      "--no-sandbox",
+      "--enable-unsafe-webgpu",
+      "--use-angle=swiftshader"
+    ]
   });
 
   try {
@@ -403,25 +437,42 @@ async function runCapture(options) {
       waitUntil: "load",
       timeout: options.timeoutMs
     });
-    await page.locator("#result-json").waitFor({
+    await page.locator(repoConfig.resultSelector || "#result-json").waitFor({
       state: "visible",
       timeout: options.timeoutMs
     });
 
     for (const scenario of repoConfig.scenarios) {
-      const previousText = (await page.locator("#result-json").textContent()) || "";
+      let previousText = (await readResultPayload(page, repoConfig, scenario)) || "";
       const stopSignal = { done: false };
       const typingTask = scenario.typingSelector
         ? driveProbeInput(page, scenario.typingSelector, stopSignal)
         : Promise.resolve();
 
-      await page.locator(scenario.button).click();
-      await waitForResult(page, scenario, previousText, options.timeoutMs);
+      if (scenario.probeButton) {
+        await page.locator(scenario.probeButton).click();
+        const probeResult = await waitForResult(page, repoConfig, scenario, previousText, options.timeoutMs, ["success", "partial"]);
+        previousText = JSON.stringify(probeResult, null, 2);
+
+        if (scenario.runButton && probeResult.status === "success") {
+          await page.locator(scenario.runButton).click();
+          const postRunPrevious = await readResultPayload(page, repoConfig, scenario);
+          await page.waitForTimeout(scenario.runWaitMs || 1000);
+          const refreshed = await readResultPayload(page, repoConfig, scenario);
+          if (refreshed === postRunPrevious) {
+            await page.waitForTimeout(300);
+          }
+        }
+      } else {
+        await page.locator(scenario.button).click();
+        await waitForResult(page, repoConfig, scenario, previousText, options.timeoutMs);
+      }
+
       stopSignal.done = true;
       await typingTask;
       await page.waitForTimeout(100);
 
-      const result = await parseResultJson(page);
+      const result = await parseResultJson(page, repoConfig, scenario);
       const captureContext = {
         tool: "playwright-chromium",
         browser_name: "Chromium",

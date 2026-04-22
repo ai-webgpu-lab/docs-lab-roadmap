@@ -99,5 +99,5 @@
 ## Raw Result Automation
 - `scripts/capture-p0-baseline-results.mjs --repo-dir <path>`는 P0 workload 저장소의 Pages harness를 headless Chromium으로 실행하고 `reports/raw/*.json`, `reports/screenshots/*.png`, `reports/logs/*.log`, `RESULTS.md`를 함께 갱신한다.
 - `scripts/render-results-summary.mjs --repo-dir <path>`는 이미 수집된 raw JSON만 다시 읽어서 `RESULTS.md`를 재생성한다.
-- `scripts/seed-p0-baseline-results.sh --push`는 7개 P0 workload 저장소를 clone/update하고 위 capture 흐름을 실행한 뒤 결과 커밋까지 밀어 넣는 운영용 오케스트레이터다.
+- `scripts/seed-p0-baseline-results.sh --push`는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`를 포함한 9개 browser-visible P0 baseline 저장소를 clone/update하고 위 capture 흐름을 실행한 뒤 결과 커밋까지 밀어 넣는 운영용 오케스트레이터다.
 - 위 자동화는 첫 baseline raw result를 seed하는 목적이며, 이후 실제 runtime/model/renderer가 붙더라도 파일 구조와 결과 문서 경로는 그대로 유지한다.

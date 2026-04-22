@@ -52,3 +52,26 @@ assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/reports/raw/02-warm-l
 assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/RESULTS.md" "Cold Load"
 assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/RESULTS.md" "Warm Load"
 assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/RESULTS.md" "playwright-chromium"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "tpl-webgpu-vanilla" \
+  --output-root "${TMP_DIR}/out-template" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-template/tpl-webgpu-vanilla" \
+  --repo-name "tpl-webgpu-vanilla" \
+  --commit "template-commit" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/raw/01-minimal-webgpu-starter.json"
+assert_file "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/screenshots/01-minimal-webgpu-starter.png"
+assert_file "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/logs/01-minimal-webgpu-starter.log"
+assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/reports/raw/01-minimal-webgpu-starter.json" "\"commit\": \"template-commit\""
+assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/RESULTS.md" "Minimal WebGPU Starter"
+assert_contains "${TMP_DIR}/out-template/tpl-webgpu-vanilla/RESULTS.md" "playwright-chromium"

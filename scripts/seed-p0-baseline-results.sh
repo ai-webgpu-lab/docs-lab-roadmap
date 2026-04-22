@@ -14,6 +14,8 @@ GIT_USER_NAME="$(git -C "${REPO_ROOT}" config --get user.name 2>/dev/null || pri
 GIT_USER_EMAIL="$(git -C "${REPO_ROOT}" config --get user.email 2>/dev/null || printf 'automation@example.invalid')"
 CAPTURED_BY="${GIT_USER_NAME}"
 REPOS=(
+  "tpl-webgpu-vanilla"
+  "tpl-webgpu-react"
   "exp-embeddings-browser-throughput"
   "exp-llm-chat-runtime-shootout"
   "exp-stt-whisper-webgpu"

@@ -83,4 +83,4 @@ bash tests/test-seed-org-issues.sh
 실제 앱 빌드가 필요한 저장소는 이후 각 저장소에서 build 단계와 artifact 경로를 교체해야 합니다.
 기존 저장소의 README를 새 상세 포맷으로 다시 쓰려면 `--refresh-readme` 옵션을 사용합니다.
 기존 저장소의 baseline probe와 생성 자산까지 다시 쓰려면 `--refresh-generated` 옵션을 함께 사용합니다.
-7개 P0 workload 저장소의 첫 raw 결과는 `scripts/seed-p0-baseline-results.sh`로 headless Chromium baseline을 캡처해 `reports/raw/`, `reports/screenshots/`, `reports/logs/`, `RESULTS.md`까지 한 번에 갱신할 수 있습니다.
+`scripts/seed-p0-baseline-results.sh`는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`를 포함한 9개 browser-visible P0 baseline 저장소의 headless Chromium 결과를 캡처해 `reports/raw/`, `reports/screenshots/`, `reports/logs/`, `RESULTS.md`까지 한 번에 갱신할 수 있습니다.

@@ -61,7 +61,7 @@ bash scripts/seed-p0-baseline-results.sh --push
 - demo 대상 저장소가 GitHub Pages `workflow` source로 설정됨
 - 기존 저장소 README가 최신 상세 포맷으로 갱신됨
 - 기존 저장소 baseline probe 자산이 최신 공통 포맷으로 갱신됨
-- 7개 P0 workload 저장소에 첫 raw JSON, screenshot, log, `RESULTS.md`가 반영됨
+- `tpl-webgpu-vanilla`, `tpl-webgpu-react`를 포함한 9개 browser-visible P0 baseline 저장소에 첫 raw JSON, screenshot, log, `RESULTS.md`가 반영됨
 
 ## Phase Gate
 ### Phase 0 — Organization Bootstrap

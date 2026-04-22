@@ -4,6 +4,16 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const REPO_QUESTIONS = {
+  "tpl-webgpu-vanilla": [
+    "최소 WebGPU 스타터가 현재 브라우저에서 adapter/device 획득 또는 fallback 보고를 제대로 남기는가",
+    "triangle sample frame pacing이 첫 baseline result로 재현 가능한가",
+    "이 결과를 downstream raw WebGPU 실험의 출발점으로 사용할 수 있는가"
+  ],
+  "tpl-webgpu-react": [
+    "React shell 위에서도 capability probe와 canvas mount flow를 결과 문서로 고정할 수 있는가",
+    "no-build React starter가 fallback 또는 WebGPU 경로를 명확히 기록하는가",
+    "후속 React 기반 실험 저장소의 첫 baseline으로 재사용 가능한가"
+  ],
   "exp-embeddings-browser-throughput": [
     "cold index build와 warm query reuse 차이가 브라우저 내 deterministic fixture에서도 명확하게 드러나는가",
     "같은 fixture에서 recall@10과 throughput이 안정적으로 재현되는가",
@@ -42,6 +52,12 @@ const REPO_QUESTIONS = {
 };
 
 const SCENARIO_LABELS = {
+  "tpl-webgpu-vanilla": {
+    "minimal-webgpu-starter": "Minimal WebGPU Starter"
+  },
+  "tpl-webgpu-react": {
+    "react-webgpu-starter": "React WebGPU Starter"
+  },
   "exp-embeddings-browser-throughput": {
     "synthetic-embeddings-cold": "Cold Index",
     "synthetic-embeddings-warm": "Warm Query"
@@ -215,6 +231,13 @@ function runTableMetrics(repoName, result) {
         p95: formatNumber(result.metrics.embeddings?.p95_ms),
         notes: `queries/s=${formatNumber(result.metrics.embeddings?.queries_per_sec)}, recall@10=${formatNumber(result.metrics.embeddings?.recall_at_10)}, metric=docs/s`
       };
+    case "tpl-webgpu-vanilla":
+    case "tpl-webgpu-react":
+      return {
+        mean: formatNumber(result.metrics.graphics?.avg_fps),
+        p95: formatNumber(result.metrics.graphics?.p95_frametime_ms),
+        notes: `scene_load=${formatNumber(result.metrics.graphics?.scene_load_ms)} ms, fallback=${formatBoolean(result.environment.fallback_triggered)}`
+      };
     case "exp-llm-chat-runtime-shootout":
       return {
         mean: formatNumber(result.metrics.llm?.decode_tok_per_sec),
@@ -262,6 +285,15 @@ function runTableMetrics(repoName, result) {
 
 function repoMetricSummary(repoName, results) {
   switch (repoName) {
+    case "tpl-webgpu-vanilla":
+    case "tpl-webgpu-react":
+      return [
+        `- avg_fps: ${summarizeRange(results.map((result) => result.metrics.graphics?.avg_fps))}`,
+        `- p95_frametime_ms: ${summarizeRange(results.map((result) => result.metrics.graphics?.p95_frametime_ms), "ms")}`,
+        `- scene_load_ms: ${summarizeRange(results.map((result) => result.metrics.graphics?.scene_load_ms), "ms")}`,
+        `- fallback states: ${summarizeValues(results.map((result) => String(result.environment.fallback_triggered)))}`,
+        `- backends: ${summarizeValues(results.map((result) => result.environment.backend))}`
+      ];
     case "exp-embeddings-browser-throughput":
       return [
         `- docs_per_sec: ${summarizeRange(results.map((result) => result.metrics.embeddings?.docs_per_sec))}`,
@@ -318,7 +350,10 @@ function repoObservations(repoName, results) {
   const first = results[0];
   const notes = [];
 
-  if (repoName === "exp-embeddings-browser-throughput") {
+  if (repoName === "tpl-webgpu-vanilla" || repoName === "tpl-webgpu-react") {
+    notes.push(`- starter backend는 ${first.environment.backend}이고 fallback_triggered=${formatBoolean(first.environment.fallback_triggered)}로 기록됐다.`);
+    notes.push(`- frame pacing summary는 avg_fps=${formatNumber(first.metrics.graphics?.avg_fps)}, p95_frametime_ms=${formatNumber(first.metrics.graphics?.p95_frametime_ms)}였다.`);
+  } else if (repoName === "exp-embeddings-browser-throughput") {
     const cold = results.find((result) => result.environment.cache_state === "cold");
     const warm = results.find((result) => result.environment.cache_state === "warm");
     if (cold && warm) {
@@ -369,6 +404,18 @@ function repoObservations(repoName, results) {
 
 function repoConclusions(repoName, results) {
   switch (repoName) {
+    case "tpl-webgpu-vanilla":
+      return [
+        "- raw WebGPU starter의 첫 baseline raw result와 summary 문서가 연결됐다.",
+        "- 다음 단계는 같은 결과 형식을 유지한 채 downstream raw WebGPU 실험 저장소로 전파하는 것이다.",
+        "- 실제 device/browser 다변화와 WebGPU/fallback 비교를 추가해야 템플릿 검증이 충분해진다."
+      ];
+    case "tpl-webgpu-react":
+      return [
+        "- React WebGPU starter도 첫 baseline raw result와 summary 문서를 갖게 됐다.",
+        "- 다음 단계는 build-driven React repo로 승격하면서 동일 결과 구조를 유지하는 것이다.",
+        "- 실제 app repo에서 state, worker, cache 경로를 덧붙여야 템플릿 검증이 완료된다."
+      ];
     case "exp-embeddings-browser-throughput":
       return [
         "- cold/warm embeddings baseline 결과와 문서화 경로가 처음으로 연결됐다.",
