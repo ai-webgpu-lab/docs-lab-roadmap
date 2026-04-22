@@ -215,6 +215,11 @@
 | `bench-model-load-and-cache` | 모델 로드와 캐시 이득은 얼마나 큰가 | cold/warm load harness | cold vs warm delta |
 | `bench-worker-isolation-and-ui-jank` | worker 분리가 체감에 얼마나 유효한가 | main/worker 비교 측정 페이지 | input delay, dropped frame |
 
+## 현재 P0 Baseline 구현 상태
+- 2026-04-22 기준 repo-specific Pages baseline이 있는 저장소: `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`
+- `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`는 코드/문서 기준 저장소로 usable baseline 상태
+- `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`, `bench-runtime-shootout`는 아직 공통 baseline probe 상태이며 첫 runtime/model-specific harness와 `reports/raw/*.json`이 다음 단계다
+
 ## 트랙별 핵심 질문
 ### Graphics
 - 어느 라이브러리가 WebGPU 준비도가 높은가

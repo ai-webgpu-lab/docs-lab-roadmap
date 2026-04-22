@@ -67,6 +67,74 @@ assert_file "${TMP_DIR}/out-capability/shared-webgpu-capability/src/index.mjs"
 assert_file "${TMP_DIR}/out-capability/shared-webgpu-capability/docs/capability-contract.md"
 assert_contains "${TMP_DIR}/out-capability/shared-webgpu-capability/src/index.mjs" "collectWebGpuCapability"
 
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "tpl-webgpu-vanilla" \
+  --output-root "${TMP_DIR}/out-vanilla" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/index.html"
+assert_file "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/app.js"
+assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/index.html" "Minimal WebGPU Starter"
+assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/app.js" "minimal-webgpu-starter"
+assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/README.md" "Repository-specific runnable baseline active"
+assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/README.md" "repo-scaffolds/p0/tpl-webgpu-vanilla/"
+node --check "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "tpl-webgpu-react" \
+  --output-root "${TMP_DIR}/out-react" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-react/tpl-webgpu-react/public/index.html"
+assert_file "${TMP_DIR}/out-react/tpl-webgpu-react/public/app.js"
+assert_contains "${TMP_DIR}/out-react/tpl-webgpu-react/public/index.html" "react.production.min.js"
+assert_contains "${TMP_DIR}/out-react/tpl-webgpu-react/public/app.js" "bootReactWebGpuTemplate"
+assert_contains "${TMP_DIR}/out-react/tpl-webgpu-react/README.md" "repo-scaffolds/p0/tpl-webgpu-react/"
+node --check "${TMP_DIR}/out-react/tpl-webgpu-react/public/app.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "bench-worker-isolation-and-ui-jank" \
+  --output-root "${TMP_DIR}/out-worker-jank" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/index.html"
+assert_file "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/app.js"
+assert_file "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/jank-worker.js"
+assert_contains "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/index.html" "Worker Isolation vs Main Thread Jank"
+assert_contains "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/app.js" "worker-isolation-jank-harness"
+assert_contains "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/README.md" "repo-scaffolds/p0/bench-worker-isolation-and-ui-jank/"
+node --check "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/app.js"
+node --check "${TMP_DIR}/out-worker-jank/bench-worker-isolation-and-ui-jank/public/jank-worker.js"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "bench-model-load-and-cache" \
+  --output-root "${TMP_DIR}/out-model-cache" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+assert_file "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/index.html"
+assert_file "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/app.js"
+assert_file "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/model-manifest.json"
+assert_contains "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/index.html" "Cold vs Warm Model Load Harness"
+assert_contains "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/app.js" "synthetic-model-load-cache-harness"
+assert_contains "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/README.md" "repo-scaffolds/p0/bench-model-load-and-cache/"
+node --check "${TMP_DIR}/out-model-cache/bench-model-load-and-cache/public/app.js"
+
 assert_file "${TMP_DIR}/out/docs-track-notes/README.md"
 assert_dir "${TMP_DIR}/out/docs-track-notes/docs"
 assert_contains "${TMP_DIR}/out/docs-track-notes/README.md" "문서 기준 저장소"

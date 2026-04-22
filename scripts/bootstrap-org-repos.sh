@@ -384,6 +384,64 @@ copy_file_if_missing() {
   fi
 }
 
+copy_generated_file() {
+  local src="$1"
+  local dest="$2"
+
+  mkdir -p "$(dirname "${dest}")"
+  if [[ "${REFRESH_GENERATED}" -eq 1 || ! -f "${dest}" ]]; then
+    cp "${src}" "${dest}"
+  fi
+}
+
+copy_generated_tree() {
+  local src_root="$1"
+  local dest_root="$2"
+  local src
+  local rel
+
+  if [[ ! -d "${src_root}" ]]; then
+    return
+  fi
+
+  while IFS= read -r -d '' src; do
+    rel="${src#${src_root}/}"
+    copy_generated_file "${src}" "${dest_root}/${rel}"
+  done < <(find "${src_root}" -type f -print0 | sort -z)
+}
+
+has_repo_specific_pages_baseline() {
+  [[ -d "${REPO_ROOT}/repo-scaffolds/p0/$1" ]]
+}
+
+repo_specific_pages_baseline_summary() {
+  case "$1" in
+    tpl-webgpu-vanilla)
+      echo "minimal raw WebGPU starter with adapter/device acquisition, animated triangle sample, and schema-aligned result export"
+      ;;
+    tpl-webgpu-react)
+      echo "no-build React WebGPU starter with capability panel, React mount flow, and live canvas sample"
+      ;;
+    bench-model-load-and-cache)
+      echo "cold/warm model load harness with synthetic fixture materialization, Cache Storage, and prepared-artifact reuse"
+      ;;
+    bench-worker-isolation-and-ui-jank)
+      echo "main-thread vs worker stress harness with frame-gap, timer-lag, and optional input-lag capture"
+      ;;
+    *)
+      echo "shared browser/device/WebGPU baseline probe"
+      ;;
+  esac
+}
+
+apply_repo_specific_pages_demo_scaffold() {
+  local dir="$1"
+  local repo="$2"
+  local scaffold_root="${REPO_ROOT}/repo-scaffolds/p0/${repo}"
+
+  copy_generated_tree "${scaffold_root}" "${dir}"
+}
+
 create_common_files() {
   local dir="$1"
 
@@ -458,7 +516,8 @@ create_pages_demo_scaffold() {
   write_generated_file "${dir}/public/.nojekyll" <<'EOF'
 EOF
 
-  write_generated_file "${dir}/public/index.html" <<EOF
+  if ! has_repo_specific_pages_baseline "${repo}"; then
+    write_generated_file "${dir}/public/index.html" <<EOF
 <!doctype html>
 <html lang="en">
   <head>
@@ -1446,6 +1505,7 @@ log("Baseline probe ready. Capture environment first, then run WebGPU, frame, an
 detectEnvironment();
 render();
 EOF
+  fi
 
   write_generated_file "${dir}/.github/workflows/deploy-pages.yml" <<'EOF'
 name: Deploy GitHub Pages Demo
@@ -1492,6 +1552,8 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 EOF
+
+  apply_repo_specific_pages_demo_scaffold "${dir}" "${repo}"
 }
 
 copy_results_template() {
@@ -2057,6 +2119,7 @@ render_work_repo() {
   local pages_bootstrap_status
   local pages_structure_entry
   local pages_section
+  local baseline_status_block
   local role_block
   local question_block
   local scope_block
@@ -2295,12 +2358,33 @@ EOF
 
   if [[ "${RUN_PAGES}" -eq 1 ]]; then
     create_pages_demo_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
-    pages_bootstrap_status="$(cat <<EOF
+    if has_repo_specific_pages_baseline "${repo}"; then
+      baseline_status_block="$(cat <<EOF
+- Repository-specific runnable baseline active: $(repo_specific_pages_baseline_summary "${repo}")
+- Generated override source: \`repo-scaffolds/p0/${repo}/\`
+- Results/report scaffold is ready to promote exported JSON into \`reports/raw/\` and \`RESULTS.md\`
+EOF
+)"
+      pages_bootstrap_status="$(cat <<EOF
+- Repo-specific Pages baseline copied from \`repo-scaffolds/p0/${repo}/\`
+- Generated entry point updated in \`public/index.html\` and related assets
+- GitHub Pages workflow copied to \`.github/workflows/deploy-pages.yml\`
+EOF
+)"
+    else
+      baseline_status_block="$(cat <<'EOF'
+- Shared baseline probe active: browser/device/WebGPU readiness capture page
+- Generated baseline is intended as a stopgap until a repository-specific harness replaces it
+- Results/report scaffold is ready to promote exported JSON into `reports/raw/` and `RESULTS.md`
+EOF
+)"
+      pages_bootstrap_status="$(cat <<EOF
 - GitHub Pages baseline probe copied to \`public/index.html\`
 - Browser probe logic copied to \`public/app.js\`
 - GitHub Pages workflow copied to \`.github/workflows/deploy-pages.yml\`
 EOF
 )"
+    fi
     pages_structure_entry='- `public/` - GitHub Pages baseline probe 또는 실제 정적 데모 산출물'
     pages_section="$(cat <<EOF
 ## GitHub Pages 운영 메모
@@ -2310,6 +2394,12 @@ EOF
 EOF
 )"
   else
+    baseline_status_block="$(cat <<EOF
+- GitHub Pages scaffold skipped in this run
+- Intended Pages baseline: $(repo_specific_pages_baseline_summary "${repo}")
+- Results/report scaffold is still ready in \`reports/raw/\`, \`schemas/\`, and \`RESULTS.md\`
+EOF
+)"
     pages_bootstrap_status='- GitHub Pages scaffold skipped by bootstrap option `--no-pages`'
     pages_structure_entry=""
     pages_section=""
@@ -2351,6 +2441,9 @@ ${pages_structure_entry}
 - Shared result schema copied to \`schemas/ai-webgpu-lab-result.schema.json\`
 - Shared reporting template copied to \`RESULTS.md\`
 ${pages_bootstrap_status}
+
+## 현재 baseline 상태
+${baseline_status_block}
 
 ${pages_section}
 

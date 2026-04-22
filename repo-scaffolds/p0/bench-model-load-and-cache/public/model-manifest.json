@@ -1,0 +1,8 @@
+{
+  "modelId": "synthetic-browser-load-v1",
+  "tokenCount": 32768,
+  "tokenWidth": 8,
+  "multiplier": 17,
+  "offset": 29,
+  "modulus": 1048573
+}

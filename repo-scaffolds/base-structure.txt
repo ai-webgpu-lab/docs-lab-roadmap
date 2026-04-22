@@ -3,6 +3,7 @@ repo/
   public/
     index.html
     app.js
+    [optional repo-specific worker/data assets]
     .nojekyll
   .github/
     workflows/

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>bench-model-load-and-cache Cold/Warm Load Harness</title>
+    <meta name="description" content="Cold/warm model load and cache harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f8f4;
+        --panel: rgba(255, 255, 255, 0.95);
+        --panel-soft: rgba(245, 249, 245, 0.98);
+        --border: rgba(17, 24, 39, 0.1);
+        --text: #17212f;
+        --muted: #5b6876;
+        --accent: #16a34a;
+        --accent-strong: #15803d;
+        --success: #166534;
+        --warn: #b45309;
+        --danger: #be123c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(22, 163, 74, 0.12), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(14, 116, 144, 0.1), transparent 30%),
+          linear-gradient(180deg, #f8fbf8 0%, #eef5ee 100%);
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 28px;
+        border-radius: 28px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: 0 26px 64px rgba(17, 24, 39, 0.1);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(22, 163, 74, 0.12);
+        color: var(--accent-strong);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 14px 0 10px;
+        font-size: clamp(34px, 5vw, 54px);
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr);
+        align-items: start;
+        margin-top: 22px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 18px;
+        border-radius: 20px;
+        background: var(--panel-soft);
+        border: 1px solid var(--border);
+      }
+
+      .panel h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .status-row,
+      .actions,
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(17, 24, 39, 0.06);
+        border: 1px solid rgba(17, 24, 39, 0.1);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .badge.success {
+        color: var(--success);
+        border-color: rgba(22, 101, 52, 0.16);
+      }
+
+      .badge.warn {
+        color: var(--warn);
+        border-color: rgba(180, 83, 9, 0.18);
+      }
+
+      .badge.danger {
+        color: var(--danger);
+        border-color: rgba(190, 18, 60, 0.16);
+      }
+
+      button,
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+        color: white;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button.secondary,
+      a.button.secondary {
+        background: rgba(17, 24, 39, 0.06);
+        border: 1px solid rgba(17, 24, 39, 0.12);
+        color: var(--text);
+      }
+
+      .metric-grid,
+      .meta-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .card {
+        padding: 14px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .value {
+        font-size: 18px;
+        font-weight: 600;
+        word-break: break-word;
+      }
+
+      pre {
+        margin: 0;
+        max-height: 340px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        color: #152334;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          width: min(100%, calc(100% - 16px));
+          margin: 8px auto;
+          padding: 18px;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- ai-webgpu-lab-generated: bench-model-load-and-cache-v2 -->
+      <div class="eyebrow">AI WebGPU Lab Benchmark</div>
+      <h1>Cold vs Warm Model Load Harness</h1>
+      <p>`bench-model-load-and-cache` uses a deterministic synthetic fixture to separate three phases: manifest fetch, model materialization, and prepared-artifact reuse. Cold mode clears Cache Storage and localStorage first. Warm mode reuses those artifacts when available.</p>
+      <p>The goal is not to mimic one framework perfectly. It is to make load and cache deltas observable before runtime-specific integrations land.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Scenario Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run cold first to prime Cache Storage and prepared artifacts, then run warm to measure how much work gets skipped on the second visit.</p>
+            <div class="actions">
+              <button id="run-cold" type="button">Run Cold Load</button>
+              <button id="run-warm" type="button">Run Warm Load</button>
+              <button id="clear-cache" class="secondary" type="button">Clear Stored Artifacts</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Benchmark Guidance</h2>
+            <ul>
+              <li>Use the same browser session when comparing cold and warm results so storage state is meaningful.</li>
+              <li>Export one JSON draft per scenario. The UI delta is useful for comparison, but raw results should stay scenario-specific.</li>
+              <li>Replace the synthetic fixture with a real model manifest and weight preparation flow once the runtime choice is fixed.</li>
+            </ul>
+          </section>
+        </article>
+
+        <article class="stack">
+          <section class="panel">
+            <h2>Manifest and Cache State</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Environment Snapshot</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Activity Log</h2>
+          <ul id="log-list"></ul>
+        </article>
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/bench-model-load-and-cache">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-model-load-and-cache/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-model-load-and-cache/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

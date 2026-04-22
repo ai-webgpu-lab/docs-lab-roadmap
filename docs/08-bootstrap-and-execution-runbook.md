@@ -62,9 +62,9 @@ bash scripts/seed-org-issues.sh
 
 ### Phase 1 — P0 Baseline
 - `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`가 usable baseline 상태
-- `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`가 첫 runnable baseline 확보
-- `bench-runtime-shootout`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`가 공통 측정 harness 확보
-- demo 대상 저장소가 GitHub Pages에서 baseline probe 또는 저장소 전용 화면을 노출함
+- `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`가 repo-specific browser harness 확보
+- `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `exp-stt-whisper-webgpu`, `exp-rag-browser-pipeline`, `bench-runtime-shootout`는 공통 baseline probe 상태에서 각 runtime/model harness로 승격 대기
+- demo 대상 저장소가 GitHub Pages에서 공통 baseline probe 또는 저장소 전용 화면을 노출함
 
 ### Phase 2 — P1 Expansion
 - 엔진/런타임 비교 실험이 최소 2축 이상 누적됨

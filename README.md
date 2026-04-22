@@ -71,6 +71,7 @@ bash tests/test-seed-org-issues.sh
 
 위 스크립트와 테스트는 `docs/repo-inventory.csv`를 기준으로 조직 저장소를 부트스트랩하고, 계획 문서/시드 이슈 정합성을 검증하며, 기본 라벨과 GitHub topics를 정렬합니다.
 실험/벤치/앱/템플릿 저장소에는 기본 `public/index.html`, `public/app.js`, `.github/workflows/deploy-pages.yml`이 함께 생성되어 GitHub Pages baseline probe를 바로 올릴 수 있습니다.
+`repo-scaffolds/p0/<repo>/`에 전용 Pages baseline이 있는 저장소는 공통 probe 대신 저장소별 harness가 배치됩니다. 현재 대상은 `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`입니다.
 실제 앱 빌드가 필요한 저장소는 이후 각 저장소에서 build 단계와 artifact 경로를 교체해야 합니다.
 기존 저장소의 README를 새 상세 포맷으로 다시 쓰려면 `--refresh-readme` 옵션을 사용합니다.
 기존 저장소의 baseline probe와 생성 자산까지 다시 쓰려면 `--refresh-generated` 옵션을 함께 사용합니다.

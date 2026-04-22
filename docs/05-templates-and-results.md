@@ -87,6 +87,9 @@
 ## GitHub Pages Demo
 - 기본 데모 엔트리 포인트는 `public/index.html`이다.
 - 공통 probe 로직은 `public/app.js`에 위치하며, 브라우저/디바이스/WebGPU baseline을 캡처하고 schema-aligned JSON 초안을 export한다.
+- `repo-scaffolds/p0/<repo>/`가 존재하면 공통 probe 위에 저장소 전용 정적 harness를 덮어쓴다.
+- 현재 전용 baseline이 있는 저장소는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`, `bench-model-load-and-cache`, `bench-worker-isolation-and-ui-jank`다.
+- `exp-*`, `bench-runtime-shootout`, 다수의 ML/LLM/STT/RAG 저장소는 아직 공통 probe 단계이며, 실제 runtime/model harness가 준비되면 전용 Pages surface로 교체한다.
 - GitHub Pages 배포는 custom workflow 방식으로 `actions/configure-pages@v5`, `actions/upload-pages-artifact@v4`, `actions/deploy-pages@v4`를 사용한다.
 - 기본 workflow는 `public/`의 baseline probe 정적 artifact를 그대로 배포한다.
 - Vite, React, Wasm bundling 등 실제 build가 필요한 저장소는 첫 runnable baseline 시점에 build job과 artifact path를 저장소별로 교체한다.

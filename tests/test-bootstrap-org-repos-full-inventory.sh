@@ -63,7 +63,32 @@ assert_contains "${TMP_DIR}/out/exp-embeddings-browser-throughput/public/index.h
 assert_contains "${TMP_DIR}/out/exp-embeddings-browser-throughput/public/app.js" "schema-aligned baseline JSON draft"
 assert_contains "${TMP_DIR}/out/exp-embeddings-browser-throughput/README.md" "## 측정 및 검증 포인트"
 
+assert_file "${TMP_DIR}/out/tpl-webgpu-vanilla/public/index.html"
+assert_file "${TMP_DIR}/out/tpl-webgpu-vanilla/public/app.js"
+assert_contains "${TMP_DIR}/out/tpl-webgpu-vanilla/public/index.html" "Minimal WebGPU Starter"
+assert_contains "${TMP_DIR}/out/tpl-webgpu-vanilla/public/app.js" "minimal-webgpu-starter"
+
+assert_file "${TMP_DIR}/out/tpl-webgpu-react/public/index.html"
+assert_file "${TMP_DIR}/out/tpl-webgpu-react/public/app.js"
+assert_contains "${TMP_DIR}/out/tpl-webgpu-react/public/index.html" "react.production.min.js"
+assert_contains "${TMP_DIR}/out/tpl-webgpu-react/public/app.js" "bootReactWebGpuTemplate"
+
 assert_file "${TMP_DIR}/out/bench-runtime-shootout/RESULTS.md"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "AI WebGPU Lab Baseline Probe"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "Shared baseline probe active"
+
+assert_file "${TMP_DIR}/out/bench-worker-isolation-and-ui-jank/public/index.html"
+assert_file "${TMP_DIR}/out/bench-worker-isolation-and-ui-jank/public/app.js"
+assert_file "${TMP_DIR}/out/bench-worker-isolation-and-ui-jank/public/jank-worker.js"
+assert_contains "${TMP_DIR}/out/bench-worker-isolation-and-ui-jank/public/index.html" "Worker Isolation vs Main Thread Jank"
+assert_contains "${TMP_DIR}/out/bench-worker-isolation-and-ui-jank/public/app.js" "worker-isolation-jank-harness"
+
+assert_file "${TMP_DIR}/out/bench-model-load-and-cache/public/index.html"
+assert_file "${TMP_DIR}/out/bench-model-load-and-cache/public/app.js"
+assert_file "${TMP_DIR}/out/bench-model-load-and-cache/public/model-manifest.json"
+assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/public/index.html" "Cold vs Warm Model Load Harness"
+assert_contains "${TMP_DIR}/out/bench-model-load-and-cache/public/model-manifest.json" "\"modelId\": \"synthetic-browser-load-v1\""
+
 assert_file "${TMP_DIR}/out/app-blackhole-observatory/README.md"
 assert_dir "${TMP_DIR}/out/app-blackhole-observatory/public"
 assert_file "${TMP_DIR}/out/app-blackhole-observatory/public/.nojekyll"
