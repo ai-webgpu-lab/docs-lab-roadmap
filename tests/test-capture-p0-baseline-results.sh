@@ -1157,3 +1157,29 @@ assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/reports/raw/01-doc
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/reports/raw/01-docs-lab-roadmap-baseline.json" "\"track\": \"docs\""
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/RESULTS.md" "docs-lab-roadmap Inventory"
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/RESULTS.md" "inventory_repo_count"
+
+# bench-runtime-shootout: deterministic + real-runtime capture, with capture metadata
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "bench-runtime-shootout" \
+  --output-root "${TMP_DIR}/out-runtime-shootout" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout" \
+  --repo-name "bench-runtime-shootout" \
+  --commit "real-runtime-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/01-runtime-benchmark-webgpu.json"
+assert_file "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/02-runtime-benchmark-fallback.json"
+assert_file "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/03-runtime-benchmark-real-runtime.json"
+assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/03-runtime-benchmark-real-runtime.json" "\"capture_scenario_id\": \"03-runtime-benchmark-real-runtime\""
+assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/03-runtime-benchmark-real-runtime.json" "\"capture_url_search\": \"?mode=real-runtime\""
+assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/01-runtime-benchmark-webgpu.json" "\"capture_url_search\": \"?mode=webgpu\""
+assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/RESULTS.md" "Real Adapter vs Deterministic"
+assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/RESULTS.md" "decode tok/s: real="

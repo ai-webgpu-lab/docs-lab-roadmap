@@ -1214,25 +1214,89 @@ function repoMetricSummary(repoName, results) {
   }
 }
 
-function realRuntimeComparisonLines(repoName, results) {
-  if (repoName !== "bench-runtime-shootout") return [];
-  const realResult = results.find((result) => result.meta?.capture_url_search === "?mode=real-runtime");
-  const deterministicResult = results.find((result) => result.meta?.capture_url_search === "?mode=webgpu");
-  if (!realResult || !deterministicResult) return [];
+const REAL_MODE_BY_REPO = {
+  "bench-runtime-shootout": "?mode=real-runtime",
+  "exp-three-webgpu-core": "?mode=real-three",
+  "app-blackhole-observatory": "?mode=real-surface",
+  "bench-renderer-shootout": "?mode=real-benchmark"
+};
 
-  const realAdapter = realResult.artifacts?.runtime_adapter || {};
-  const deterministicAdapter = deterministicResult.artifacts?.runtime_adapter || {};
+const ADAPTER_ARTIFACT_KEY_BY_REPO = {
+  "bench-runtime-shootout": "runtime_adapter",
+  "exp-three-webgpu-core": "renderer_adapter",
+  "app-blackhole-observatory": "app_surface_adapter",
+  "bench-renderer-shootout": "benchmark_adapter"
+};
+
+function selectRealAndDeterministic(repoName, results) {
+  const realMode = REAL_MODE_BY_REPO[repoName];
+  if (!realMode) return null;
+  const realResult = results.find((result) => result.meta?.capture_url_search === realMode);
+  if (!realResult) return null;
+  const deterministicResult = results.find((result) => {
+    const search = result.meta?.capture_url_search;
+    if (!search) return false;
+    if (search === realMode) return false;
+    return search.startsWith("?mode=webgpu") || search === "?mode=" || (!search.startsWith("?mode=real-") && search.startsWith("?mode="));
+  }) || results.find((result) => result !== realResult);
+  if (!deterministicResult) return null;
+  return { realResult, deterministicResult };
+}
+
+function adapterDescriptors(repoName, realResult, deterministicResult) {
+  const key = ADAPTER_ARTIFACT_KEY_BY_REPO[repoName];
+  return {
+    realAdapter: realResult?.artifacts?.[key] || {},
+    deterministicAdapter: deterministicResult?.artifacts?.[key] || {}
+  };
+}
+
+function adapterStatusLine(realAdapter, deterministicAdapter, fallbackLabel) {
   const realStatus = realAdapter.status || "unknown";
   const isRealConnected = realAdapter.isReal === true && realStatus === "connected";
-  const adapterLine = isRealConnected
-    ? `- runtime adapter: real=${realAdapter.id || "(connected)"}, deterministic=${deterministicAdapter.id || "deterministic-mock"}`
-    : `- runtime adapter: real=${realStatus} (no real adapter registered — falling back to deterministic), deterministic=${deterministicAdapter.id || "deterministic-mock"}`;
-  return [
-    adapterLine,
-    `- decode tok/s: real=${formatNumber(realResult.metrics.llm?.decode_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.decode_tok_per_sec, deterministicResult.metrics.llm?.decode_tok_per_sec)}`,
-    `- TTFT: real=${formatNumberWithUnit(realResult.metrics.llm?.ttft_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.llm?.ttft_ms, "ms")}, delta=${formatDelta(realResult.metrics.llm?.ttft_ms, deterministicResult.metrics.llm?.ttft_ms, 2, "ms")}`,
-    `- prefill tok/s: real=${formatNumber(realResult.metrics.llm?.prefill_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.prefill_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.prefill_tok_per_sec, deterministicResult.metrics.llm?.prefill_tok_per_sec)}`
-  ];
+  return isRealConnected
+    ? `- adapter: real=${realAdapter.id || "(connected)"}, deterministic=${deterministicAdapter.id || fallbackLabel}`
+    : `- adapter: real=${realStatus} (no real adapter registered — falling back to deterministic), deterministic=${deterministicAdapter.id || fallbackLabel}`;
+}
+
+function realRuntimeComparisonLines(repoName, results) {
+  if (!REAL_MODE_BY_REPO[repoName]) return [];
+  const pair = selectRealAndDeterministic(repoName, results);
+  if (!pair) return [];
+  const { realResult, deterministicResult } = pair;
+  const { realAdapter, deterministicAdapter } = adapterDescriptors(repoName, realResult, deterministicResult);
+
+  if (repoName === "bench-runtime-shootout") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-mock"),
+      `- decode tok/s: real=${formatNumber(realResult.metrics.llm?.decode_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.decode_tok_per_sec, deterministicResult.metrics.llm?.decode_tok_per_sec)}`,
+      `- TTFT: real=${formatNumberWithUnit(realResult.metrics.llm?.ttft_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.llm?.ttft_ms, "ms")}, delta=${formatDelta(realResult.metrics.llm?.ttft_ms, deterministicResult.metrics.llm?.ttft_ms, 2, "ms")}`,
+      `- prefill tok/s: real=${formatNumber(realResult.metrics.llm?.prefill_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.prefill_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.prefill_tok_per_sec, deterministicResult.metrics.llm?.prefill_tok_per_sec)}`
+    ];
+  }
+  if (repoName === "exp-three-webgpu-core") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-three-style"),
+      `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
+      `- p95_frametime: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`,
+      `- scene_load_ms: real=${formatNumberWithUnit(realResult.metrics.graphics?.scene_load_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.scene_load_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.scene_load_ms, deterministicResult.metrics.graphics?.scene_load_ms, 2, "ms")}`
+    ];
+  }
+  if (repoName === "app-blackhole-observatory") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-observatory"),
+      `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
+      `- frame_ms: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`
+    ];
+  }
+  if (repoName === "bench-renderer-shootout") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-renderer-shootout"),
+      `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
+      `- p95_frametime: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`
+    ];
+  }
+  return [];
 }
 
 function fallbackComparisonLines(repoName, results) {
@@ -2105,7 +2169,7 @@ function buildMarkdown(repoName, results, artifacts) {
     "",
     ...(comparisonLines.length ? ["## 8. WebGPU vs Fallback", ...comparisonLines, ""] : []),
     ...(realRuntimeLines.length
-      ? [`## ${comparisonLines.length ? "9" : "8"}. Real Runtime vs Deterministic`, ...realRuntimeLines, ""]
+      ? [`## ${comparisonLines.length ? "9" : "8"}. Real Adapter vs Deterministic`, ...realRuntimeLines, ""]
       : []),
     `## ${comparisonLines.length + realRuntimeLines.length === 0 ? "8" : comparisonLines.length && realRuntimeLines.length ? "10" : "9"}. 결론`,
     ...repoConclusions(repoName, sortedResults),

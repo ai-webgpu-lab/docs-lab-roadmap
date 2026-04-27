@@ -50,6 +50,17 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-three-scene-real-three",
+        label: "Three Scene / Real three.js",
+        urlSearch: "?mode=real-three",
+        probeExpectedScenario: "three-webgpu-scene-pending",
+        expectedScenario: "three-webgpu-scene-readiness",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500
       }
     ]
   },
@@ -350,6 +361,13 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "renderer-shootout-fallback"
+      },
+      {
+        id: "03-renderer-shootout-real-benchmark",
+        label: "Renderer Shootout / Real benchmark.js",
+        urlSearch: "?mode=real-benchmark",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "renderer-shootout-"
       }
     ]
   },
@@ -738,6 +756,13 @@ const CAPTURE_CONFIG = {
         label: "Blackhole Observatory",
         button: "#run-observatory",
         expectedScenario: "blackhole-observatory-demo"
+      },
+      {
+        id: "02-blackhole-observatory-real-surface",
+        label: "Blackhole Observatory / Real Surface",
+        urlSearch: "?mode=real-surface",
+        button: "#run-observatory",
+        expectedScenarioPrefix: "blackhole-observatory-"
       }
     ]
   },

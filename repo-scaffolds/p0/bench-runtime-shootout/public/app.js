@@ -51,6 +51,48 @@ function describeRuntimeAdapter() {
   };
 }
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealRuntimeMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+// Allow bootstrap (CDN dynamic import + adapter.register()) up to 5s. The
+// follow-on model download is bounded separately inside runRealAdapterBenchmark
+// so a slow Hub fetch can't stall the capture pipeline.
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealAdapter(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealAdapter();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealRuntimeBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const executionMode = resolveExecutionMode();
 
 const state = {
@@ -214,10 +256,88 @@ function profileScore(result) {
   return result.decodeTokPerSec - (result.ttftMs / 80);
 }
 
+async function runRealAdapterBenchmark(adapter) {
+  log(`Connecting real runtime adapter '${adapter.id}'.`);
+  const initStartedAt = performance.now();
+  const runtime = await withTimeout(
+    Promise.resolve(adapter.loadRuntime({ device: "webgpu" })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadRuntime(${adapter.id})`
+  );
+  const initMs = performance.now() - initStartedAt;
+  log(`Loaded real runtime in ${round(initMs, 2)} ms; running prefill.`);
+
+  const prefillResult = await withTimeout(
+    Promise.resolve(adapter.prefill(runtime, FIXED_PROMPT)),
+    REAL_ADAPTER_LOAD_MS,
+    `prefill(${adapter.id})`
+  );
+  const promptTokens = prefillResult?.promptTokens ?? tokenize(FIXED_PROMPT).length;
+  const prefillMs = prefillResult?.prefillMs ?? 0;
+  const prefillTokPerSec = promptTokens / Math.max(prefillMs / 1000, 0.001);
+
+  const outputBudget = 64;
+  const decodeResult = await withTimeout(
+    Promise.resolve(adapter.decode(runtime, prefillResult, outputBudget)),
+    REAL_ADAPTER_LOAD_MS,
+    `decode(${adapter.id})`
+  );
+  const decodeTokens = decodeResult?.tokens ?? outputBudget;
+  const decodeMs = decodeResult?.decodeMs ?? 0;
+  const ttftMs = decodeResult?.ttftMs ?? (decodeMs / Math.max(decodeTokens, 1));
+  const decodeTokPerSec = decodeResult?.decodeTokPerSec ?? (decodeTokens / Math.max(decodeMs / 1000, 0.001));
+
+  log(`Real adapter '${adapter.id}' complete: TTFT ${round(ttftMs, 2)} ms, decode ${round(decodeTokPerSec, 2)} tok/s.`);
+
+  return {
+    profile: {
+      id: `real-${adapter.id}`,
+      label: adapter.label || adapter.id,
+      version: adapter.version
+    },
+    promptTokens,
+    outputTokens: decodeTokens,
+    ttftMs,
+    initMs,
+    prefillTokPerSec,
+    decodeTokPerSec,
+    turnLatencyMs: initMs + prefillMs + decodeMs
+  };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
+  state.realAdapterError = null;
   render();
+
+  if (isRealRuntimeMode) {
+    log(`Mode=${requestedMode} requested; awaiting real runtime adapter registration.`);
+    const adapter = await awaitRealAdapter();
+    if (adapter) {
+      try {
+        const realResult = await runRealAdapterBenchmark(adapter);
+        state.run = {
+          executionMode: `real-${adapter.id}`,
+          fixedPromptTokens: tokenize(FIXED_PROMPT).length,
+          profiles: [realResult],
+          winner: realResult,
+          realAdapter: adapter
+        };
+        state.active = false;
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real adapter '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealRuntimeBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real runtime adapter registered (${reason}); falling back to deterministic ${executionMode.label} path.`);
+    }
+  }
+
   const profiles = await loadProfiles();
   const results = [];
 
@@ -234,7 +354,8 @@ async function runBenchmark() {
     executionMode: executionMode.id,
     fixedPromptTokens: tokenize(FIXED_PROMPT).length,
     profiles: results,
-    winner: results[0]
+    winner: results[0],
+    realAdapter: null
   };
   state.active = false;
   render();
@@ -250,6 +371,15 @@ function matrixText() {
 function buildResult() {
   const run = state.run;
   const winner = run ? run.winner : null;
+  const isRealRun = Boolean(run && run.realAdapter);
+  const scenarioModeSuffix = isRealRun ? `real-${run.realAdapter.id}` : executionMode.id;
+  const backendValue = isRealRun ? (run.realAdapter.backendHint || "webgpu") : executionMode.backend;
+  let realFallbackNote = "";
+  if (isRealRuntimeMode && !isRealRun) {
+    realFallbackNote = state.realAdapterError
+      ? `; realAdapter=fallback(${state.realAdapterError})`
+      : "; realAdapter=fallback(unavailable)";
+  }
   return {
     meta: {
       repo: "bench-runtime-shootout",
@@ -257,9 +387,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "benchmark",
-      scenario: winner ? `runtime-benchmark-${winner.profile.id}-${executionMode.id}` : "runtime-benchmark-pending",
+      scenario: winner ? `runtime-benchmark-${winner.profile.id}${isRealRun ? "" : `-${executionMode.id}`}` : "runtime-benchmark-pending",
       notes: run
-        ? `${run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")}; executionMode=${executionMode.id}; backend=${executionMode.backend}`
+        ? `${run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")}; executionMode=${scenarioModeSuffix}; backend=${backendValue}${realFallbackNote}`
         : "Run the fixed-scenario runtime benchmark."
     },
     environment: state.environment,
