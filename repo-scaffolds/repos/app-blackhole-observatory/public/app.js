@@ -1,9 +1,49 @@
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealSurfaceMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealSurface() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealSurface(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealSurface();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealSurfaceBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   fixture: null,
   active: false,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -263,11 +303,70 @@ function evaluateProfiles(fixture) {
     .map((profile, index) => ({ ...profile, rank: index + 1 }));
 }
 
+async function runRealSurfaceObservatory(adapter) {
+  log(`Connecting real app-surface adapter '${adapter.id}'.`);
+  const fixture = await loadFixture();
+  const ranked = evaluateProfiles(fixture);
+  const winner = ranked[0];
+
+  const dataset = await withTimeout(
+    Promise.resolve(adapter.loadDataset({ presetId: fixture.observatory.id })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadDataset(${adapter.id})`
+  );
+  const renderInfo = await withTimeout(
+    Promise.resolve(adapter.renderSurface({ canvas: elements.canvas, frameIndex: 0 })),
+    REAL_ADAPTER_LOAD_MS,
+    `renderSurface(${adapter.id})`
+  );
+  await withTimeout(
+    Promise.resolve(adapter.recordTelemetry({
+      kind: "observatory-run",
+      winnerId: winner.id,
+      observatoryScore: winner.observatoryScore
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `recordTelemetry(${adapter.id})`
+  );
+  log(`Real adapter '${adapter.id}' rendered preset ${dataset?.preset?.id || "(unknown)"} (frame ${renderInfo?.frameIndex ?? 0}).`);
+  return {
+    preset: fixture.observatory,
+    leaderboard: ranked,
+    winner,
+    realAdapter: adapter,
+    realDataset: dataset,
+    realRenderInfo: renderInfo
+  };
+}
+
 async function runObservatory() {
   if (state.active) return;
   state.active = true;
   state.run = null;
+  state.realAdapterError = null;
   render();
+
+  if (isRealSurfaceMode) {
+    log(`Mode=${requestedMode} requested; awaiting real app-surface adapter registration.`);
+    const adapter = await awaitRealSurface();
+    if (adapter) {
+      try {
+        state.run = await runRealSurfaceObservatory(adapter);
+        drawObservatoryView(await loadFixture(), state.run.winner);
+        log(`Real app-surface '${adapter.id}' complete.`);
+        state.active = false;
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real surface '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealSurfaceBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real app-surface adapter registered (${reason}); falling back to deterministic observatory demo.`);
+    }
+  }
 
   const fixture = await loadFixture();
   log(`Preset loaded: ${fixture.observatory.id}.`);
@@ -286,7 +385,8 @@ async function runObservatory() {
   state.run = {
     preset: fixture.observatory,
     leaderboard: ranked,
-    winner
+    winner,
+    realAdapter: null
   };
   state.active = false;
   render();
@@ -321,9 +421,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "integration",
-      scenario: run ? "blackhole-observatory-demo" : "blackhole-observatory-pending",
+      scenario: run
+        ? (run.realAdapter ? `blackhole-observatory-real-${run.realAdapter.id}` : "blackhole-observatory-demo")
+        : "blackhole-observatory-pending",
       notes: run
-        ? `preset=${run.preset.id}; winner=${run.winner.id}; observatory_score=${run.winner.observatoryScore}; checksum=${run.preset.geodesicChecksum}`
+        ? `preset=${run.preset.id}; winner=${run.winner.id}; observatory_score=${run.winner.observatoryScore}; checksum=${run.preset.geodesicChecksum}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealSurfaceMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the blackhole observatory demo."
     },
     environment: state.environment,

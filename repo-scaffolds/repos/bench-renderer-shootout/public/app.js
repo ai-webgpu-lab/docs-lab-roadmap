@@ -61,11 +61,51 @@ const profiles = [
   }
 ];
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealBenchmarkMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealBenchmark() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealBenchmark(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealBenchmark();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealBenchmarkBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   run: null,
   active: false,
+  realAdapterError: null,
   logs: []
 };
 
@@ -286,10 +326,73 @@ async function drawBenchmark(results) {
   }
 }
 
+async function runRealBenchmarkShootout(adapter) {
+  log(`Connecting real benchmark adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.createBenchmark({ name: "renderer-shootout" })),
+    REAL_ADAPTER_LOAD_MS,
+    `createBenchmark(${adapter.id})`
+  );
+  const startedAt = performance.now();
+  for (const profile of profiles) {
+    await withTimeout(
+      Promise.resolve(adapter.runProfile({
+        profileId: profile.id,
+        fn: () => benchmarkProfile(profile),
+        options: { drawCalls: profile.drawCalls }
+      })),
+      REAL_ADAPTER_LOAD_MS,
+      `runProfile(${adapter.id}/${profile.id})`
+    );
+  }
+  const aggregate = await withTimeout(
+    Promise.resolve(adapter.aggregateResults()),
+    REAL_ADAPTER_LOAD_MS,
+    `aggregateResults(${adapter.id})`
+  );
+  const totalMs = performance.now() - startedAt;
+  const detResults = profiles.map(benchmarkProfile);
+  await drawBenchmark(detResults);
+  let winner = [...detResults].sort((left, right) => right.score - left.score)[0];
+  if (aggregate?.winner) {
+    const realWinner = detResults.find((entry) => entry.profile.id === aggregate.winner);
+    if (realWinner) winner = realWinner;
+  }
+  log(`Real benchmark adapter '${adapter.id}' winner=${winner.profile.label} via ${aggregate?.profileCount || 0} profiles.`);
+  return {
+    totalMs,
+    profiles: detResults,
+    winner,
+    realAdapter: adapter,
+    realAggregate: aggregate
+  };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
+  state.realAdapterError = null;
   render();
+
+  if (isRealBenchmarkMode) {
+    log(`Mode=${requestedMode} requested; awaiting real benchmark adapter registration.`);
+    const adapter = await awaitRealBenchmark();
+    if (adapter) {
+      try {
+        state.run = await runRealBenchmarkShootout(adapter);
+        state.active = false;
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real benchmark '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealBenchmarkBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real benchmark adapter registered (${reason}); falling back to deterministic shootout.`);
+    }
+  }
 
   const startedAt = performance.now();
   await new Promise((resolve) => setTimeout(resolve, state.environment.fallback_triggered ? 42 : 24));
@@ -300,7 +403,8 @@ async function runBenchmark() {
   state.run = {
     totalMs: performance.now() - startedAt,
     profiles: results,
-    winner
+    winner,
+    realAdapter: null
   };
   state.active = false;
   log(`Renderer shootout complete: winner ${winner.profile.label}, score ${winner.score}.`);
@@ -344,9 +448,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "graphics",
-      scenario: `renderer-shootout-${executionMode()}`,
+      scenario: run && run.realAdapter
+        ? `renderer-shootout-real-${run.realAdapter.id}`
+        : `renderer-shootout-${executionMode()}`,
       notes: run
-        ? `winner=${winner.profile.id}; profiles=${run.profiles.length}; ${profileNotes()}`
+        ? `winner=${winner.profile.id}; profiles=${run.profiles.length}; ${profileNotes()}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealBenchmarkMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the deterministic renderer shootout."
     },
     environment: state.environment,

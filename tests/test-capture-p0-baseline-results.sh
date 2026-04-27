@@ -1183,3 +1183,68 @@ assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/
 assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/reports/raw/01-runtime-benchmark-webgpu.json" "\"capture_url_search\": \"?mode=webgpu\""
 assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/RESULTS.md" "Real Adapter vs Deterministic"
 assert_contains "${TMP_DIR}/out-runtime-shootout/bench-runtime-shootout/RESULTS.md" "decode tok/s: real="
+
+# exp-three-webgpu-core: deterministic + real-three capture, with real renderer routing
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "exp-three-webgpu-core" \
+  --output-root "${TMP_DIR}/out-three-core" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-three-core/exp-three-webgpu-core" \
+  --repo-name "exp-three-webgpu-core" \
+  --commit "real-three-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-three-core/exp-three-webgpu-core/reports/raw/01-three-scene-readiness.json"
+assert_file "${TMP_DIR}/out-three-core/exp-three-webgpu-core/reports/raw/02-three-scene-real-three.json"
+assert_contains "${TMP_DIR}/out-three-core/exp-three-webgpu-core/reports/raw/02-three-scene-real-three.json" "\"capture_url_search\": \"?mode=real-three\""
+assert_contains "${TMP_DIR}/out-three-core/exp-three-webgpu-core/RESULTS.md" "Real Adapter vs Deterministic"
+assert_contains "${TMP_DIR}/out-three-core/exp-three-webgpu-core/RESULTS.md" "avg_fps: real="
+
+# bench-renderer-shootout: deterministic + real-benchmark capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "bench-renderer-shootout" \
+  --output-root "${TMP_DIR}/out-renderer-shootout" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-renderer-shootout/bench-renderer-shootout" \
+  --repo-name "bench-renderer-shootout" \
+  --commit "real-benchmark-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-renderer-shootout/bench-renderer-shootout/reports/raw/03-renderer-shootout-real-benchmark.json"
+assert_contains "${TMP_DIR}/out-renderer-shootout/bench-renderer-shootout/reports/raw/03-renderer-shootout-real-benchmark.json" "\"capture_url_search\": \"?mode=real-benchmark\""
+assert_contains "${TMP_DIR}/out-renderer-shootout/bench-renderer-shootout/RESULTS.md" "Real Adapter vs Deterministic"
+
+# app-blackhole-observatory: deterministic + real-surface capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "app-blackhole-observatory" \
+  --output-root "${TMP_DIR}/out-observatory" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-observatory/app-blackhole-observatory" \
+  --repo-name "app-blackhole-observatory" \
+  --commit "real-surface-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-observatory/app-blackhole-observatory/reports/raw/02-blackhole-observatory-real-surface.json"
+assert_contains "${TMP_DIR}/out-observatory/app-blackhole-observatory/reports/raw/02-blackhole-observatory-real-surface.json" "\"capture_url_search\": \"?mode=real-surface\""
+assert_contains "${TMP_DIR}/out-observatory/app-blackhole-observatory/RESULTS.md" "Real Adapter vs Deterministic"

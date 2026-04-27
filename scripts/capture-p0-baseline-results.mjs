@@ -56,7 +56,7 @@ const CAPTURE_CONFIG = {
         label: "Three Scene / Real three.js",
         urlSearch: "?mode=real-three",
         probeExpectedScenario: "three-webgpu-scene-pending",
-        expectedScenario: "three-webgpu-scene-readiness",
+        expectedScenarioPrefix: "three-webgpu-scene-",
         probeButton: "#probe-capability",
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
@@ -367,7 +367,8 @@ const CAPTURE_CONFIG = {
         label: "Renderer Shootout / Real benchmark.js",
         urlSearch: "?mode=real-benchmark",
         button: "#run-benchmark",
-        expectedScenarioPrefix: "renderer-shootout-"
+        expectedScenarioPrefix: "renderer-shootout-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -762,7 +763,8 @@ const CAPTURE_CONFIG = {
         label: "Blackhole Observatory / Real Surface",
         urlSearch: "?mode=real-surface",
         button: "#run-observatory",
-        expectedScenarioPrefix: "blackhole-observatory-"
+        expectedScenarioPrefix: "blackhole-observatory-",
+        timeoutMs: 180000
       }
     ]
   },
