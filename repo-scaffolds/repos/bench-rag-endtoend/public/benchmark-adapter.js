@@ -49,7 +49,8 @@ class BenchmarkAdapterRegistry {
   }
 
   describe(modeId) {
-    if (modeId === "adapter-stub") {
+    const reportRealAdapter = modeId === "adapter-stub" || (typeof modeId === "string" && modeId.startsWith("real-"));
+    if (reportRealAdapter) {
       const registered = [...this.adapters.values()];
       if (registered.length === 0) {
         return {
@@ -60,7 +61,7 @@ class BenchmarkAdapterRegistry {
           version: "n/a",
           capabilities: this.deterministic.capabilities,
           benchmarkType: "stub",
-          message: "No real benchmark adapter has registered. Run with default scenario to use the deterministic harness."
+          message: `No real benchmark adapter has registered for mode='${modeId}'. Falling back to the deterministic harness.`
         };
       }
       const primary = registered[0];

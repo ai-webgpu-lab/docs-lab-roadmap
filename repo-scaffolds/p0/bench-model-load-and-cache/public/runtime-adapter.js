@@ -49,7 +49,8 @@ class RuntimeAdapterRegistry {
   }
 
   describe(modeId) {
-    if (modeId === "adapter-stub") {
+    const reportRealAdapter = modeId === "adapter-stub" || (typeof modeId === "string" && modeId.startsWith("real-"));
+    if (reportRealAdapter) {
       const registered = [...this.adapters.values()];
       if (registered.length === 0) {
         return {
@@ -60,7 +61,7 @@ class RuntimeAdapterRegistry {
           version: "n/a",
           capabilities: this.deterministic.capabilities,
           loadType: "stub",
-          message: "No real runtime adapter has registered. Run with ?mode=webgpu or ?mode=fallback to use the deterministic harness."
+          message: `No real runtime adapter has registered for mode='${modeId}'. Falling back to the deterministic harness.`
         };
       }
       const primary = registered[0];

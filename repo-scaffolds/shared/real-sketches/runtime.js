@@ -10,7 +10,10 @@
 
 const DEFAULT_TRANSFORMERS_VERSION = "3.0.0";
 const DEFAULT_TRANSFORMERS_CDN = (version) => `https://esm.sh/@huggingface/transformers@${version}`;
-const DEFAULT_MODEL_ID = "Xenova/Phi-3-mini-4k-instruct-q4f16";
+// Default to a HuggingFace model id known to be published in ONNX form for
+// Transformers.js v3. Quantization is selected through the dtype option in
+// loadRuntime(), not appended to the model id.
+const DEFAULT_MODEL_ID = "Xenova/Phi-3-mini-4k-instruct";
 
 export async function loadPipelineFromCdn({ version = DEFAULT_TRANSFORMERS_VERSION } = {}) {
   const transformers = await import(/* @vite-ignore */ DEFAULT_TRANSFORMERS_CDN(version));
