@@ -49,6 +49,36 @@
 - material setup
 - editor/code workflow 비교
 
+### `exp-pixi-webgpu-2d`
+질문:
+- 2D sprite batching workload에서 WebGPU/fallback 준비도를 어떻게 비교할 수 있는가?
+
+핵심 항목:
+- sprite count
+- atlas/batch metadata
+- 2D frame pacing
+- fallback metadata
+
+### `exp-luma-webgpu-viz`
+질문:
+- visualization layer와 attribute buffer 중심 workload에서 WebGPU 준비도를 어떻게 고정할 수 있는가?
+
+핵심 항목:
+- point/layer count
+- attribute buffer metadata
+- aggregation bins
+- visualization frame pacing
+
+### `exp-deckgl-webgpu-readiness`
+질문:
+- geospatial map layer workload에서 deck.gl WebGPU readiness를 어떻게 고정할 수 있는가?
+
+핵심 항목:
+- viewport update
+- layer/tile metadata
+- picking samples
+- map layer frame pacing
+
 ## 블랙홀 실험군
 ### `exp-blackhole-three-singularity`
 - three.js / TSL / WebGPU-WebGL fallback 중심
@@ -57,33 +87,49 @@
 ### `exp-blackhole-kerr-engine`
 - Rust/WASM 물리 커널 + JS/UI + WebGPU/WebGL 분리
 - 과학 정확도 우선
+- deterministic readiness baseline에서는 spin/inclination, ray step budget, geodesic integration timing을 먼저 고정
 
 ### `exp-blackhole-webgpu-fromscratch`
 - raw WebGPU로 구현하는 최소 기준선
 - 엔진 abstraction 비용/이점 분리
+- deterministic readiness baseline에서는 shader/pipeline metadata, dispatch timing, ray step budget을 먼저 고정
 
 ## compute stress 실험군
 ### `exp-nbody-webgpu-core`
 - pairwise gravity compute baseline
+- deterministic readiness baseline에서는 body count, workgroup size, substep budget, energy drift/thermal metadata를 먼저 고정
 
 ### `exp-fluid-webgpu-core`
 - fluid / particle / grid update / atomics-heavy workload
+- deterministic readiness baseline에서는 particle count, grid resolution, pressure iterations, divergence/thermal metadata를 먼저 고정
 
 ### `exp-three-webgpu-particles-stress`
 - three.js WebGPU 경로에서 particle/VFX stress
+- deterministic readiness baseline에서는 particle count, emitter count, post-FX passes, overdraw ratio, thermal note를 먼저 고정
+- 실제 three.js WebGPU particle material과 후처리 패스가 들어가기 전 graphics capture/result 경로를 먼저 고정
 
 ## 전용 벤치
 ### `bench-blackhole-render-shootout`
 - 같은 블랙홀 장면을 서로 다른 경로로 비교
 
+### `bench-renderer-shootout`
+- 같은 장면 fixture를 three.js / Babylon.js / PlayCanvas / raw WebGPU-style 경로로 비교
+
+### `app-blackhole-observatory`
+- 블랙홀 preset, renderer scoreboard, observatory telemetry를 하나의 내부 쇼케이스로 묶음
+- deterministic demo 단계에서는 photon ring, lensing arc, checksum, renderer selection 결과를 먼저 고정
+
 ### `bench-compute-stress-suite`
-- N-body / fluid / particle / reduction 계열 비교
+- deterministic N-body / fluid / particle compute suite 비교
+- aggregate winner selection, peak load, workgroup, dispatch timing을 같은 benchmark 결과로 고정
 
 ### `bench-atomics-and-memory`
-- contention / histogram / particle-to-grid accumulation
+- deterministic histogram / scatter / reduction atomics benchmark 비교
+- peak items, shared memory, atomic passes, conflict rate, bandwidth를 같은 benchmark 결과로 고정
 
 ### `bench-texture-upload-and-streaming`
-- texture upload / streaming / background update 비용 측정
+- deterministic atlas / tile / video texture upload benchmark 비교
+- sustained stream throughput, upload/background update timing, frame-drop, atlas memory를 같은 benchmark 결과로 고정
 
 ## 대표 KPI
 ### Graphics / Blackhole

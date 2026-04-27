@@ -83,6 +83,12 @@
 - wer / cer
 - roundtrip_ms
 
+현재 readiness baseline:
+- `exp-stt-whisper-webgpu`는 deterministic file transcription baseline으로 partial/final/WER/CER 보고 경로를 먼저 고정했다.
+- `exp-voice-assistant-local`는 deterministic STT->intent->reply->TTS voice turn baseline으로 roundtrip, wake word, intent, fallback metadata를 먼저 고정했다.
+- `bench-voice-roundtrip`는 deterministic voice-turn profile 비교와 WebGPU/fallback pair를 기반으로 roundtrip, first partial, WER/CER, TTS handoff metadata 보고 경로를 먼저 고정했다.
+- `app-voice-agent-lab`는 deterministic voice turn과 browser-agent task deck을 한 앱 surface로 묶어 transcript, roundtrip, task success, intervention metadata 보고 경로를 먼저 고정했다.
+
 ### 7. VLM / Multimodal
 저장소:
 - `exp-vlm-browser-multimodal`
@@ -92,6 +98,10 @@
 - image_preprocess_ms
 - image_to_first_token_ms
 - answer_total_ms
+
+현재 readiness baseline:
+- `exp-vlm-browser-multimodal`는 deterministic image fixture, prompt set, patch/focus metadata를 기반으로 image preprocess, first token, answer total, accuracy score 보고 경로를 먼저 고정했다.
+- `bench-multimodal-latency`는 deterministic image-question fixture 비교와 WebGPU/fallback pair를 기반으로 image preprocess, first token, answer total, accuracy score benchmark 보고 경로를 먼저 고정했다.
 
 ### 8. Diffusion
 저장소:
@@ -105,6 +115,11 @@
 - resolution_success_rate
 - oom_or_fail_rate
 
+현재 readiness baseline:
+- `exp-diffusion-webgpu-browser`는 deterministic prompt fixture, scheduler/seed/resolution metadata, generated canvas output을 기반으로 sec per image, steps per sec, resolution success, fail-rate 보고 경로를 먼저 고정했다.
+- `bench-diffusion-browser-shootout`는 deterministic diffusion profile 비교와 WebGPU/fallback pair를 기반으로 sec per image, steps per sec, resolution success, fail-rate benchmark 보고 경로를 먼저 고정했다.
+- `app-browser-image-lab`는 deterministic source scene inspection과 prompt-to-image preview를 하나의 앱 surface로 묶어 multimodal answer latency와 diffusion generation metadata를 같은 결과 문서에 남긴다.
+
 ### 9. Browser Agent
 저장소:
 - `exp-browser-agent-local`
@@ -115,6 +130,10 @@
 - avg_step_latency_ms
 - tool_call_success_rate
 - user_intervention_count
+
+현재 readiness baseline:
+- `exp-browser-agent-local`는 deterministic local task deck, tool catalog, step trace, intervention handling을 기반으로 task success, step latency, tool success, intervention count 보고 경로를 먼저 고정했다.
+- `bench-agent-step-latency`는 deterministic browser-agent profile 비교와 WebGPU/fallback pair를 기반으로 task success, step latency, tool success, intervention benchmark 보고 경로를 먼저 고정했다.
 
 ## 공통 벤치
 - `bench-runtime-shootout`

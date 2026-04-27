@@ -39,7 +39,7 @@ bash tests/test-seed-org-issues.sh
 - 샘플 인벤토리 렌더링 통과
 - 전체 인벤토리 렌더링 통과
 - raw result summary 렌더링 테스트 통과
-- P0 browser harness capture smoke test 통과
+- P0 및 조기 승격 후보 browser harness capture smoke test 통과
 - 시드 이슈 dry-run 출력 통과
 
 ### 3. GitHub 조직 반영
@@ -78,7 +78,8 @@ bash scripts/seed-p0-baseline-results.sh --push
 ### Phase 2 — P1 Expansion
 - 엔진/런타임 비교 실험이 최소 2축 이상 누적됨
 - shared CI/workflow가 `shared-github-actions`로 재사용 가능해짐
-- `app-private-rag-lab`, `app-local-chat-arena`가 내부 데모로 연결됨
+- `exp-three-webgpu-core`, `exp-babylon-webgpu-core`, `exp-playcanvas-webgpu-core`, `exp-pixi-webgpu-2d`, `exp-luma-webgpu-viz`, `exp-deckgl-webgpu-readiness`, `exp-blackhole-three-singularity`, `exp-blackhole-kerr-engine`, `exp-blackhole-webgpu-fromscratch`, `exp-nbody-webgpu-core`, `exp-fluid-webgpu-core`, `exp-three-webgpu-particles-stress`, `bench-compute-stress-suite`, `bench-atomics-and-memory`, `bench-texture-upload-and-streaming`, `exp-reranker-browser`, `bench-embeddings-latency-quality`, `bench-reranker-latency`, `bench-rag-endtoend`, `bench-llm-prefill-decode`, `bench-stt-streaming-latency`, `bench-voice-roundtrip`, `bench-multimodal-latency`, `bench-diffusion-browser-shootout`, `bench-agent-step-latency`, `bench-webgpu-vs-wasm-parity`, `bench-blackhole-render-shootout`, `bench-renderer-shootout`, `exp-ort-webgpu-baseline`, `exp-webllm-browser-chat`, `exp-llm-worker-ux`, `exp-voice-assistant-local`, `exp-vlm-browser-multimodal`, `exp-diffusion-webgpu-browser`, `exp-browser-agent-local`, `app-private-rag-lab`, `app-local-chat-arena`, `app-voice-agent-lab`, `app-browser-image-lab`, `app-blackhole-observatory`, `.github`, `shared-webgpu-capability`, `shared-bench-schema`, `shared-github-actions`, `docs-lab-roadmap`가 공통 probe를 벗어난 repo-specific harness를 보유함
+- `app-private-rag-lab`, `app-local-chat-arena`, `app-voice-agent-lab`, `app-browser-image-lab`, `app-blackhole-observatory`가 내부 데모로 연결됨
 
 ### Phase 3 — P2 Research Portfolio
 - 블랙홀, 멀티모달, 에이전트, diffusion, compute stress 트랙이 baseline 이상 상태

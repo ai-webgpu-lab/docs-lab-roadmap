@@ -17,7 +17,10 @@ fail() {
 assert_contains() {
   local path="$1"
   local pattern="$2"
-  rg -Fq "${pattern}" "${path}" || fail "missing pattern '${pattern}' in ${path}"
+  if command -v rg >/dev/null 2>&1 && rg -Fq "${pattern}" "${path}" 2>/dev/null; then
+    return 0
+  fi
+  grep -Fq "${pattern}" "${path}" || fail "missing pattern '${pattern}' in ${path}"
 }
 
 bash "${REPO_ROOT}/scripts/validate-lab-planning.sh" > "${OUTPUT_FILE}"
@@ -39,5 +42,16 @@ fi
 
 assert_contains "${FAIL_OUTPUT_FILE}" "planning validation failed:"
 assert_contains "${FAIL_OUTPUT_FILE}" "references repo 'missing-repo' which is not present in inventory"
+
+assert_contains "${OUTPUT_FILE}" "infra fixture validation passed"
+
+SKIP_OUTPUT_FILE="$(mktemp)"
+bash "${REPO_ROOT}/scripts/validate-lab-planning.sh" --skip-infra-fixtures > "${SKIP_OUTPUT_FILE}"
+assert_contains "${SKIP_OUTPUT_FILE}" "planning validation passed"
+if grep -Fq "infra fixture validation passed" "${SKIP_OUTPUT_FILE}"; then
+  rm -f "${SKIP_OUTPUT_FILE}"
+  fail "infra fixture hook should be skipped with --skip-infra-fixtures"
+fi
+rm -f "${SKIP_OUTPUT_FILE}"
 
 echo "validate-lab-planning test passed"

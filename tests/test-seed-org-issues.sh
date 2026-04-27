@@ -15,7 +15,10 @@ fail() {
 assert_contains() {
   local path="$1"
   local pattern="$2"
-  rg -Fq "${pattern}" "${path}" || fail "missing pattern '${pattern}' in ${path}"
+  if command -v rg >/dev/null 2>&1 && rg -Fq "${pattern}" "${path}" 2>/dev/null; then
+    return 0
+  fi
+  grep -Fq "${pattern}" "${path}" || fail "missing pattern '${pattern}' in ${path}"
 }
 
 bash "${REPO_ROOT}/scripts/seed-org-issues.sh" \

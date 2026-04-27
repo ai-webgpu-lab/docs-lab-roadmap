@@ -157,6 +157,7 @@
 - `bench-llm-prefill-decode`
 - `bench-stt-streaming-latency`
 - `bench-webgpu-vs-wasm-parity`
+- `bench-renderer-shootout`
 - `app-private-rag-lab`
 - `app-local-chat-arena`
 
@@ -189,7 +190,6 @@
 - `bench-compute-stress-suite`
 - `bench-atomics-and-memory`
 - `bench-texture-upload-and-streaming`
-- `bench-renderer-shootout`
 - `app-voice-agent-lab`
 - `app-browser-image-lab`
 - `app-blackhole-observatory`
@@ -220,7 +220,57 @@
 - 2026-04-22 기준 위 9개 browser-visible P0 baseline 저장소는 headless Chromium baseline capture를 통해 첫 `reports/raw/*.json`, `reports/screenshots/*.png`, `reports/logs/*.log`, `RESULTS.md`를 보유한다
 - 2026-04-22 기준 `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `bench-runtime-shootout`는 deterministic `webgpu`/`fallback` pair를 함께 수집해 `WebGPU vs fallback` 비교가 가능하다
 - 현재 raw result는 deterministic browser harness baseline이므로, 다음 단계는 실제 runtime/model integration과 multi-browser/device 반복 측정이다
-- `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`는 코드/문서 기준 저장소로 usable baseline 상태
+- `shared-webgpu-capability`, `shared-bench-schema`, `docs-lab-roadmap`는 코드/문서 기준 저장소로 usable baseline 상태이며, 이제 deterministic infra/docs harness로 readiness baseline까지 함께 기록한다
+- 2026-04-26 기준 `.github`, `shared-webgpu-capability`, `shared-bench-schema`, `shared-github-actions`, `docs-lab-roadmap` 5개 인프라 저장소도 deterministic harness로 promote되어, 조직 공통 surface가 같은 readiness pipeline에서 measurable 상태로 유지된다
+
+## 현재 전용 Harness 구현 상태
+- 2026-04-26 기준 P0 이후 전용 Pages harness가 있는 저장소: `exp-three-webgpu-core`, `exp-babylon-webgpu-core`, `exp-playcanvas-webgpu-core`, `exp-pixi-webgpu-2d`, `exp-luma-webgpu-viz`, `exp-deckgl-webgpu-readiness`, `exp-blackhole-three-singularity`, `exp-blackhole-kerr-engine`, `exp-blackhole-webgpu-fromscratch`, `exp-nbody-webgpu-core`, `exp-fluid-webgpu-core`, `exp-three-webgpu-particles-stress`, `bench-compute-stress-suite`, `bench-atomics-and-memory`, `bench-texture-upload-and-streaming`, `exp-reranker-browser`, `bench-embeddings-latency-quality`, `bench-reranker-latency`, `bench-rag-endtoend`, `bench-llm-prefill-decode`, `bench-stt-streaming-latency`, `bench-voice-roundtrip`, `bench-multimodal-latency`, `bench-diffusion-browser-shootout`, `bench-agent-step-latency`, `bench-webgpu-vs-wasm-parity`, `bench-blackhole-render-shootout`, `bench-renderer-shootout`, `exp-ort-webgpu-baseline`, `exp-webllm-browser-chat`, `exp-llm-worker-ux`, `exp-voice-assistant-local`, `exp-vlm-browser-multimodal`, `exp-diffusion-webgpu-browser`, `exp-browser-agent-local`, `app-private-rag-lab`, `app-local-chat-arena`, `app-voice-agent-lab`, `app-browser-image-lab`, `app-blackhole-observatory`, `.github`, `shared-webgpu-capability`, `shared-bench-schema`, `shared-github-actions`, `docs-lab-roadmap`
+- `exp-three-webgpu-core`는 deterministic scene readiness, frame pacing, fallback metadata를 기록하는 graphics baseline surface를 가진다
+- `exp-babylon-webgpu-core`는 deterministic scene readiness, material/submesh metadata, frame pacing, fallback metadata를 기록하는 graphics baseline surface를 가진다
+- `exp-playcanvas-webgpu-core`는 deterministic scene readiness, entity/component/script metadata, frame pacing, fallback metadata를 기록하는 graphics baseline surface를 가진다
+- `exp-pixi-webgpu-2d`는 deterministic sprite batch readiness, sprite/atlas/batch metadata, frame pacing, fallback metadata를 기록하는 2D graphics baseline surface를 가진다
+- `exp-luma-webgpu-viz`는 deterministic visualization readiness, point/layer/attribute metadata, aggregation bin metadata, frame pacing, fallback metadata를 기록하는 graphics baseline surface를 가진다
+- `exp-deckgl-webgpu-readiness`는 deterministic map layer readiness, viewport/layer/tile metadata, picking metadata, frame pacing, fallback metadata를 기록하는 graphics baseline surface를 가진다
+- `exp-blackhole-three-singularity`는 deterministic lensing/accretion disk scene readiness, ray step budget, TAA state, frame pacing, fallback metadata를 기록하는 blackhole graphics baseline surface를 가진다
+- `exp-blackhole-kerr-engine`은 deterministic Kerr geodesic readiness, spin/inclination metadata, ray step budget, integration timing, fallback metadata를 기록하는 blackhole science-engine baseline surface를 가진다
+- `exp-blackhole-webgpu-fromscratch`는 deterministic raw WebGPU-style blackhole readiness, shader/pipeline metadata, dispatch timing, ray step budget, fallback metadata를 기록하는 blackhole baseline surface를 가진다
+- `exp-nbody-webgpu-core`는 deterministic N-body compute readiness, body/workgroup metadata, dispatch timing, energy drift, thermal metadata를 기록하는 compute stress baseline surface를 가진다
+- `exp-fluid-webgpu-core`는 deterministic fluid compute readiness, particle/grid metadata, pressure solve timing, divergence error, thermal metadata를 기록하는 compute stress baseline surface를 가진다
+- `exp-three-webgpu-particles-stress`는 deterministic particle/VFX stress readiness, particle/emitter metadata, overdraw ratio, draw calls, fallback metadata를 기록하는 graphics stress baseline surface를 가진다
+- `exp-reranker-browser`는 deterministic candidate scoring, top-k quality, latency, fallback metadata를 기록하는 ML reranker baseline surface를 가진다
+- `bench-embeddings-latency-quality`는 deterministic embedding profile 비교, WebGPU/fallback pair, retrieval quality, latency/throughput 요약을 기록하는 benchmark surface를 가진다
+- `bench-reranker-latency`는 deterministic reranker profile 비교, WebGPU/fallback pair, top-k quality, latency/throughput 요약을 기록하는 benchmark surface를 가진다
+- `bench-rag-endtoend`는 deterministic ingest, embed, retrieve, rerank, answer profile 비교와 WebGPU/fallback pair를 기록하는 RAG benchmark surface를 가진다
+- `bench-llm-prefill-decode`는 deterministic LLM runtime profile 비교, WebGPU/fallback pair, TTFT, prefill/decode throughput, turn latency를 기록하는 benchmark surface를 가진다
+- `bench-stt-streaming-latency`는 deterministic streaming transcription profile 비교, WebGPU/fallback pair, first partial, final latency, WER/CER를 기록하는 benchmark surface를 가진다
+- `bench-voice-roundtrip`는 deterministic voice-turn profile 비교, WebGPU/fallback pair, roundtrip latency, first partial, WER/CER, TTS handoff metadata를 기록하는 benchmark surface를 가진다
+- `bench-multimodal-latency`는 deterministic image-question profile 비교, WebGPU/fallback pair, image preprocess, first token, answer total, accuracy score를 기록하는 multimodal benchmark surface를 가진다
+- `bench-diffusion-browser-shootout`는 deterministic diffusion profile 비교, WebGPU/fallback pair, sec per image, steps per sec, resolution success, fail-rate를 기록하는 diffusion benchmark surface를 가진다
+- `bench-agent-step-latency`는 deterministic browser-agent profile 비교, WebGPU/fallback pair, task success, step latency, tool success, intervention count를 기록하는 browser-agent benchmark surface를 가진다
+- `bench-compute-stress-suite`는 deterministic N-body, fluid, particle compute suite 비교, aggregate winner selection, peak load, workgroup, dispatch timing을 기록하는 compute benchmark surface를 가진다
+- `bench-atomics-and-memory`는 deterministic histogram, scatter accumulation, reduction kernel 비교, conflict rate, histogram spill, bandwidth, shared-memory budget을 기록하는 atomics benchmark surface를 가진다
+- `bench-texture-upload-and-streaming`는 deterministic atlas, tile, video texture upload 비교, sustained stream throughput, upload/background update timing, frame-drop, atlas memory budget을 기록하는 graphics benchmark surface를 가진다
+- `bench-webgpu-vs-wasm-parity`는 deterministic numeric kernel fixture로 WebGPU-style output과 Wasm-style output의 pass rate, max abs error, max relative error를 기록하는 parity benchmark surface를 가진다
+- `bench-blackhole-render-shootout`는 deterministic blackhole renderer profile 비교, WebGPU/fallback pair, winner selection, frame pacing, ray step/TAA metadata를 기록하는 benchmark surface를 가진다
+- `bench-renderer-shootout`는 deterministic graphics renderer profile 비교, WebGPU/fallback pair, winner selection, frame pacing, scene load, TAA/resolution metadata를 기록하는 benchmark surface를 가진다
+- `exp-ort-webgpu-baseline`은 ORT-Web style provider readiness, WebGPU/fallback mode, worker metadata, deterministic inference timing을 기록하는 LLM runtime baseline surface를 가진다
+- `exp-webllm-browser-chat`는 단일 WebLLM-style browser chat readiness와 fallback query mode를 기록하는 LLM baseline surface를 가진다
+- `exp-llm-worker-ux`는 dedicated worker와 main-thread chat execution을 같은 prompt/output budget으로 비교하는 UX baseline surface를 가진다
+- `exp-voice-assistant-local`는 deterministic STT partial, local intent routing, TTS roundtrip, wake word/fallback metadata를 기록하는 voice assistant baseline surface를 가진다
+- `exp-vlm-browser-multimodal`는 deterministic image fixture, prompt set, image preprocess, first token, answer latency, patch/focus metadata를 기록하는 multimodal baseline surface를 가진다
+- `exp-diffusion-webgpu-browser`는 deterministic prompt fixture, generated canvas output, sec per image, steps per sec, resolution/fail metadata를 기록하는 diffusion baseline surface를 가진다
+- `exp-browser-agent-local`는 deterministic local task deck, tool routing trace, task success, step latency, intervention metadata를 기록하는 browser-agent baseline surface를 가진다
+- `app-private-rag-lab`는 bundled private-note fixture를 ingest, retrieve, rerank, answer 흐름으로 검증하는 내부 RAG 데모 초안 surface를 가진다
+- `app-local-chat-arena`는 두 local-chat profile을 같은 prompt/output budget으로 비교하는 내부 데모 초안 surface를 가진다
+- `app-voice-agent-lab`는 deterministic wake word, transcript, browser-agent task deck, local-only reply/TTS handoff를 하나의 내부 데모 초안 surface로 기록한다
+- `app-browser-image-lab`는 deterministic source scene inspection, multimodal answer set, prompt-to-image preview를 하나의 내부 데모 초안 surface로 기록한다
+- `app-blackhole-observatory`는 deterministic blackhole preset, renderer leaderboard, observatory telemetry를 하나의 내부 데모 초안 surface로 기록한다
+- `.github`는 org-wide issue form, PR template, profile section, contributing section 인벤토리를 deterministic 결과 문서로 고정하는 community audit baseline surface를 가진다
+- `shared-webgpu-capability`는 helper export 인벤토리와 live `navigator.gpu` capability/limit count를 같은 schema로 기록하는 shared infra baseline surface를 가진다
+- `shared-bench-schema`는 root/required field count, metric group catalog, track/status enum size, RESULTS template section count를 deterministic 결과 문서로 고정하는 schema audit baseline surface를 가진다
+- `shared-github-actions`는 reusable workflow 인벤토리, workflow input count, consumer scenario count를 기록하는 shared CI baseline surface를 가진다
+- `docs-lab-roadmap`는 docs/scripts/templates/schemas surface와 inventory P0/P1/P2 카운트, 카테고리 카운트를 기록하는 docs roadmap baseline surface를 가진다
+- 위 45개 저장소는 Phase 2/3 진입을 빠르게 하기 위한 조기 harness이며, 실제 renderer/runtime/provider integration 또는 인프라 운영 전환으로 교체해야 한다
 
 ## 트랙별 핵심 질문
 ### Graphics
