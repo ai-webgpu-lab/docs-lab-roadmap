@@ -323,7 +323,7 @@ needs_schema_copy() {
 
 needs_pages_demo() {
   case "$1" in
-    template|graphics|blackhole|ml|llm|audio|multimodal|agent|benchmark|app)
+    template|graphics|blackhole|ml|llm|audio|multimodal|agent|benchmark|app|org|shared|docs)
       return 0
       ;;
     *)
@@ -410,8 +410,36 @@ copy_generated_tree() {
   done < <(find "${src_root}" -type f -print0 | sort -z)
 }
 
+repo_specific_pages_baseline_root() {
+  local repo="$1"
+
+  if [[ -d "${REPO_ROOT}/repo-scaffolds/repos/${repo}" ]]; then
+    printf '%s\n' "${REPO_ROOT}/repo-scaffolds/repos/${repo}"
+    return 0
+  fi
+
+  if [[ -d "${REPO_ROOT}/repo-scaffolds/p0/${repo}" ]]; then
+    printf '%s\n' "${REPO_ROOT}/repo-scaffolds/p0/${repo}"
+    return 0
+  fi
+
+  return 1
+}
+
+repo_specific_pages_baseline_source() {
+  local repo="$1"
+  local root
+
+  if ! root="$(repo_specific_pages_baseline_root "${repo}")"; then
+    return 1
+  fi
+
+  root="${root#${REPO_ROOT}/}"
+  printf '%s/\n' "${root}"
+}
+
 has_repo_specific_pages_baseline() {
-  [[ -d "${REPO_ROOT}/repo-scaffolds/p0/$1" ]]
+  repo_specific_pages_baseline_root "$1" >/dev/null 2>&1
 }
 
 repo_specific_pages_baseline_summary() {
@@ -431,8 +459,68 @@ repo_specific_pages_baseline_summary() {
     exp-stt-whisper-webgpu)
       echo "file transcription readiness harness with deterministic segment processing, first-partial timing, and WER/CER estimation"
       ;;
+    exp-voice-assistant-local)
+      echo "local voice assistant readiness harness with deterministic STT, intent routing, TTS roundtrip timing, and schema-aligned audio result export"
+      ;;
+    exp-vlm-browser-multimodal)
+      echo "browser VLM readiness harness with deterministic image fixture prompts, multimodal latency metrics, and schema-aligned result export"
+      ;;
+    exp-diffusion-webgpu-browser)
+      echo "browser diffusion readiness harness with deterministic prompt fixture, generated canvas output, and schema-aligned diffusion result export"
+      ;;
+    exp-browser-agent-local)
+      echo "browser agent readiness harness with deterministic task deck, tool routing trace, intervention handling, and schema-aligned agent result export"
+      ;;
     exp-rag-browser-pipeline)
       echo "browser-only RAG pipeline harness with ingest, chunk, embed, retrieve, and citation hit-rate measurement"
+      ;;
+    exp-reranker-browser)
+      echo "browser reranker readiness harness with deterministic candidate scoring, top-k quality, and latency reporting"
+      ;;
+    bench-embeddings-latency-quality)
+      echo "embeddings latency and quality benchmark comparing deterministic browser embedder profiles with WebGPU/fallback modes"
+      ;;
+    bench-reranker-latency)
+      echo "reranker latency benchmark comparing deterministic browser reranker profiles with top-k quality and WebGPU/fallback modes"
+      ;;
+    bench-rag-endtoend)
+      echo "browser RAG end-to-end benchmark comparing deterministic ingest, embed, retrieve, rerank, and answer profiles"
+      ;;
+    bench-llm-prefill-decode)
+      echo "LLM prefill/decode benchmark comparing deterministic browser runtime profiles with fixed context and output budgets"
+      ;;
+    bench-stt-streaming-latency)
+      echo "STT streaming latency benchmark comparing deterministic transcription profiles with first-partial, final-latency, and WER/CER metrics"
+      ;;
+    bench-voice-roundtrip)
+      echo "voice roundtrip benchmark comparing deterministic STT, intent, reply, and TTS profiles with WebGPU/fallback modes"
+      ;;
+    bench-multimodal-latency)
+      echo "multimodal latency benchmark comparing deterministic browser VLM profiles with WebGPU/fallback modes and image-question fixtures"
+      ;;
+    bench-diffusion-browser-shootout)
+      echo "diffusion browser benchmark comparing deterministic prompt-to-image profiles with WebGPU/fallback modes and schema-aligned latency reporting"
+      ;;
+    bench-agent-step-latency)
+      echo "browser agent benchmark comparing deterministic planner profiles with WebGPU/fallback modes and schema-aligned task and latency reporting"
+      ;;
+    bench-webgpu-vs-wasm-parity)
+      echo "WebGPU versus Wasm parity benchmark comparing deterministic numeric kernels with fixed tolerance reporting"
+      ;;
+    exp-ort-webgpu-baseline)
+      echo "ORT-Web style provider readiness harness with WebGPU/fallback modes, worker metadata, and deterministic inference timing"
+      ;;
+    app-private-rag-lab)
+      echo "private RAG lab demo with bundled local notes, deterministic retrieval, citation scoring, and app-level result export"
+      ;;
+    app-voice-agent-lab)
+      echo "integrated voice agent lab demo with deterministic wake word, transcript, task routing, and app-level result export"
+      ;;
+    app-browser-image-lab)
+      echo "integrated browser image lab demo with deterministic scene inspection, multimodal answers, and prompt-to-image preview export"
+      ;;
+    app-blackhole-observatory)
+      echo "integrated blackhole observatory demo with deterministic preset telemetry, renderer leaderboard, and app-level result export"
       ;;
     bench-runtime-shootout)
       echo "fixed-scenario runtime benchmark comparing deterministic browser-side LLM runtime profiles with shared prompt settings"
@@ -443,6 +531,81 @@ repo_specific_pages_baseline_summary() {
     bench-worker-isolation-and-ui-jank)
       echo "main-thread vs worker stress harness with frame-gap, timer-lag, and optional input-lag capture"
       ;;
+    exp-three-webgpu-core)
+      echo "three-style scene readiness harness with capability probe, animated scene baseline, and schema-aligned graphics result export"
+      ;;
+    exp-babylon-webgpu-core)
+      echo "Babylon-style scene readiness harness with capability probe, material/submesh metadata, and schema-aligned graphics result export"
+      ;;
+    exp-playcanvas-webgpu-core)
+      echo "PlayCanvas-style scene readiness harness with capability probe, entity/script metadata, and schema-aligned graphics result export"
+      ;;
+    exp-blackhole-three-singularity)
+      echo "blackhole lensing readiness harness with capability probe, ray-step metadata, frame pacing, and schema-aligned graphics result export"
+      ;;
+    exp-blackhole-kerr-engine)
+      echo "Kerr geodesic engine readiness harness with capability probe, spin/inclination metadata, integration timing, and schema-aligned blackhole result export"
+      ;;
+    exp-blackhole-webgpu-fromscratch)
+      echo "raw WebGPU blackhole readiness harness with capability probe, shader/pipeline metadata, dispatch timing, and schema-aligned blackhole result export"
+      ;;
+    exp-nbody-webgpu-core)
+      echo "N-body compute readiness harness with capability probe, body/workgroup metadata, dispatch timing, and schema-aligned compute result export"
+      ;;
+    exp-fluid-webgpu-core)
+      echo "fluid compute readiness harness with capability probe, particle/grid metadata, pressure solve timing, and schema-aligned compute result export"
+      ;;
+    exp-three-webgpu-particles-stress)
+      echo "three.js-style particle stress readiness harness with capability probe, emitter/overdraw metadata, and schema-aligned graphics result export"
+      ;;
+    bench-compute-stress-suite)
+      echo "compute stress benchmark comparing deterministic N-body, fluid, and particle-heavy cases with one schema-aligned result export"
+      ;;
+    bench-atomics-and-memory)
+      echo "atomics and memory benchmark comparing deterministic histogram, scatter, and reduction kernels with contention and bandwidth reporting"
+      ;;
+    bench-texture-upload-and-streaming)
+      echo "texture upload and streaming benchmark comparing deterministic atlas, tile, and video upload profiles with bandwidth and frame-drop reporting"
+      ;;
+    exp-pixi-webgpu-2d)
+      echo "PixiJS-style 2D sprite batching readiness harness with capability probe, batch metadata, and schema-aligned graphics result export"
+      ;;
+    exp-luma-webgpu-viz)
+      echo "luma.gl-style visualization readiness harness with capability probe, layer/attribute metadata, and schema-aligned graphics result export"
+      ;;
+    exp-deckgl-webgpu-readiness)
+      echo "deck.gl-style map layer readiness harness with capability probe, viewport/picking metadata, and schema-aligned graphics result export"
+      ;;
+    bench-blackhole-render-shootout)
+      echo "blackhole renderer shootout benchmark comparing deterministic renderer profiles with WebGPU/fallback capture pairs"
+      ;;
+    bench-renderer-shootout)
+      echo "renderer shootout benchmark comparing deterministic three.js, Babylon.js, PlayCanvas, and raw WebGPU-style profiles"
+      ;;
+    exp-webllm-browser-chat)
+      echo "single-runtime browser chat readiness harness with streamed response surface, TTFT/decode metrics, and fallback-ready metadata"
+      ;;
+    exp-llm-worker-ux)
+      echo "LLM worker UX readiness harness comparing dedicated worker and main-thread chat execution with responsiveness metadata"
+      ;;
+    app-local-chat-arena)
+      echo "local chat arena demo with pairwise synthetic runtime battle, shared prompt input, and app-level scoreboard export"
+      ;;
+    .github)
+      echo "org-wide community files audit harness with deterministic issue-form, profile, and contributing inventory plus schema-aligned baseline result export"
+      ;;
+    shared-webgpu-capability)
+      echo "shared WebGPU capability probe harness that runs the helper exports against the live browser and emits a schema-aligned baseline result"
+      ;;
+    shared-bench-schema)
+      echo "shared result-schema validation harness with deterministic root/required/metric-group counts and schema-aligned baseline result export"
+      ;;
+    shared-github-actions)
+      echo "shared CI reusable workflow inventory harness with deterministic workflow/input/consumer counts and schema-aligned baseline result export"
+      ;;
+    docs-lab-roadmap)
+      echo "docs roadmap inventory harness snapshotting docs/scripts/templates plus repo inventory counts with schema-aligned baseline result export"
+      ;;
     *)
       echo "shared browser/device/WebGPU baseline probe"
       ;;
@@ -452,7 +615,9 @@ repo_specific_pages_baseline_summary() {
 apply_repo_specific_pages_demo_scaffold() {
   local dir="$1"
   local repo="$2"
-  local scaffold_root="${REPO_ROOT}/repo-scaffolds/p0/${repo}"
+  local scaffold_root
+
+  scaffold_root="$(repo_specific_pages_baseline_root "${repo}")"
 
   copy_generated_tree "${scaffold_root}" "${dir}"
 }
@@ -1568,7 +1733,9 @@ jobs:
         uses: actions/deploy-pages@v4
 EOF
 
-  apply_repo_specific_pages_demo_scaffold "${dir}" "${repo}"
+  if has_repo_specific_pages_baseline "${repo}"; then
+    apply_repo_specific_pages_demo_scaffold "${dir}" "${repo}"
+  fi
 }
 
 copy_results_template() {
@@ -1580,6 +1747,139 @@ copy_schema() {
   local dir="$1"
   mkdir -p "${dir}/schemas"
   copy_file_if_missing "${REPO_ROOT}/schemas/ai-webgpu-lab-result.schema.json" "${dir}/schemas/ai-webgpu-lab-result.schema.json"
+}
+
+adapter_families_for_repo() {
+  local repo="$1"
+  local category="$2"
+
+  case "${repo}" in
+    .github|tpl-webgpu-vanilla|tpl-webgpu-react|shared-webgpu-capability|shared-bench-schema|shared-github-actions|docs-lab-roadmap)
+      echo ""
+      return 0
+      ;;
+  esac
+
+  case "${category}" in
+    graphics|blackhole)
+      echo "renderer"
+      ;;
+    ml|llm|audio|multimodal|agent)
+      echo "runtime"
+      ;;
+    app)
+      echo "app-surface"
+      ;;
+    benchmark)
+      case "${repo}" in
+        bench-blackhole-render-shootout|bench-renderer-shootout|bench-compute-stress-suite|bench-atomics-and-memory|bench-texture-upload-and-streaming)
+          echo "benchmark renderer"
+          ;;
+        bench-runtime-shootout)
+          echo "benchmark runtime"
+          ;;
+        *)
+          echo "benchmark runtime"
+          ;;
+      esac
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+attach_family_adapters() {
+  local dir="$1"
+  local repo="$2"
+  local category="$3"
+  local families
+  families="$(adapter_families_for_repo "${repo}" "${category}")"
+
+  if [[ -z "${families}" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${dir}/public"
+
+  local family
+  for family in ${families}; do
+    local source="${REPO_ROOT}/repo-scaffolds/shared/adapters/${family}-adapter.js"
+    local dest="${dir}/public/${family}-adapter.js"
+    if [[ -f "${source}" ]]; then
+      copy_generated_file "${source}" "${dest}"
+    fi
+  done
+}
+
+real_sketch_dest_for_family() {
+  case "$1" in
+    renderer)
+      echo "real-renderer-sketch.js"
+      ;;
+    runtime)
+      echo "real-runtime-sketch.js"
+      ;;
+    app-surface)
+      echo "real-surface-sketch.js"
+      ;;
+    benchmark)
+      echo "real-benchmark-sketch.js"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+attach_family_real_sketches() {
+  local dir="$1"
+  local repo="$2"
+  local category="$3"
+  local families
+  families="$(adapter_families_for_repo "${repo}" "${category}")"
+
+  if [[ -z "${families}" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${dir}/public"
+
+  local family
+  for family in ${families}; do
+    local source="${REPO_ROOT}/repo-scaffolds/shared/real-sketches/${family}.js"
+    local dest_name
+    dest_name="$(real_sketch_dest_for_family "${family}")"
+    if [[ -z "${dest_name}" || ! -f "${source}" ]]; then
+      continue
+    fi
+    local dest="${dir}/public/${dest_name}"
+    # Only copy the canonical when the repo does not already ship a specific
+    # sketch (which the repo-specific page baseline already wrote in place).
+    if [[ ! -f "${dest}" ]]; then
+      cp "${source}" "${dest}"
+    fi
+  done
+}
+
+maybe_attach_infra_baseline_scaffold() {
+  local dir="$1"
+  local repo="$2"
+  local category="$3"
+  local purpose="$4"
+  local priority="$5"
+
+  if ! has_repo_specific_pages_baseline "${repo}"; then
+    return 0
+  fi
+
+  create_result_scaffold "${dir}"
+  copy_results_template "${dir}"
+  copy_schema "${dir}"
+
+  if [[ "${RUN_PAGES}" -eq 1 ]]; then
+    create_pages_demo_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
+  fi
 }
 
 render_org_repo() {
@@ -2070,6 +2370,151 @@ EOF
 - build tooling이나 framework integration 자동화
 EOF
   fi
+
+  if [[ "${repo}" == "shared-github-actions" ]]; then
+    mkdir -p "${dir}/.github/workflows"
+
+    write_generated_file "${dir}/.github/workflows/reusable-results-guard.yml" <<'EOF'
+name: reusable-results-guard
+
+on:
+  workflow_call:
+    inputs:
+      repo_root:
+        description: Repository subdirectory to validate
+        required: false
+        type: string
+        default: .
+
+jobs:
+  validate-results:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate RESULTS.md and raw JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ inputs.repo_root }}"
+
+          if [[ ! -f "RESULTS.md" ]]; then
+            echo "RESULTS.md is required"
+            exit 1
+          fi
+
+          if [[ ! -d "reports/raw" ]]; then
+            echo "reports/raw is required"
+            exit 1
+          fi
+
+          raw_files="$(find reports/raw -maxdepth 1 -type f -name '*.json' | sort)"
+          if [[ -z "${raw_files}" ]]; then
+            echo "at least one raw JSON file is required"
+            exit 1
+          fi
+
+          while IFS= read -r file; do
+            jq empty "${file}" >/dev/null
+            basename "${file}" | sed 's#^#validated raw file: #'
+          done <<< "${raw_files}"
+
+          if grep -Fq "핵심 질문 1" RESULTS.md; then
+            echo "RESULTS.md still contains placeholder template content"
+            exit 1
+          fi
+EOF
+
+    write_generated_file "${dir}/.github/workflows/reusable-pages-smoke.yml" <<'EOF'
+name: reusable-pages-smoke
+
+on:
+  workflow_call:
+    inputs:
+      url:
+        description: Absolute GitHub Pages URL
+        required: true
+        type: string
+      expected_title:
+        description: Optional expected page title substring
+        required: false
+        type: string
+        default: ""
+      fallback_query:
+        description: Optional query string to probe after the main page
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check primary page
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -I -L -s -o /dev/null -w '%{http_code}' "${{ inputs.url }}")"
+          if [[ "${status}" != "200" ]]; then
+            echo "unexpected status: ${status}"
+            exit 1
+          fi
+
+          html="$(curl -fsSL "${{ inputs.url }}")"
+          if [[ -n "${{ inputs.expected_title }}" ]] && [[ "${html}" != *"<title>${{ inputs.expected_title }}</title>"* ]] && [[ "${html}" != *"${{ inputs.expected_title }}"* ]]; then
+            echo "expected title not found"
+            exit 1
+          fi
+
+      - name: Check fallback query
+        if: ${{ inputs.fallback_query != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -I -L -s -o /dev/null -w '%{http_code}' "${{ inputs.url }}${{ inputs.fallback_query }}")"
+          if [[ "${status}" != "200" ]]; then
+            echo "unexpected fallback status: ${status}"
+            exit 1
+          fi
+EOF
+
+    write_generated_file "${dir}/docs/reusable-workflows.md" <<'EOF'
+# Reusable Workflows
+
+## Included Workflows
+- `.github/workflows/reusable-results-guard.yml`
+- `.github/workflows/reusable-pages-smoke.yml`
+
+## Consumer Example
+```yaml
+name: repo-results-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  results:
+    uses: ai-webgpu-lab/shared-github-actions/.github/workflows/reusable-results-guard.yml@main
+```
+
+```yaml
+name: repo-pages-smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pages:
+    uses: ai-webgpu-lab/shared-github-actions/.github/workflows/reusable-pages-smoke.yml@main
+    with:
+      url: https://ai-webgpu-lab.github.io/exp-llm-chat-runtime-shootout/
+      expected_title: exp-llm-chat-runtime-shootout Runtime Readiness Harness
+      fallback_query: ?mode=fallback
+```
+EOF
+  fi
 }
 
 render_docs_repo() {
@@ -2373,15 +2818,19 @@ EOF
 
   if [[ "${RUN_PAGES}" -eq 1 ]]; then
     create_pages_demo_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
+    attach_family_adapters "${dir}" "${repo}" "${category}"
+    attach_family_real_sketches "${dir}" "${repo}" "${category}"
     if has_repo_specific_pages_baseline "${repo}"; then
+      local baseline_source
+      baseline_source="$(repo_specific_pages_baseline_source "${repo}")"
       baseline_status_block="$(cat <<EOF
 - Repository-specific runnable baseline active: $(repo_specific_pages_baseline_summary "${repo}")
-- Generated override source: \`repo-scaffolds/p0/${repo}/\`
+- Generated override source: \`${baseline_source}\`
 - Results/report scaffold is ready to promote exported JSON into \`reports/raw/\` and \`RESULTS.md\`
 EOF
 )"
       pages_bootstrap_status="$(cat <<EOF
-- Repo-specific Pages baseline copied from \`repo-scaffolds/p0/${repo}/\`
+- Repo-specific Pages baseline copied from \`${baseline_source}\`
 - Generated entry point updated in \`public/index.html\` and related assets
 - GitHub Pages workflow copied to \`.github/workflows/deploy-pages.yml\`
 EOF
@@ -2498,9 +2947,11 @@ render_repo() {
   case "${category}" in
     org)
       render_org_repo "${dir}"
+      maybe_attach_infra_baseline_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
       ;;
     docs)
       render_docs_repo "${dir}" "${repo}" "${purpose}" "${priority}"
+      maybe_attach_infra_baseline_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
       ;;
     shared)
       if [[ "${repo}" == "shared-bench-schema" ]]; then
@@ -2508,12 +2959,14 @@ render_repo() {
       else
         render_shared_repo "${dir}" "${repo}" "${purpose}" "${priority}"
       fi
+      maybe_attach_infra_baseline_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
       ;;
     template|graphics|blackhole|ml|llm|audio|multimodal|agent|benchmark|app)
       render_work_repo "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
       ;;
     *)
       render_shared_repo "${dir}" "${repo}" "${purpose}" "${priority}"
+      maybe_attach_infra_baseline_scaffold "${dir}" "${repo}" "${category}" "${purpose}" "${priority}"
       ;;
   esac
 }

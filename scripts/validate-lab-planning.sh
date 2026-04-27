@@ -6,6 +6,7 @@ INVENTORY_FILE="docs/repo-inventory.csv"
 ISSUES_FILE="issues/initial-draft-issues-30.csv"
 MASTER_PLAN_FILE="docs/07-master-experiment-plan.md"
 EXECUTION_PLAN_FILE="docs/06-six-week-execution-plan.md"
+SKIP_INFRA_FIXTURES=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -20,6 +21,7 @@ Options:
   --issues-file FILE       Seed issue CSV file
   --master-plan FILE       Master experiment plan markdown file
   --execution-plan FILE    Six-week execution plan markdown file
+  --skip-infra-fixtures    Skip the infra fixture drift check
   -h, --help               Show help
 USAGE
 }
@@ -41,6 +43,10 @@ while [[ $# -gt 0 ]]; do
     --execution-plan)
       EXECUTION_PLAN_FILE="$2"
       shift 2
+      ;;
+    --skip-infra-fixtures)
+      SKIP_INFRA_FIXTURES=1
+      shift
       ;;
     -h|--help)
       usage
@@ -319,3 +325,9 @@ print(
     f"{len(execution_target_repos)}/{len(execution_target_repos)}"
 )
 PY2
+
+if [[ "${SKIP_INFRA_FIXTURES}" -eq 0 ]]; then
+  if [[ -f "${SCRIPT_DIR}/validate-infra-fixtures.mjs" ]]; then
+    node "${SCRIPT_DIR}/validate-infra-fixtures.mjs"
+  fi
+fi

@@ -48,10 +48,12 @@ while IFS=, read -r repo category purpose priority_group; do
   sync_label "$full_repo" "demo-live" "fbca04" "Public demo is live"
   sync_label "$full_repo" "docs" "0075ca" "Documentation, ADR, or reporting work"
   sync_label "$full_repo" "experiment" "5319e7" "Experiment proposal or execution work"
+  sync_label "$full_repo" "integration" "1d76db" "Integrated demo or showcase work"
   sync_label "$full_repo" "infra" "6f42c1" "Shared tooling, CI, schema, or org operations"
   sync_label "$full_repo" "priority:p0" "b60205" "Highest priority"
   sync_label "$full_repo" "priority:p1" "d93f0b" "Important but not immediate"
   sync_label "$full_repo" "priority:p2" "fbca04" "Exploratory or later priority"
+  sync_label "$full_repo" "priority:p3" "c2e0c6" "Backlog or later follow-up"
   sync_label "$full_repo" "results-published" "1f883d" "Results have been published"
 
   echo "synced labels: $full_repo"
