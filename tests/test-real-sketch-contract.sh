@@ -18,10 +18,10 @@ assert_contains() {
   fi
 }
 
-# 1. Healthy run: all 47 sketches conform to per-family contract
+# 1. Healthy run: all 65 sketches conform to per-family contract
 OUTPUT="$(node "${REPO_ROOT}/scripts/check-real-sketch-contract.mjs" 2>&1)"
-assert_contains "${OUTPUT}" "scanned 47 sketches (expected 47)"
-assert_contains "${OUTPUT}" "families: renderer=12, runtime=12, app-surface=5, benchmark=18, unknown=0"
+assert_contains "${OUTPUT}" "scanned 65 sketches (expected 65)"
+assert_contains "${OUTPUT}" "families: renderer=17, runtime=25, app-surface=5, benchmark=18, unknown=0"
 assert_contains "${OUTPUT}" "per-sketch contract failures: 0"
 assert_contains "${OUTPUT}" "family count mismatches: 0"
 assert_contains "${OUTPUT}" "OK real-sketch contract"

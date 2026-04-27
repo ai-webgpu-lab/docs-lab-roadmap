@@ -26,7 +26,7 @@ node "${REPO_ROOT}/scripts/render-capabilities-matrix.mjs" --output "${OUT}"
 
 CONTENT="$(cat "${OUT}")"
 assert_contains "${CONTENT}" "# Capabilities Matrix"
-assert_contains "${CONTENT}" "Total sketches: 47"
+assert_contains "${CONTENT}" "Total sketches: 65"
 assert_contains "${CONTENT}" "## Top capability frequency"
 assert_contains "${CONTENT}" "## By family"
 assert_contains "${CONTENT}" "## Per-sketch matrix"
@@ -51,6 +51,6 @@ assert_contains "${CONTENT}" "| \`bench-runtime-shootout\` | benchmark |"
 # --stdout mode emits to stdout
 STDOUT_OUT="$(node "${REPO_ROOT}/scripts/render-capabilities-matrix.mjs" --stdout 2>&1)"
 assert_contains "${STDOUT_OUT}" "# Capabilities Matrix"
-assert_contains "${STDOUT_OUT}" "Total sketches: 47"
+assert_contains "${STDOUT_OUT}" "Total sketches: 65"
 
 echo "render-capabilities-matrix test passed"

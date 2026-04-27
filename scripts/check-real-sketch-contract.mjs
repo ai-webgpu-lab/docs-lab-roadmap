@@ -28,9 +28,14 @@ const FAMILY_METHODS = {
   benchmark: ["createBenchmark", "runProfile", "aggregateResults"]
 };
 
+// Counts reflect committed sketches across all family memberships:
+// - renderer: 12 graphics/blackhole exp-* + 5 bench-* dual-family (renderer companion)
+// - runtime: 12 ml/llm/audio/multimodal/agent exp-* + 13 bench-* dual-family
+// - app-surface: 5 app-* repos
+// - benchmark: 18 bench-* repos (primary)
 const EXPECTED_FAMILY_COUNTS = {
-  renderer: 12,
-  runtime: 12,
+  renderer: 17,
+  runtime: 25,
   "app-surface": 5,
   benchmark: 18
 };
