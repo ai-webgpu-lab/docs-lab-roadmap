@@ -25,7 +25,30 @@ const EXECUTION_MODES = {
 
 function resolveExecutionMode() {
   const requested = new URLSearchParams(window.location.search).get("mode");
+  if (requested === "adapter-stub") {
+    return EXECUTION_MODES.webgpu;
+  }
   return EXECUTION_MODES[requested] || EXECUTION_MODES.webgpu;
+}
+
+function describeRuntimeAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-mock",
+    label: "Deterministic Mock",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["prefill", "decode", "fixed-output-budget"],
+    loadType: "synchronous",
+    message: "Runtime adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 const executionMode = resolveExecutionMode();
@@ -266,7 +289,8 @@ function buildResult() {
     status: winner ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/bench-runtime-shootout/"
+      deploy_url: "https://ai-webgpu-lab.github.io/bench-runtime-shootout/",
+      runtime_adapter: describeRuntimeAdapter()
     }
   };
 }

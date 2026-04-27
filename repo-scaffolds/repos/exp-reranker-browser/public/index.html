@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-reranker-browser Browser Reranker Readiness</title>
+    <meta name="description" content="Browser reranker readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --panel: #171b21;
+        --panel-strong: #212832;
+        --border: #3b4654;
+        --text: #f5f8fb;
+        --muted: #b7c1cc;
+        --accent: #c084fc;
+        --accent-strong: #a855f7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(135deg, #0f1115 0%, #171b22 52%, #11151a 100%);
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        display: grid;
+        gap: 16px;
+      }
+      header, section {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      header { padding: 28px; display: grid; gap: 12px; }
+      h1, h2 { margin: 0; }
+      h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+      h2 { font-size: 18px; }
+      p { margin: 0; color: var(--muted); line-height: 1.65; }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 16px;
+      }
+      .stack { display: grid; gap: 16px; }
+      section { padding: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--accent-strong);
+        color: #180525;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: var(--panel-strong);
+        border-color: var(--border);
+        color: var(--text);
+      }
+      textarea {
+        width: 100%;
+        min-height: 116px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0b1015;
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+      .metric-grid, .meta-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+      }
+      .card {
+        min-height: 86px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .value { font-size: 18px; font-weight: 650; overflow-wrap: anywhere; }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: #0b1015;
+        border: 1px solid var(--border);
+        color: #f3e8ff;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; }
+        header { padding: 20px; }
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">AI WebGPU Lab Experiment</div>
+        <h1>Browser Reranker Readiness</h1>
+        <p>`exp-reranker-browser` now exposes a deterministic browser reranker harness. It reranks a fixed candidate set for one query, records scoring latency, top-k quality, and fallback-ready backend metadata before a real model runtime is connected.</p>
+      </header>
+
+      <div class="layout">
+        <article class="stack">
+          <section>
+            <h2>Query</h2>
+            <textarea id="query-input">Which browser-local experiment proves that worker isolation improves perceived responsiveness while preserving shared result schema?</textarea>
+          </section>
+          <section>
+            <h2>Run Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run the reranker to score fixed candidates, sort top-k output, and export schema-aligned latency and quality metrics.</p>
+            <div class="actions">
+              <button id="run-reranker" type="button">Run Reranker</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section>
+            <h2>Ranking Output</h2>
+            <pre id="ranking-view">No reranker run yet.</pre>
+          </section>
+        </article>
+
+        <article class="stack">
+          <section>
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section>
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section>
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </div>
+
+      <div class="layout">
+        <section>
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </section>
+        <section>
+          <h2>Readiness Notes</h2>
+          <ul>
+            <li>Candidate set, expected best document, and query budget stay fixed.</li>
+            <li>Embedding metric fields carry reranker throughput, p50/p95 latency, and top-k quality until a dedicated reranker metric schema is added.</li>
+            <li>The harness keeps the same result contract for later Transformers.js, ORT-Web, or WebGPU runtime replacement.</li>
+          </ul>
+        </section>
+      </div>
+
+      <nav class="links" aria-label="Repository links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-reranker-browser">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-reranker-browser/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-reranker-browser/blob/main/RESULTS.md">View Results</a>
+      </nav>
+    </main>
+    <script type="module" src="./real-runtime-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "id": "dotgithub-community-v1",
+  "title": "ai-webgpu-lab/.github community file inventory",
+  "objective": "Audit the org-wide community files exposed by `.github` so consumer repositories inherit a consistent template baseline.",
+  "issue_forms": [
+    "benchmark.yml",
+    "bug.yml",
+    "docs.yml",
+    "experiment.yml",
+    "infra.yml"
+  ],
+  "community_files": [
+    ".github/pull_request_template.md",
+    ".github/CODEOWNERS",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    "profile/README.md",
+    "CONTRIBUTING.md",
+    "RESULTS-template.md"
+  ],
+  "profile_sections": [
+    "Focus Areas",
+    "Repository Model",
+    "Operating Rules",
+    "Start Here"
+  ],
+  "contributing_sections": [
+    "Minimum Requirements",
+    "Reporting Conventions",
+    "When Editing This Repository"
+  ]
+}

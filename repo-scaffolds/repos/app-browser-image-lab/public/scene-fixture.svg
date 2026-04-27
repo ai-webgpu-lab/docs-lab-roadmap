@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Deterministic studio scene fixture</title>
+  <desc id="desc">A studio tabletop scene with a poster, notebook, teal mug, lamp, and compact camera.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#121826"/>
+      <stop offset="55%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#25172c"/>
+    </linearGradient>
+    <linearGradient id="desk" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#433126"/>
+      <stop offset="100%" stop-color="#241914"/>
+    </linearGradient>
+    <linearGradient id="poster" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="420" fill="url(#wall)"/>
+  <rect x="0" y="288" width="720" height="132" fill="url(#desk)"/>
+  <rect x="54" y="58" width="172" height="122" rx="6" fill="url(#poster)" stroke="#f8fafc" stroke-opacity=".18"/>
+  <circle cx="140" cy="102" r="24" fill="#f8fafc" fill-opacity=".92"/>
+  <path d="M80 160 132 108 168 136 202 96 202 170 80 170Z" fill="#16a34a" fill-opacity=".72"/>
+  <rect x="80" y="206" width="180" height="24" rx="6" fill="#0f172a" fill-opacity=".35"/>
+  <rect x="92" y="220" width="150" height="42" rx="8" fill="#f97316"/>
+  <rect x="110" y="230" width="112" height="10" rx="5" fill="#fed7aa" fill-opacity=".7"/>
+  <rect x="286" y="198" width="164" height="74" rx="18" fill="#33261e"/>
+  <ellipse cx="366" cy="280" rx="114" ry="16" fill="#000" fill-opacity=".18"/>
+  <rect x="332" y="166" width="62" height="58" rx="12" fill="#0f766e"/>
+  <rect x="386" y="174" width="10" height="42" rx="5" fill="#ccfbf1"/>
+  <rect x="505" y="138" width="128" height="134" rx="16" fill="#111827" fill-opacity=".42"/>
+  <rect x="532" y="158" width="12" height="74" rx="6" fill="#f8fafc"/>
+  <rect x="540" y="152" width="76" height="10" rx="5" fill="#f8fafc"/>
+  <rect x="552" y="210" width="52" height="30" rx="6" fill="#334155"/>
+  <circle cx="566" cy="225" r="8" fill="#94a3b8"/>
+  <rect x="604" y="214" width="10" height="16" rx="2" fill="#94a3b8"/>
+  <rect x="78" y="312" width="564" height="10" rx="5" fill="#f8fafc" fill-opacity=".08"/>
+  <circle cx="590" cy="84" r="26" fill="#fb7185" fill-opacity=".18"/>
+  <circle cx="624" cy="110" r="16" fill="#22d3ee" fill-opacity=".18"/>
+</svg>

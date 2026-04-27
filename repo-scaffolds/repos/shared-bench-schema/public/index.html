@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>shared-bench-schema Validation Probe</title>
+    <meta name="description" content="Deterministic schema validation baseline for shared-bench-schema">
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: #0d1614;
+        --panel-soft: #121d1c;
+        --border: rgba(110, 231, 183, 0.2);
+        --text: #ecfdf5;
+        --muted: #a7f3d0;
+        --accent: #6ee7b7;
+        --accent-strong: #34d399;
+        --button-text: #03251c;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--text); background: linear-gradient(150deg, #04130d 0%, #0a2118 52%, #07140e 100%); }
+      main { width: min(1140px, calc(100% - 32px)); margin: 24px auto; padding: 24px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34); }
+      .eyebrow { display: inline-flex; padding: 5px 10px; border: 1px solid rgba(110, 231, 183, 0.3); border-radius: 8px; color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+      h1 { margin: 14px 0 10px; font-size: clamp(28px, 4.4vw, 44px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.65; }
+      .grid { display: grid; gap: 16px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr); align-items: start; margin-top: 20px; }
+      .stack { display: grid; gap: 16px; }
+      .panel { padding: 16px; border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 8px; background: var(--panel-soft); }
+      .panel h2 { margin: 0 0 12px; font-size: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); font-size: 13px; font-weight: 600; }
+      button, a.button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: var(--button-text); font-weight: 700; text-decoration: none; cursor: pointer; }
+      button.secondary, a.button.secondary { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); color: var(--text); }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .metric-grid, .meta-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+      .card { padding: 12px; border-radius: 8px; background: #07150f; border: 1px solid rgba(148, 163, 184, 0.14); }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 650; word-break: break-word; }
+      pre { margin: 0; max-height: 360px; overflow: auto; padding: 12px; border-radius: 8px; background: #07150f; border: 1px solid rgba(148, 163, 184, 0.14); color: #ecfdf5; font-size: 13px; line-height: 1.6; }
+      table { width: 100%; border-collapse: collapse; color: var(--muted); font-size: 13px; }
+      th, td { padding: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.14); text-align: left; vertical-align: top; }
+      th { color: var(--text); }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) { main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 16px; } .hero { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Infra</div>
+      <h1>shared-bench-schema Validation Probe</h1>
+      <p>`shared-bench-schema` distributes the result JSON schema, the `RESULTS.md` template, and an example result. This page audits the schema surface to confirm consumer repositories can rely on a stable contract.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Validation Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run the validation to assemble a schema-aligned result for the shared schema surface.</p>
+            <div class="actions">
+              <button id="run-baseline" type="button">Run Schema Audit</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Schema Inventory</h2>
+            <div id="matrix-view"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Fixture</h2>
+          <div id="fixture-view"></div>
+        </article>
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Validation Notes</h2>
+          <ul>
+            <li>The fixture lists root and nested required fields, the metric group catalog, and the track/status enum surfaces.</li>
+            <li>The audit reports the field count and group count alongside an enum-coverage signal so consumer drift is visible.</li>
+            <li>Schema or template changes should bump the fixture and re-run this probe before publishing.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>Linked Artifacts</h2>
+          <div class="links">
+            <a class="button" href="https://github.com/ai-webgpu-lab/shared-bench-schema">Open Repository</a>
+            <a class="button secondary" href="https://github.com/ai-webgpu-lab/shared-bench-schema/blob/main/schemas/ai-webgpu-lab-result.schema.json">Schema</a>
+            <a class="button secondary" href="https://github.com/ai-webgpu-lab/shared-bench-schema/blob/main/templates/RESULTS-template.md">RESULTS Template</a>
+          </div>
+        </article>
+      </section>
+    </main>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

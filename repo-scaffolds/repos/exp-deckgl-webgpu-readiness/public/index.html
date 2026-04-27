@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-deckgl-webgpu-readiness Deck.gl Readiness</title>
+    <meta name="description" content="Deterministic deck.gl-style WebGPU readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: rgba(8, 12, 18, 0.96);
+        --panel-soft: rgba(14, 20, 28, 0.94);
+        --border: rgba(96, 165, 250, 0.24);
+        --text: #eef6ff;
+        --muted: #a9b8c8;
+        --accent: #60a5fa;
+        --accent-2: #f5c061;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: #04070d;
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.42);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(96, 165, 250, 0.12);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(32px, 5vw, 52px); letter-spacing: 0; }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.7; }
+      .grid { display: grid; gap: 18px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr); align-items: start; margin-top: 22px; }
+      .stack { display: grid; gap: 18px; }
+      .panel {
+        padding: 18px;
+        border-radius: 8px;
+        background: var(--panel-soft);
+        border: 1px solid rgba(238, 246, 255, 0.12);
+      }
+      .panel h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: 0; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 8px;
+        background: rgba(245, 192, 97, 0.12);
+        border: 1px solid rgba(245, 192, 97, 0.18);
+        color: #ffe6b4;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #03101f;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: rgba(238, 246, 255, 0.1);
+        border: 1px solid rgba(238, 246, 255, 0.15);
+        color: var(--text);
+      }
+      .metric-grid, .meta-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card {
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(4, 7, 13, 0.9);
+        border: 1px solid rgba(238, 246, 255, 0.1);
+      }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 600; word-break: break-word; }
+      canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        border: 1px solid rgba(96, 165, 250, 0.24);
+        background: #02050b;
+      }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(4, 7, 13, 0.9);
+        border: 1px solid rgba(238, 246, 255, 0.1);
+        color: #dbeeff;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 18px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Graphics Experiment</div>
+      <h1>Deck.gl Readiness</h1>
+      <p>`exp-deckgl-webgpu-readiness` records a deterministic deck.gl-style map layer baseline before the real deck.gl WebGPU path lands.</p>
+      <p>The harness captures viewport update cost, layer metadata, tile count, picking samples, scene load cost, frame pacing, and fallback state.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Scene Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Probe capability first, then run the fixed map layer scene to export schema-aligned graphics metrics.</p>
+            <div class="actions">
+              <button id="probe-capability" type="button">Probe Capability</button>
+              <button id="run-scene" type="button">Run Map Baseline</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Map Viewport</h2>
+            <canvas id="scene-canvas" width="960" height="540"></canvas>
+          </section>
+          <section class="panel">
+            <h2>Checks</h2>
+            <ul>
+              <li>Fixed viewport path, layer count, and tile count keep browser captures comparable.</li>
+              <li>Picking and attribute metadata are recorded before replacing this surface with deck.gl.</li>
+              <li>Exported JSON stays compatible with graphics summaries and renderer shootout inputs.</li>
+            </ul>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+        <article class="panel">
+          <h2>What This Unlocks</h2>
+          <ul>
+            <li>First deck.gl-style raw JSON and screenshot capture path</li>
+            <li>Stable viewport/layer/picking metadata for later real deck.gl integration</li>
+            <li>Reusable graphics metric inputs for geospatial visualization comparisons</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-deckgl-webgpu-readiness">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-deckgl-webgpu-readiness/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-deckgl-webgpu-readiness/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-renderer-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

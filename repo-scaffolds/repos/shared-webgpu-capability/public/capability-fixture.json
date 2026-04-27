@@ -1,0 +1,44 @@
+{
+  "id": "shared-webgpu-capability-v1",
+  "title": "shared-webgpu-capability helper inventory",
+  "objective": "Enumerate exported helpers and the result fields the shared utility is expected to populate.",
+  "exported_helpers": [
+    "inferDeviceClass",
+    "parseBrowser",
+    "parseOs",
+    "baseEnvironmentSnapshot",
+    "extractGpuLimits",
+    "collectWebGpuCapability",
+    "buildBaselineResult"
+  ],
+  "expected_result_fields": [
+    "meta.repo",
+    "meta.commit",
+    "meta.timestamp",
+    "meta.track",
+    "meta.scenario",
+    "environment.browser",
+    "environment.os",
+    "environment.device",
+    "environment.gpu",
+    "environment.backend",
+    "environment.fallback_triggered",
+    "workload.kind",
+    "workload.name",
+    "workload.input_profile",
+    "metrics.common",
+    "status"
+  ],
+  "expected_limit_keys": [
+    "maxTextureDimension1D",
+    "maxTextureDimension2D",
+    "maxTextureDimension3D",
+    "maxBindGroups",
+    "maxBindingsPerBindGroup",
+    "maxUniformBufferBindingSize",
+    "maxStorageBufferBindingSize",
+    "maxComputeInvocationsPerWorkgroup",
+    "maxComputeWorkgroupStorageSize",
+    "maxBufferSize"
+  ]
+}

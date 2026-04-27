@@ -1,0 +1,66 @@
+{
+  "id": "shared-bench-schema-v1",
+  "title": "shared-bench-schema validation surface",
+  "objective": "Validate the bundled result schema, RESULTS template, and example result so consumer repositories share a single reporting baseline.",
+  "schema_root_required": [
+    "meta",
+    "environment",
+    "workload",
+    "metrics",
+    "status"
+  ],
+  "meta_required": [
+    "repo",
+    "commit",
+    "timestamp",
+    "track"
+  ],
+  "environment_required": [
+    "browser",
+    "os",
+    "device",
+    "gpu",
+    "backend"
+  ],
+  "metric_groups": [
+    "common",
+    "graphics",
+    "embeddings",
+    "rag",
+    "llm",
+    "stt",
+    "voice",
+    "vlm",
+    "diffusion",
+    "agent"
+  ],
+  "track_enum": [
+    "graphics",
+    "blackhole",
+    "ml",
+    "llm",
+    "audio",
+    "multimodal",
+    "agent",
+    "benchmark",
+    "integration",
+    "infra",
+    "docs"
+  ],
+  "status_enum": [
+    "success",
+    "partial",
+    "failed"
+  ],
+  "results_template_sections": [
+    "## 1. 실험 요약",
+    "## 2. 질문",
+    "## 3. 실행 환경",
+    "## 4. 워크로드 정의",
+    "## 5. 측정 지표",
+    "## 6. 결과 표",
+    "## 7. 관찰",
+    "## 8. 결론",
+    "## 9. 첨부"
+  ]
+}

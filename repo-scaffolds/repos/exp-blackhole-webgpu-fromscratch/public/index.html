@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-blackhole-webgpu-fromscratch Raw WebGPU Blackhole Readiness</title>
+    <meta name="description" content="Deterministic raw WebGPU blackhole readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: rgba(8, 9, 12, 0.96);
+        --panel-soft: rgba(15, 16, 20, 0.94);
+        --border: rgba(94, 234, 212, 0.23);
+        --text: #edfdfa;
+        --muted: #a8beb9;
+        --accent: #5eead4;
+        --accent-2: #f7c35f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: #030506;
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.42);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(94, 234, 212, 0.12);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(32px, 5vw, 52px); letter-spacing: 0; }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.7; }
+      .grid { display: grid; gap: 18px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr); align-items: start; margin-top: 22px; }
+      .stack { display: grid; gap: 18px; }
+      .panel {
+        padding: 18px;
+        border-radius: 8px;
+        background: var(--panel-soft);
+        border: 1px solid rgba(237, 253, 250, 0.12);
+      }
+      .panel h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: 0; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 8px;
+        background: rgba(247, 195, 95, 0.12);
+        border: 1px solid rgba(247, 195, 95, 0.18);
+        color: #ffe5b1;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #031413;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: rgba(237, 253, 250, 0.1);
+        border: 1px solid rgba(237, 253, 250, 0.15);
+        color: var(--text);
+      }
+      .metric-grid, .meta-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card {
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(3, 5, 6, 0.9);
+        border: 1px solid rgba(237, 253, 250, 0.1);
+      }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 600; word-break: break-word; }
+      canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        border: 1px solid rgba(94, 234, 212, 0.23);
+        background: #010203;
+      }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(3, 5, 6, 0.9);
+        border: 1px solid rgba(237, 253, 250, 0.1);
+        color: #dffefa;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 18px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Blackhole Experiment</div>
+      <h1>Raw WebGPU Blackhole Readiness</h1>
+      <p>`exp-blackhole-webgpu-fromscratch` records a deterministic raw WebGPU-style blackhole baseline before handwritten WGSL and render pipelines land.</p>
+      <p>The harness captures adapter state, pipeline metadata, shader budget, buffer sizes, ray-step frame pacing, TAA state, and fallback state.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Pipeline Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Probe capability first, then run the deterministic raw WebGPU-style lensing scene to export schema-aligned blackhole metrics.</p>
+            <div class="actions">
+              <button id="probe-capability" type="button">Probe Capability</button>
+              <button id="run-scene" type="button">Run Raw Baseline</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Raw Pipeline Viewport</h2>
+            <canvas id="scene-canvas" width="960" height="540"></canvas>
+          </section>
+          <section class="panel">
+            <h2>Checks</h2>
+            <ul>
+              <li>Use one fixed bind group layout, uniform block, storage buffer profile, and ray-step budget.</li>
+              <li>Record shader and pipeline metadata before replacing this deterministic canvas surface with WGSL.</li>
+              <li>Keep frame pacing, ray steps, resolution scale, and visual artifact notes compatible with blackhole shootouts.</li>
+            </ul>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+        <article class="panel">
+          <h2>What This Unlocks</h2>
+          <ul>
+            <li>First raw WebGPU blackhole raw JSON and screenshot capture path</li>
+            <li>Stable pipeline metadata for later WGSL renderer integration</li>
+            <li>Reusable blackhole metrics for from-scratch vs framework comparisons</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-blackhole-webgpu-fromscratch">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-blackhole-webgpu-fromscratch/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-blackhole-webgpu-fromscratch/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-renderer-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

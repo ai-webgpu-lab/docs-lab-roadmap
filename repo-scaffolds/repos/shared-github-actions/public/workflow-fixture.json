@@ -1,0 +1,31 @@
+{
+  "id": "shared-github-actions-v1",
+  "title": "shared-github-actions reusable workflow inventory",
+  "objective": "Catalog the reusable workflows shipped from the shared CI repository so consumer repositories can wire them with confidence.",
+  "workflows": [
+    {
+      "name": "reusable-results-guard",
+      "path": ".github/workflows/reusable-results-guard.yml",
+      "trigger": "workflow_call",
+      "inputs": ["repo_root"],
+      "purpose": "Validate that consumer repositories produce a non-template RESULTS.md and at least one raw JSON file."
+    },
+    {
+      "name": "reusable-pages-smoke",
+      "path": ".github/workflows/reusable-pages-smoke.yml",
+      "trigger": "workflow_call",
+      "inputs": ["url", "expected_title", "fallback_query"],
+      "purpose": "Smoke check the deployed Pages baseline plus an optional fallback query string."
+    }
+  ],
+  "consumer_examples": [
+    {
+      "scenario": "results-guard",
+      "repos": ["exp-llm-chat-runtime-shootout", "bench-runtime-shootout", "app-private-rag-lab"]
+    },
+    {
+      "scenario": "pages-smoke",
+      "repos": ["exp-llm-chat-runtime-shootout", "bench-blackhole-render-shootout", "app-blackhole-observatory"]
+    }
+  ]
+}

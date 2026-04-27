@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>app-voice-agent-lab Voice Agent Lab Demo</title>
+    <meta name="description" content="Integrated local voice-agent demo for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #091018;
+        --panel: rgba(15, 22, 30, 0.96);
+        --panel-soft: rgba(20, 29, 39, 0.96);
+        --border: rgba(125, 211, 252, 0.16);
+        --text: #eef7ff;
+        --muted: #b6c6d8;
+        --accent: #7dd3fc;
+        --accent-2: #34d399;
+        --accent-3: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(125, 211, 252, 0.12), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(52, 211, 153, 0.1), transparent 30%),
+          linear-gradient(160deg, #04070d 0%, #0b1219 54%, #0d151d 100%);
+      }
+      main {
+        width: min(1200px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 24px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(125, 211, 252, 0.24);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(34px, 5vw, 56px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.7; }
+      .grid { display: grid; gap: 16px; }
+      .hero { grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr); align-items: start; margin-top: 20px; }
+      .stack { display: grid; gap: 16px; }
+      section {
+        padding: 18px;
+        border-radius: 8px;
+        background: var(--panel-soft);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+      section h2 { margin: 0 0 12px; font-size: 18px; }
+      .status-row, .actions, .links, .chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge, .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 8px;
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .chip {
+        min-height: 26px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: #dbeafe;
+        background: rgba(125, 211, 252, 0.12);
+        border-color: rgba(125, 211, 252, 0.18);
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+        color: #071218;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        color: var(--text);
+      }
+      .board-grid, .task-grid, .metric-grid, .meta-grid {
+        display: grid;
+        gap: 10px;
+      }
+      .board-grid, .task-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .metric-grid, .meta-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card {
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(7, 11, 17, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+      .card strong { display: block; margin-bottom: 8px; font-size: 15px; }
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .value { font-size: 18px; font-weight: 650; word-break: break-word; }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(7, 11, 17, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        color: #dbeafe;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 16px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab App</div>
+      <h1>Voice Agent Lab Demo</h1>
+      <p>`app-voice-agent-lab` exposes an integrated local voice-to-agent surface. It runs one deterministic wake-word, transcript, task-routing, and TTS handoff flow in a single app-shaped result.</p>
+      <p>This is the first internal demo surface that keeps voice roundtrip and browser-agent task metrics in the same raw result before real local provider wiring lands.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section>
+            <h2>Run Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run the voice agent lab to simulate wake word detection, transcript assembly, agent task execution, and TTS handoff.</p>
+            <div class="actions">
+              <button id="run-lab" type="button">Run Voice Agent Lab</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section>
+            <h2>Transcript</h2>
+            <pre id="transcript-view">No voice turn yet.</pre>
+          </section>
+          <section>
+            <h2>Assistant Reply</h2>
+            <pre id="reply-view">No reply emitted yet.</pre>
+          </section>
+          <section>
+            <h2>Workspace Snapshot</h2>
+            <div class="board-grid" id="workspace-grid"></div>
+          </section>
+        </article>
+
+        <article class="stack">
+          <section>
+            <h2>Task Deck</h2>
+            <div class="task-grid" id="task-grid"></div>
+          </section>
+          <section>
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section>
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section>
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section>
+            <h2>Fixture Metadata</h2>
+            <pre id="fixture-view">Loading fixture...</pre>
+          </section>
+          <section>
+            <h2>Schema-Aligned Result Draft</h2>
+            <pre id="result-json">{
+  "status": "pending"
+}</pre>
+          </section>
+        </article>
+        <article class="stack">
+          <section>
+            <h2>Demo Notes</h2>
+            <ul>
+              <li>Voice turn, task routing, and response handoff are fixed to one local-only fixture.</li>
+              <li>Roundtrip and task metrics stay together so the app can inherit both voice and agent regression contracts.</li>
+              <li>The same result schema can later absorb real STT, planner, DOM policy, and TTS providers.</li>
+            </ul>
+          </section>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/app-voice-agent-lab">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/app-voice-agent-lab/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/app-voice-agent-lab/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-surface-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

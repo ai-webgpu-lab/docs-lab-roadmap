@@ -1,0 +1,83 @@
+{
+  "scene": {
+    "id": "studio-kit-v1",
+    "src": "./scene-fixture.svg",
+    "width": 720,
+    "height": 420,
+    "patchCount": 144,
+    "caption": "A studio tabletop scene with a moon poster, an orange notebook, a teal mug, and a compact camera under a slim lamp.",
+    "focusRegions": [
+      "left-poster",
+      "center-tray",
+      "right-shelf"
+    ]
+  },
+  "vision": {
+    "preprocessMs": 84.2,
+    "tasks": [
+      {
+        "id": "vision-1",
+        "question": "What color is the mug near the center tray?",
+        "answer": "Teal.",
+        "focusRegion": "center-tray",
+        "firstTokenMs": 97.4,
+        "answerTotalMs": 214.8
+      },
+      {
+        "id": "vision-2",
+        "question": "What is hanging above the notebook on the left side?",
+        "answer": "A moon-and-mountain poster.",
+        "focusRegion": "left-poster",
+        "firstTokenMs": 103.6,
+        "answerTotalMs": 228.1
+      },
+      {
+        "id": "vision-3",
+        "question": "Which device sits beside the lamp on the right shelf?",
+        "answer": "A compact camera.",
+        "focusRegion": "right-shelf",
+        "firstTokenMs": 94.2,
+        "answerTotalMs": 219.5
+      }
+    ]
+  },
+  "generation": {
+    "prompt": "Cinematic product shot of a compact travel kit on a lacquer table with a teal mug, orange notebook, soft rim light, reflective floor, and crisp shadows.",
+    "negativePrompt": "watermark, blur, low detail, deformed objects",
+    "seed": 11472,
+    "scheduler": "dpm++ 2m karras",
+    "steps": 28,
+    "guidanceScale": 6.5,
+    "width": 960,
+    "height": 544,
+    "secPerImage": 0.412,
+    "stepsPerSec": 67.96,
+    "resolutionSuccessRate": 1,
+    "oomOrFailRate": 0,
+    "safetyLabel": "clean",
+    "previewStages": [
+      {
+        "label": "encode",
+        "delayMs": 74,
+        "message": "Latents seeded from deterministic prompt fixture."
+      },
+      {
+        "label": "denoise",
+        "delayMs": 198,
+        "message": "Scheduler sweep reached stable composition."
+      },
+      {
+        "label": "decode",
+        "delayMs": 140,
+        "message": "Preview canvas decoded and color-mapped."
+      }
+    ],
+    "palette": [
+      "#0f172a",
+      "#155e75",
+      "#f59e0b",
+      "#fb7185",
+      "#e2e8f0"
+    ]
+  }
+}

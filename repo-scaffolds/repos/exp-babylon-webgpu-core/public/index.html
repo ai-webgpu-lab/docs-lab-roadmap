@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-babylon-webgpu-core Babylon Scene Readiness</title>
+    <meta name="description" content="Babylon-style WebGPU scene readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1216;
+        --panel: #171c22;
+        --panel-strong: #202832;
+        --border: #3b4655;
+        --text: #f4f8fb;
+        --muted: #b5c1cc;
+        --accent: #fb7185;
+        --accent-strong: #f43f5e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(135deg, #0f1216 0%, #171b22 52%, #11161b 100%);
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        display: grid;
+        gap: 16px;
+      }
+      header, section {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      header {
+        padding: 28px;
+        display: grid;
+        gap: 12px;
+      }
+      h1, h2 { margin: 0; }
+      h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+      h2 { font-size: 18px; }
+      p { margin: 0; color: var(--muted); line-height: 1.65; }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 16px;
+      }
+      .stack { display: grid; gap: 16px; }
+      section { padding: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--accent-strong);
+        color: #23060b;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: var(--panel-strong);
+        border-color: var(--border);
+        color: var(--text);
+      }
+      .metric-grid, .meta-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+      }
+      .card {
+        min-height: 86px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .value { font-size: 18px; font-weight: 650; overflow-wrap: anywhere; }
+      canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0b1015;
+      }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: #0b1015;
+        border: 1px solid var(--border);
+        color: #ffe4e6;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; }
+        header { padding: 20px; }
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">AI WebGPU Lab Experiment</div>
+        <h1>Babylon Scene Readiness</h1>
+        <p>`exp-babylon-webgpu-core` now exposes a deterministic Babylon-style scene readiness harness. It captures capability state, scene load timing, submesh count, material count, and frame pacing before a real Babylon.js/WebGPU build is added.</p>
+      </header>
+
+      <div class="layout">
+        <article class="stack">
+          <section>
+            <h2>Scene Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Probe capability first, then run the Babylon-style scene baseline to record init and frame pacing metrics.</p>
+            <div class="actions">
+              <button id="probe-capability" type="button">Probe Capability</button>
+              <button id="run-scene" type="button">Run Scene Baseline</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section>
+            <h2>Viewport</h2>
+            <canvas id="scene-canvas" width="960" height="540"></canvas>
+          </section>
+          <section>
+            <h2>Checks</h2>
+            <ul>
+              <li>Scene graph, material, and submesh counts stay fixed across runs.</li>
+              <li>Fallback state is exported explicitly when WebGPU is unavailable.</li>
+              <li>The result format matches other graphics harnesses for renderer shootout reuse.</li>
+            </ul>
+          </section>
+        </article>
+
+        <article class="stack">
+          <section>
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section>
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section>
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </div>
+
+      <div class="layout">
+        <section>
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </section>
+        <section>
+          <h2>What This Unlocks</h2>
+          <ul>
+            <li>Second renderer-specific graphics baseline alongside three.js.</li>
+            <li>Stable graphics raw JSON for future renderer shootout inputs.</li>
+            <li>Clear migration point for a real Babylon.js WebGPU engine setup.</li>
+          </ul>
+        </section>
+      </div>
+
+      <nav class="links" aria-label="Repository links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-babylon-webgpu-core">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-babylon-webgpu-core/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-babylon-webgpu-core/blob/main/RESULTS.md">View Results</a>
+      </nav>
+    </main>
+    <script type="module" src="./real-renderer-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

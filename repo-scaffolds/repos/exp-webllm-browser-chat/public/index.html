@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-webllm-browser-chat WebLLM Browser Chat Readiness</title>
+    <meta name="description" content="WebLLM-style browser chat readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0d16;
+        --panel: rgba(15, 17, 28, 0.95);
+        --panel-soft: rgba(19, 24, 38, 0.95);
+        --border: rgba(248, 113, 113, 0.14);
+        --text: #fef2f2;
+        --muted: #d4b7b7;
+        --accent: #f87171;
+        --accent-strong: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.14), transparent 28%),
+          linear-gradient(160deg, #05070d 0%, #0c1120 52%, #080b13 100%);
+      }
+      main { width: min(1180px, calc(100% - 32px)); margin: 24px auto; padding: 28px; border-radius: 28px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 28px 72px rgba(0, 0, 0, 0.32); }
+      .eyebrow { display: inline-flex; padding: 6px 12px; border-radius: 999px; background: rgba(248, 113, 113, 0.14); color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+      h1 { margin: 14px 0 10px; font-size: clamp(34px, 5vw, 54px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.7; }
+      .grid { display: grid; gap: 18px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr); align-items: start; margin-top: 22px; }
+      .stack { display: grid; gap: 18px; }
+      .panel { padding: 18px; border-radius: 20px; background: var(--panel-soft); border: 1px solid rgba(148, 163, 184, 0.14); }
+      .panel h2 { margin: 0 0 14px; font-size: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+      .badge { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); font-size: 13px; font-weight: 600; }
+      button, a.button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); color: #220808; font-weight: 700; text-decoration: none; cursor: pointer; }
+      button.secondary, a.button.secondary { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); color: var(--text); }
+      textarea { width: 100%; min-height: 120px; padding: 14px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.16); background: rgba(5, 10, 18, 0.88); color: var(--text); font: inherit; resize: vertical; }
+      .metric-grid, .meta-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card { padding: 14px; border-radius: 16px; background: rgba(5, 10, 18, 0.88); border: 1px solid rgba(148, 163, 184, 0.12); }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 600; word-break: break-word; }
+      pre { margin: 0; max-height: 360px; overflow: auto; padding: 14px; border-radius: 16px; background: rgba(5, 10, 18, 0.88); border: 1px solid rgba(148, 163, 184, 0.12); color: #ffe4e6; font-size: 13px; line-height: 1.6; }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 18px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Experiment</div>
+      <h1>WebLLM Browser Chat Readiness</h1>
+      <p>`exp-webllm-browser-chat` now exposes a repo-specific browser chat harness. It keeps one WebLLM-style path visible while preserving explicit fallback metadata when the backend changes.</p>
+      <p>Use `?mode=fallback` to inspect the slower fallback path without changing the prompt or result schema.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Prompt</h2>
+            <textarea id="prompt-input">Explain why a browser-side WebLLM baseline should keep prompt budget, output budget, worker mode, and fallback reporting stable across runs.</textarea>
+          </section>
+          <section class="panel">
+            <h2>Run Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run one chat turn to measure init, TTFT, decode throughput, and total turn latency for the active mode.</p>
+            <div class="actions">
+              <button id="run-chat" type="button">Run Chat Turn</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Last Generated Output</h2>
+            <pre id="output-view">No chat run yet.</pre>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+        <article class="panel">
+          <h2>Mode Notes</h2>
+          <ul>
+            <li>Default mode uses a synthetic WebGPU-style schedule.</li>
+            <li>`?mode=fallback` switches backend metadata and latency multipliers without changing prompt or token budget.</li>
+            <li>This is a readiness baseline, not a final runtime implementation.</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-webllm-browser-chat">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-webllm-browser-chat/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-webllm-browser-chat/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-runtime-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

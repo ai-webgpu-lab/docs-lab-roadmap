@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>bench-multimodal-latency Multimodal Latency Benchmark</title>
+    <meta name="description" content="Deterministic multimodal latency benchmark for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: #10161d;
+        --panel-soft: #16212d;
+        --border: rgba(96, 165, 250, 0.22);
+        --text: #f4fffd;
+        --muted: #b7cac7;
+        --accent: #60a5fa;
+        --accent-strong: #34d399;
+        --button-text: #031310;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(145deg, #07111c 0%, #101922 56%, #141a12 100%);
+      }
+      main {
+        width: min(1200px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 5px 10px;
+        border: 1px solid rgba(96, 165, 250, 0.3);
+        border-radius: 8px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(32px, 5vw, 52px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.65; }
+      .grid { display: grid; gap: 16px; }
+      .hero { grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr); align-items: start; margin-top: 20px; }
+      .stack { display: grid; gap: 16px; }
+      .panel { padding: 16px; border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 8px; background: var(--panel-soft); }
+      .panel h2 { margin: 0 0 12px; font-size: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); font-size: 13px; font-weight: 600; }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+        color: var(--button-text);
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); color: var(--text); }
+      .metric-grid, .meta-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card { padding: 12px; border-radius: 8px; background: #0b1219; border: 1px solid rgba(148, 163, 184, 0.14); }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 650; word-break: break-word; }
+      pre { margin: 0; max-height: 360px; overflow: auto; padding: 12px; border-radius: 8px; background: #0b1219; border: 1px solid rgba(148, 163, 184, 0.14); color: #dbeafe; font-size: 13px; line-height: 1.6; }
+      img.preview {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: #091018;
+      }
+      table { width: 100%; border-collapse: collapse; color: var(--muted); font-size: 13px; }
+      th, td { padding: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.14); text-align: left; vertical-align: top; }
+      th { color: var(--text); }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 16px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Benchmark</div>
+      <h1>Multimodal Latency Benchmark</h1>
+      <p>`bench-multimodal-latency` compares deterministic browser multimodal profiles with one fixed image fixture, prompt set, and latency-quality scoring rule.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Benchmark Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run the benchmark to compare image preprocess, first-token latency, full answer latency, and task accuracy.</p>
+            <div class="actions">
+              <button id="run-benchmark" type="button">Run Multimodal Benchmark</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Profile Matrix</h2>
+            <div id="matrix-view"></div>
+          </section>
+          <section class="panel">
+            <h2>Fixture Preview</h2>
+            <img class="preview" src="./scene-fixture.svg" alt="Deterministic multimodal benchmark desk fixture">
+          </section>
+          <section class="panel">
+            <h2>Prompt Output</h2>
+            <pre id="qa-view">No benchmark run yet.</pre>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Fixture Metadata</h2>
+            <pre id="fixture-view">Loading fixture...</pre>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+          <section class="panel">
+            <h2>Schema-Aligned Result Draft</h2>
+            <pre id="result-json">{
+  "status": "pending"
+}</pre>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Benchmark Notes</h2>
+          <ul>
+            <li>All profiles share one image fixture, caption target, patch count, and question set.</li>
+            <li>The winner favors low answer latency while preserving task accuracy across the whole prompt set.</li>
+            <li>Real browser VLM runtimes should keep the same metric fields and artifact names.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>Profile Notes</h2>
+          <ul>
+            <li>`Mobile Crop Fast` keeps latency low with a lighter prompt budget.</li>
+            <li>`Balanced Patch` aims for the best latency and accuracy tradeoff.</li>
+            <li>`Dense Context` preserves full context and accuracy at higher latency cost.</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/bench-multimodal-latency">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-multimodal-latency/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-multimodal-latency/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-benchmark-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

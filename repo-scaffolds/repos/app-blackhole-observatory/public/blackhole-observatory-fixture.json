@@ -1,0 +1,79 @@
+{
+  "observatory": {
+    "id": "m87-horizon-v1",
+    "label": "M87 Horizon Observatory",
+    "capturePreset": "widefield-balanced",
+    "spin": 0.91,
+    "inclinationDeg": 64,
+    "massBillionsSolar": 6.5,
+    "distanceMly": 53.5,
+    "photonRingRadiusPx": 96,
+    "lensingArcPct": 0.87,
+    "geodesicChecksum": 0.98241,
+    "exposure": "balanced",
+    "seed": 72811,
+    "frameCount": 84,
+    "note": "Balanced observatory preset tuned for public-demo readability with deterministic geodesic checksum and renderer scorecard."
+  },
+  "profiles": [
+    {
+      "id": "kerr-science-engine",
+      "label": "Kerr Engine",
+      "renderer": "rust-wasm-kerr",
+      "avgFps": 58.9,
+      "p95FrameMs": 20.7,
+      "sceneLoadMs": 53,
+      "raySteps": 128,
+      "taaEnabled": true,
+      "resolutionScale": 0.78,
+      "qualityScore": 0.9,
+      "scienceAlignment": 0.99,
+      "observatoryScore": 0.928,
+      "artifactNote": "Highest science match with stable geodesic checksum and narrow photon-ring drift."
+    },
+    {
+      "id": "three-tsl-singularity",
+      "label": "three.js TSL",
+      "renderer": "three-tsl-webgpu",
+      "avgFps": 63.7,
+      "p95FrameMs": 18.5,
+      "sceneLoadMs": 44,
+      "raySteps": 96,
+      "taaEnabled": true,
+      "resolutionScale": 0.82,
+      "qualityScore": 0.91,
+      "scienceAlignment": 0.93,
+      "observatoryScore": 0.912,
+      "artifactNote": "Best presentation path with balanced lensing rings and strong temporal stability."
+    },
+    {
+      "id": "raw-webgpu-raymarch",
+      "label": "Raw WebGPU",
+      "renderer": "raw-webgpu-raymarch",
+      "avgFps": 69.4,
+      "p95FrameMs": 16.3,
+      "sceneLoadMs": 36,
+      "raySteps": 120,
+      "taaEnabled": false,
+      "resolutionScale": 0.76,
+      "qualityScore": 0.84,
+      "scienceAlignment": 0.86,
+      "observatoryScore": 0.874,
+      "artifactNote": "Fastest path with lower postprocess stability and slightly noisier ring contour."
+    }
+  ],
+  "controlDeck": [
+    {
+      "label": "Emission Band",
+      "value": "230 GHz synthetic capture"
+    },
+    {
+      "label": "Polar Overlay",
+      "value": "enabled"
+    },
+    {
+      "label": "Telemetry Window",
+      "value": "frame pacing + checksum"
+    }
+  ]
+}

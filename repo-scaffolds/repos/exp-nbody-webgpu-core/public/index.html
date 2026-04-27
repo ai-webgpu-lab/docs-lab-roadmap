@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-nbody-webgpu-core N-Body Compute Readiness</title>
+    <meta name="description" content="Deterministic N-body compute readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: rgba(7, 11, 16, 0.96);
+        --panel-soft: rgba(14, 20, 29, 0.94);
+        --border: rgba(96, 165, 250, 0.24);
+        --text: #eff6ff;
+        --muted: #b4c6de;
+        --accent: #60a5fa;
+        --accent-2: #34d399;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: #04070c;
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.42);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(96, 165, 250, 0.13);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(32px, 5vw, 52px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.7; }
+      .grid { display: grid; gap: 18px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr); align-items: start; margin-top: 22px; }
+      .stack { display: grid; gap: 18px; }
+      .panel {
+        padding: 18px;
+        border-radius: 8px;
+        background: var(--panel-soft);
+        border: 1px solid rgba(239, 246, 255, 0.1);
+      }
+      .panel h2 { margin: 0 0 14px; font-size: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 8px;
+        background: rgba(52, 211, 153, 0.12);
+        border: 1px solid rgba(52, 211, 153, 0.18);
+        color: #c9ffe9;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+        color: #03111d;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: rgba(239, 246, 255, 0.08);
+        border: 1px solid rgba(239, 246, 255, 0.12);
+        color: var(--text);
+      }
+      .metric-grid, .meta-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card {
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(4, 7, 12, 0.88);
+        border: 1px solid rgba(239, 246, 255, 0.1);
+      }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 600; word-break: break-word; }
+      canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        border: 1px solid rgba(96, 165, 250, 0.24);
+        background: #01040a;
+      }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(4, 7, 12, 0.88);
+        border: 1px solid rgba(239, 246, 255, 0.1);
+        color: #dbeafe;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 18px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Compute Stress</div>
+      <h1>N-Body Compute Readiness</h1>
+      <p>`exp-nbody-webgpu-core` records a deterministic N-body compute baseline before real WGSL gravity kernels and storage-buffer pipelines land.</p>
+      <p>The harness fixes body count, workgroup size, substep budget, dispatch timing, energy drift, thermal note, and fallback state in one schema-aligned result.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Compute Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Probe capability first, then run the deterministic N-body simulation to export compute-stress metrics.</p>
+            <div class="actions">
+              <button id="probe-capability" type="button">Probe Capability</button>
+              <button id="run-simulation" type="button">Run Simulation</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Simulation Viewport</h2>
+            <canvas id="simulation-canvas" width="960" height="540"></canvas>
+          </section>
+          <section class="panel">
+            <h2>Checks</h2>
+            <ul>
+              <li>Keep body count, workgroup size, shared-memory budget, and substep budget fixed.</li>
+              <li>Record dispatch timing, energy drift, atomics contention note, and thermal note before real compute kernels land.</li>
+              <li>Use this readiness surface as the seed input for later compute stress and particle benchmarks.</li>
+            </ul>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+        <article class="panel">
+          <h2>What This Unlocks</h2>
+          <ul>
+            <li>First N-body compute raw JSON and screenshot capture path</li>
+            <li>Stable body-count/workgroup metadata for future WGSL compute integration</li>
+            <li>Reusable compute stress metrics for fluid, atomics, and renderer-heavy particle tracks</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-nbody-webgpu-core">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-nbody-webgpu-core/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-nbody-webgpu-core/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-renderer-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

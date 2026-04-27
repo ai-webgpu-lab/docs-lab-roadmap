@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>app-blackhole-observatory Blackhole Observatory Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05070d;
+        --panel: rgba(16, 22, 36, 0.9);
+        --panel-alt: rgba(21, 29, 45, 0.92);
+        --line: rgba(226, 232, 240, 0.12);
+        --text: #ecf3fb;
+        --muted: #9eb0ca;
+        --accent-a: #5eead4;
+        --accent-b: #f4c45b;
+        --accent-c: #fb7185;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(94, 234, 212, 0.12), transparent 26%),
+          radial-gradient(circle at top right, rgba(251, 113, 133, 0.1), transparent 24%),
+          linear-gradient(180deg, #03050a 0%, #080c16 52%, #060912 100%);
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      main {
+        width: min(1260px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 42px;
+      }
+
+      .hero,
+      .section {
+        padding: 24px 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 18px;
+      }
+
+      .eyebrow {
+        color: var(--accent-a);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 1.04;
+      }
+
+      .lead {
+        margin: 0;
+        max-width: 920px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .status-row,
+      .controls,
+      .split,
+      .metrics,
+      .meta,
+      .links {
+        display: grid;
+        gap: 12px;
+      }
+
+      .status-row {
+        grid-template-columns: repeat(auto-fit, minmax(150px, max-content));
+      }
+
+      .controls {
+        grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
+      }
+
+      button,
+      .button {
+        border: 1px solid var(--line);
+        background: rgba(18, 25, 39, 0.92);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.primary,
+      .button.primary {
+        background: linear-gradient(135deg, rgba(94, 234, 212, 0.18), rgba(244, 196, 91, 0.18));
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      .split {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+      }
+
+      .panel h2,
+      .panel h3 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+      }
+
+      .panel p,
+      .panel li {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid var(--line);
+      }
+
+      .canvas-frame {
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: rgba(2, 4, 9, 0.96);
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .list,
+      .meta-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .list li,
+      .meta-list li {
+        padding: 10px 0;
+        border-top: 1px solid rgba(226, 232, 240, 0.08);
+      }
+
+      .list li:first-child,
+      .meta-list li:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .metrics,
+      .meta {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+
+      .metric-card,
+      .meta-card {
+        background: var(--panel-alt);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .metric-card span,
+      .meta-card span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .metric-card strong,
+      .meta-card strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 1rem;
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(6, 10, 18, 0.96);
+        border: 1px solid var(--line);
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #dbe6f4;
+      }
+
+      .links {
+        grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
+      }
+
+      @media (max-width: 720px) {
+        main { width: min(100% - 20px, 1260px); }
+        .hero,
+        .section { padding: 18px 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Integrated Blackhole App</div>
+        <h1>Blackhole Observatory Demo</h1>
+        <p class="lead">`app-blackhole-observatory` exposes a deterministic observatory surface for the blackhole track. One run ties preset telemetry, renderer selection, and blackhole-scene metrics into the same app-level result document.</p>
+        <div class="status-row" id="status-row"></div>
+        <p class="lead" id="summary">Run the observatory to evaluate renderer candidates, inspect the blackhole preset, and export one schema-aligned result.</p>
+        <div class="controls">
+          <button class="primary" id="run-observatory" type="button">Run Observatory</button>
+          <button id="download-json" type="button" disabled>Download Result JSON</button>
+        </div>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Observatory View</h2>
+          <div class="canvas-frame">
+            <canvas id="scene-canvas" width="1200" height="680"></canvas>
+          </div>
+          <p class="lead" id="view-caption"></p>
+        </article>
+        <article class="panel">
+          <h2>Renderer Leaderboard</h2>
+          <ul class="list" id="profile-list"></ul>
+        </article>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Preset Metadata</h2>
+          <ul class="meta-list" id="preset-list"></ul>
+        </article>
+        <article class="panel">
+          <h2>Control Deck</h2>
+          <ul class="meta-list" id="control-list"></ul>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="metrics" id="metric-grid"></div>
+      </section>
+
+      <section class="section">
+        <div class="meta" id="meta-grid"></div>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Fixture Summary</h2>
+          <pre id="fixture-view">Loading observatory fixture...</pre>
+        </article>
+        <article class="panel">
+          <h2>Activity Log</h2>
+          <pre id="log-list">No events yet.</pre>
+        </article>
+      </section>
+
+      <section class="section">
+        <article class="panel">
+          <h2>Result Draft</h2>
+          <pre id="result-json">No result yet.</pre>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="links">
+          <a class="button primary" href="https://github.com/ai-webgpu-lab/app-blackhole-observatory">Open Repository</a>
+          <a class="button" href="https://github.com/ai-webgpu-lab/app-blackhole-observatory/blob/main/README.md">Read README</a>
+          <a class="button" href="https://github.com/ai-webgpu-lab/app-blackhole-observatory/blob/main/RESULTS.md">View Results</a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app-surface-adapter.js"></script>
+    <script type="module" src="./real-surface-sketch.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

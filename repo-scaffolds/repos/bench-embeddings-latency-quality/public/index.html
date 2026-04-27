@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>bench-embeddings-latency-quality Embeddings Latency Quality Benchmark</title>
+    <meta name="description" content="Deterministic embeddings latency and quality benchmark for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0d12;
+        --panel: #111822;
+        --panel-soft: #151f2b;
+        --border: rgba(125, 211, 252, 0.18);
+        --text: #eff6ff;
+        --muted: #b7c4d4;
+        --accent: #7dd3fc;
+        --accent-strong: #34d399;
+        --button-text: #041018;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(150deg, #070b10 0%, #0b121b 58%, #101820 100%);
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 5px 10px;
+        border: 1px solid rgba(125, 211, 252, 0.28);
+        border-radius: 8px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 10px; font-size: clamp(32px, 5vw, 52px); }
+      p { margin: 0 0 12px; color: var(--muted); line-height: 1.65; }
+      .grid { display: grid; gap: 16px; }
+      .hero { grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr); align-items: start; margin-top: 20px; }
+      .stack { display: grid; gap: 16px; }
+      .panel { padding: 16px; border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 8px; background: var(--panel-soft); }
+      .panel h2 { margin: 0 0 12px; font-size: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); font-size: 13px; font-weight: 600; }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+        color: var(--button-text);
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.16); color: var(--text); }
+      .metric-grid, .meta-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .card { padding: 12px; border-radius: 8px; background: #0b111a; border: 1px solid rgba(148, 163, 184, 0.14); }
+      .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+      .value { font-size: 18px; font-weight: 650; word-break: break-word; }
+      pre { margin: 0; max-height: 360px; overflow: auto; padding: 12px; border-radius: 8px; background: #0b111a; border: 1px solid rgba(148, 163, 184, 0.14); color: #c7f9ff; font-size: 13px; line-height: 1.6; }
+      table { width: 100%; border-collapse: collapse; color: var(--muted); font-size: 13px; }
+      th, td { padding: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.14); text-align: left; vertical-align: top; }
+      th { color: var(--text); }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; padding: 16px; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AI WebGPU Lab Benchmark</div>
+      <h1>Embeddings Latency Quality Benchmark</h1>
+      <p>`bench-embeddings-latency-quality` compares deterministic embedding profiles with one fixed document set and one fixed query set.</p>
+
+      <section class="grid hero">
+        <article class="stack">
+          <section class="panel">
+            <h2>Benchmark Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run the benchmark to rank profiles by latency, throughput, and retrieval quality.</p>
+            <div class="actions">
+              <button id="run-benchmark" type="button">Run Embeddings Benchmark</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Comparison Matrix</h2>
+            <div id="matrix-view"></div>
+          </section>
+          <section class="panel">
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+        <article class="stack">
+          <section class="panel">
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section class="panel">
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+        </article>
+      </section>
+
+      <section class="grid hero">
+        <article class="panel">
+          <h2>Benchmark Notes</h2>
+          <ul>
+            <li>Profiles share the same documents, queries, and expected retrieval targets.</li>
+            <li>The selected winner favors recall first, then latency and throughput.</li>
+            <li>Replace the deterministic profiles with real embedders after packaging and model loading are fixed.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </article>
+      </section>
+
+      <div class="links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/bench-embeddings-latency-quality">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-embeddings-latency-quality/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/bench-embeddings-latency-quality/blob/main/RESULTS.md">View Results</a>
+      </div>
+    </main>
+    <script type="module" src="./real-benchmark-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

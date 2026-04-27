@@ -1,0 +1,46 @@
+{
+  "workflowId": "browser-agent-local-v1",
+  "workspace": {
+    "page": "ops-dashboard",
+    "cards": [
+      { "id": "GPU-17", "status": "waiting", "owner": "alex", "priority": "high", "summary": "check adapter fallback regression" },
+      { "id": "LAB-42", "status": "active", "owner": "mina", "priority": "medium", "summary": "capture nightly readiness deltas" },
+      { "id": "OPS-9", "status": "review", "owner": "jules", "priority": "low", "summary": "verify local-only routing policy" }
+    ],
+    "settings": {
+      "auditMode": "on",
+      "capturePolicy": "local-only",
+      "notificationMode": "digest"
+    }
+  },
+  "tools": ["open_panel", "filter_cards", "copy_field", "write_note", "toggle_flag"],
+  "tasks": [
+    {
+      "id": "capture-waiting-owner",
+      "goal": "Collect the owner of the waiting GPU ticket.",
+      "steps": [
+        { "tool": "open_panel", "target": "queue.waiting", "latencyMs": 32, "effect": "Opened waiting queue." },
+        { "tool": "filter_cards", "target": "status:waiting", "latencyMs": 38, "effect": "Filtered cards to waiting state." },
+        { "tool": "copy_field", "target": "GPU-17.owner", "latencyMs": 34, "effect": "Copied owner alex.", "draftLine": "Waiting GPU ticket owner: alex" }
+      ]
+    },
+    {
+      "id": "record-priority-summary",
+      "goal": "Draft a short local note for the active lab card.",
+      "steps": [
+        { "tool": "open_panel", "target": "card.LAB-42", "latencyMs": 36, "effect": "Opened LAB-42 detail panel." },
+        { "tool": "copy_field", "target": "LAB-42.priority", "latencyMs": 28, "effect": "Copied medium priority tag.", "draftLine": "LAB-42 priority: medium" },
+        { "tool": "write_note", "target": "local-draft", "latencyMs": 40, "effect": "Wrote draft line for capture readiness.", "draftLine": "LAB-42 note: capture nightly readiness deltas." }
+      ]
+    },
+    {
+      "id": "toggle-audit-flag",
+      "goal": "Toggle audit mode and confirm local-only policy is preserved.",
+      "steps": [
+        { "tool": "open_panel", "target": "settings.audit", "latencyMs": 30, "effect": "Opened audit settings." },
+        { "tool": "copy_field", "target": "settings.capturePolicy", "latencyMs": 26, "effect": "Read local-only capture policy.", "draftLine": "Capture policy remains local-only." },
+        { "tool": "toggle_flag", "target": "settings.auditMode", "latencyMs": 42, "effect": "Toggled audit mode and confirmed state.", "draftLine": "Audit mode toggle confirmed.", "fallbackFailure": true, "fallbackDraftLine": "Audit mode toggle requires manual follow-up on fallback." }
+      ]
+    }
+  ]
+}

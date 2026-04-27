@@ -1,0 +1,54 @@
+{
+  "image": {
+    "id": "lab-vision-bench-v1",
+    "file": "scene-fixture.svg",
+    "width": 1280,
+    "height": 720,
+    "patchCount": 256,
+    "focusRegions": ["monitor-chart", "development-board", "blue-mug", "orange-notebook"]
+  },
+  "caption": "A desk scene with a monitor showing a chart, a compact black development board, an orange notebook, a keyboard, and a blue mug.",
+  "preprocessMs": 74,
+  "tasks": [
+    {
+      "id": "monitor-chart",
+      "question": "What is shown on the monitor?",
+      "answer": "A performance chart with colored bars and a white trend line.",
+      "fallbackAnswer": "A performance panel with colored bars.",
+      "focusRegion": "monitor-chart",
+      "firstTokenMs": 86,
+      "answerTotalMs": 178,
+      "fallbackSensitive": false
+    },
+    {
+      "id": "development-board",
+      "question": "Which object suggests a WebGPU experiment setup?",
+      "answer": "A compact black development board with glowing blue status lights.",
+      "fallbackAnswer": "A compact board beside the monitor stand.",
+      "focusRegion": "development-board",
+      "firstTokenMs": 96,
+      "answerTotalMs": 198,
+      "fallbackSensitive": false
+    },
+    {
+      "id": "mug-color",
+      "question": "What color is the mug beside the keyboard?",
+      "answer": "The mug beside the keyboard is blue.",
+      "fallbackAnswer": "The mug beside the keyboard is teal.",
+      "focusRegion": "blue-mug",
+      "firstTokenMs": 78,
+      "answerTotalMs": 162,
+      "fallbackSensitive": true
+    },
+    {
+      "id": "notebook-color",
+      "question": "What color is the notebook on the right side of the desk?",
+      "answer": "The notebook on the right side of the desk is orange.",
+      "fallbackAnswer": "The notebook on the right side is warm orange.",
+      "focusRegion": "orange-notebook",
+      "firstTokenMs": 82,
+      "answerTotalMs": 168,
+      "fallbackSensitive": false
+    }
+  ]
+}

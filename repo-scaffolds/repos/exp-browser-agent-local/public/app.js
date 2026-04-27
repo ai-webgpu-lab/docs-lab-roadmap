@@ -1,0 +1,438 @@
+const EXECUTION_MODES = {
+  webgpu: {
+    label: "WebGPU ready",
+    backend: "webgpu",
+    fallbackTriggered: false,
+    workerMode: "worker",
+    stageMultiplier: 1
+  },
+  fallback: {
+    label: "CPU fallback",
+    backend: "cpu",
+    fallbackTriggered: true,
+    workerMode: "main",
+    stageMultiplier: 1.86
+  }
+};
+
+function resolveExecutionMode() {
+  const requested = new URLSearchParams(window.location.search).get("mode");
+  const hasWebGpu = typeof navigator !== "undefined" && Boolean(navigator.gpu);
+  if (requested === "fallback" || !hasWebGpu) return EXECUTION_MODES.fallback;
+  return EXECUTION_MODES.webgpu;
+}
+
+const executionMode = resolveExecutionMode();
+
+const state = {
+  startedAt: performance.now(),
+  fixture: null,
+  environment: buildEnvironment(),
+  capability: null,
+  active: false,
+  run: null,
+  draftLines: [],
+  taskStates: [],
+  logs: []
+};
+
+const elements = {
+  statusRow: document.getElementById("status-row"),
+  summary: document.getElementById("summary"),
+  probeCapability: document.getElementById("probe-capability"),
+  runAgent: document.getElementById("run-agent"),
+  downloadJson: document.getElementById("download-json"),
+  workspaceGrid: document.getElementById("workspace-grid"),
+  taskGrid: document.getElementById("task-grid"),
+  draftView: document.getElementById("draft-view"),
+  metricGrid: document.getElementById("metric-grid"),
+  metaGrid: document.getElementById("meta-grid"),
+  logList: document.getElementById("log-list"),
+  resultJson: document.getElementById("result-json")
+};
+
+function round(value, digits = 2) {
+  if (!Number.isFinite(value)) return null;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function parseBrowser() {
+  const ua = navigator.userAgent;
+  for (const [needle, name] of [["Edg/", "Edge"], ["Chrome/", "Chrome"], ["Firefox/", "Firefox"], ["Version/", "Safari"]]) {
+    const marker = ua.indexOf(needle);
+    if (marker >= 0) return { name, version: ua.slice(marker + needle.length).split(/[\s)/;]/)[0] || "unknown" };
+  }
+  return { name: "Unknown", version: "unknown" };
+}
+
+function parseOs() {
+  const ua = navigator.userAgent;
+  if (/Windows NT/i.test(ua)) return { name: "Windows", version: (ua.match(/Windows NT ([0-9.]+)/i) || [])[1] || "unknown" };
+  if (/Mac OS X/i.test(ua)) return { name: "macOS", version: ((ua.match(/Mac OS X ([0-9_]+)/i) || [])[1] || "unknown").replace(/_/g, ".") };
+  if (/Android/i.test(ua)) return { name: "Android", version: (ua.match(/Android ([0-9.]+)/i) || [])[1] || "unknown" };
+  if (/(iPhone|iPad|CPU OS)/i.test(ua)) return { name: "iOS", version: ((ua.match(/OS ([0-9_]+)/i) || [])[1] || "unknown").replace(/_/g, ".") };
+  if (/Linux/i.test(ua)) return { name: "Linux", version: "unknown" };
+  return { name: "Unknown", version: "unknown" };
+}
+
+function inferDeviceClass() {
+  const threads = navigator.hardwareConcurrency || 0;
+  const memory = navigator.deviceMemory || 0;
+  const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (mobile) return memory >= 6 && threads >= 8 ? "mobile-high" : "mobile-mid";
+  if (memory >= 16 && threads >= 12) return "desktop-high";
+  if (memory >= 8 && threads >= 8) return "desktop-mid";
+  if (threads >= 4) return "laptop";
+  return "unknown";
+}
+
+function buildEnvironment() {
+  return {
+    browser: parseBrowser(),
+    os: parseOs(),
+    device: {
+      name: navigator.platform || "unknown",
+      class: inferDeviceClass(),
+      cpu: navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} threads` : "unknown",
+      memory_gb: navigator.deviceMemory || undefined,
+      power_mode: "unknown"
+    },
+    gpu: { adapter: "pending", required_features: [], limits: {} },
+    backend: "pending",
+    fallback_triggered: false,
+    worker_mode: "main",
+    cache_state: "warm"
+  };
+}
+
+function log(message) {
+  state.logs.unshift(`[${new Date().toLocaleTimeString()}] ${message}`);
+  state.logs = state.logs.slice(0, 12);
+  renderLogs();
+}
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function loadFixture() {
+  if (state.fixture) return state.fixture;
+  const response = await fetch("./agent-fixture.json", { cache: "no-store" });
+  state.fixture = await response.json();
+  return state.fixture;
+}
+
+async function probeCapability() {
+  if (state.active) return;
+  state.active = true;
+  render();
+
+  const hasWebGpu = typeof navigator !== "undefined" && Boolean(navigator.gpu);
+  const forcedFallback = new URLSearchParams(window.location.search).get("mode") === "fallback";
+  const ready = hasWebGpu && !forcedFallback;
+
+  state.capability = {
+    hasWebGpu,
+    adapter: ready ? "navigator.gpu available" : "cpu-agent-fallback",
+    requiredFeatures: ready ? ["shader-f16"] : []
+  };
+  state.environment.gpu = {
+    adapter: state.capability.adapter,
+    required_features: state.capability.requiredFeatures,
+    limits: ready ? { maxStorageBuffersPerShaderStage: 8, maxBindGroups: 4 } : {}
+  };
+  state.environment.backend = executionMode.backend;
+  state.environment.fallback_triggered = executionMode.fallbackTriggered;
+  state.environment.worker_mode = executionMode.workerMode;
+  state.active = false;
+
+  log(ready ? "WebGPU agent path selected." : "Fallback agent path selected.");
+  render();
+}
+
+async function runAgent() {
+  if (state.active) return;
+  if (!state.capability) await probeCapability();
+
+  state.active = true;
+  state.run = null;
+  state.draftLines = [];
+  state.taskStates = [];
+  render();
+
+  const fixture = await loadFixture();
+  const stepLatencies = [];
+  let totalToolCalls = 0;
+  let successfulToolCalls = 0;
+  let interventionCount = 0;
+  let tasksCompleted = 0;
+
+  for (const task of fixture.tasks) {
+    log(`Task started: ${task.id}.`);
+    let taskCompleted = true;
+    let completedSteps = 0;
+
+    for (const step of task.steps) {
+      const latencyMs = step.latencyMs * executionMode.stageMultiplier;
+      await sleep(latencyMs);
+      stepLatencies.push(latencyMs);
+      totalToolCalls += 1;
+      completedSteps += 1;
+
+      if (executionMode.fallbackTriggered && step.fallbackFailure) {
+        interventionCount += 1;
+        taskCompleted = false;
+        log(`Tool failed on ${step.target}; manual follow-up required.`);
+        if (step.fallbackDraftLine) {
+          state.draftLines.push(step.fallbackDraftLine);
+        }
+        break;
+      }
+
+      successfulToolCalls += 1;
+      log(step.effect);
+      if (step.draftLine) {
+        state.draftLines.push(step.draftLine);
+      }
+      render();
+    }
+
+    state.taskStates.push({
+      id: task.id,
+      goal: task.goal,
+      completed: taskCompleted,
+      completedSteps,
+      stepCount: task.steps.length
+    });
+
+    if (taskCompleted) {
+      tasksCompleted += 1;
+      log(`Task complete: ${task.id}.`);
+    } else {
+      log(`Task deferred: ${task.id}.`);
+    }
+    render();
+  }
+
+  state.run = {
+    workflowId: fixture.workflowId,
+    taskCount: fixture.tasks.length,
+    toolCatalog: fixture.tools,
+    totalToolCalls,
+    successfulToolCalls,
+    taskSuccessRate: tasksCompleted / Math.max(fixture.tasks.length, 1),
+    avgStepLatencyMs: average(stepLatencies),
+    toolCallSuccessRate: successfulToolCalls / Math.max(totalToolCalls, 1),
+    userInterventionCount: interventionCount,
+    tasksCompleted,
+    draft: state.draftLines.join("\n"),
+    page: fixture.workspace.page
+  };
+
+  state.active = false;
+  log(`Agent baseline complete: task_success_rate ${round(state.run.taskSuccessRate, 2)}, avg_step_latency_ms ${round(state.run.avgStepLatencyMs, 2)}.`);
+  render();
+}
+
+function buildDraftText() {
+  if (!state.draftLines.length) return "No agent run yet.";
+  return state.draftLines.join("\n");
+}
+
+function buildResult() {
+  const run = state.run;
+  const fixture = state.fixture;
+  return {
+    meta: {
+      repo: "exp-browser-agent-local",
+      commit: "bootstrap-generated",
+      timestamp: new Date().toISOString(),
+      owner: "ai-webgpu-lab",
+      track: "agent",
+      scenario: run ? "browser-agent-local-readiness" : "browser-agent-local-pending",
+      notes: run
+        ? `workflow=${run.workflowId}; page=${run.page}; tasks=${run.taskCount}; tools=${run.toolCatalog.join("|")}; interventions=${run.userInterventionCount}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}`
+        : "Probe capability, then run the deterministic browser agent readiness harness."
+    },
+    environment: state.environment,
+    workload: {
+      kind: "browser-agent",
+      name: "browser-agent-local-readiness",
+      input_profile: fixture ? `${fixture.tasks.length}-tasks-${fixture.tools.length}-tools` : "fixture-pending",
+      model_id: "deterministic-browser-agent-v1",
+      dataset: "browser-agent-fixture-v1"
+    },
+    metrics: {
+      common: {
+        time_to_interactive_ms: round(performance.now() - state.startedAt, 2) || 0,
+        init_ms: run ? round(run.avgStepLatencyMs, 2) || 0 : 0,
+        success_rate: run ? 1 : 0.5,
+        peak_memory_note: navigator.deviceMemory ? `${navigator.deviceMemory} GB reported by browser` : "deviceMemory unavailable",
+        error_type: ""
+      },
+      agent: {
+        task_success_rate: run ? round(run.taskSuccessRate, 2) || 0 : 0,
+        avg_step_latency_ms: run ? round(run.avgStepLatencyMs, 2) || 0 : 0,
+        tool_call_success_rate: run ? round(run.toolCallSuccessRate, 2) || 0 : 0,
+        user_intervention_count: run ? run.userInterventionCount : 0
+      }
+    },
+    status: run ? "success" : "partial",
+    artifacts: {
+      raw_logs: state.logs.slice(0, 5),
+      deploy_url: "https://ai-webgpu-lab.github.io/exp-browser-agent-local/"
+    }
+  };
+}
+
+function renderCards(container, items) {
+  container.innerHTML = "";
+  for (const [label, value] of items) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `<span class="label">${label}</span><div class="value">${value}</div>`;
+    container.appendChild(card);
+  }
+}
+
+function renderWorkspace() {
+  elements.workspaceGrid.innerHTML = "";
+  const fixture = state.fixture;
+  if (!fixture) return;
+  for (const cardData of fixture.workspace.cards) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `<strong>${cardData.id}</strong><div>${cardData.summary}</div>`;
+    const chips = document.createElement("div");
+    chips.className = "chip-row";
+    for (const token of [`status:${cardData.status}`, `owner:${cardData.owner}`, `priority:${cardData.priority}`]) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = token;
+      chips.appendChild(chip);
+    }
+    card.appendChild(chips);
+    elements.workspaceGrid.appendChild(card);
+  }
+}
+
+function renderTasks() {
+  elements.taskGrid.innerHTML = "";
+  const fixture = state.fixture;
+  if (!fixture) return;
+  for (const task of fixture.tasks) {
+    const current = state.taskStates.find((item) => item.id === task.id);
+    const status = current ? (current.completed ? "complete" : "deferred") : "ready";
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `<strong>${task.id}</strong><div>${task.goal}</div><div class="chip-row"><span class="chip">${status}</span><span class="chip">${task.steps.length} steps</span></div>`;
+    elements.taskGrid.appendChild(card);
+  }
+}
+
+function renderStatus() {
+  const badges = state.active
+    ? ["Agent running", executionMode.label]
+    : state.run
+      ? [`task ${round(state.run.taskSuccessRate, 2)}`, `step ${round(state.run.avgStepLatencyMs, 2)} ms`]
+      : ["Fixture ready", executionMode.label];
+
+  elements.statusRow.innerHTML = "";
+  for (const text of badges) {
+    const node = document.createElement("span");
+    node.className = "badge";
+    node.textContent = text;
+    elements.statusRow.appendChild(node);
+  }
+
+  elements.summary.textContent = state.run
+    ? `Last run: task success ${round(state.run.taskSuccessRate, 2)}, avg step ${round(state.run.avgStepLatencyMs, 2)} ms, tool success ${round(state.run.toolCallSuccessRate, 2)}, interventions ${state.run.userInterventionCount}.`
+    : "Run the browser agent baseline to execute the deterministic local task deck and record task and tool metrics.";
+}
+
+function renderMetrics() {
+  renderCards(elements.metricGrid, [
+    ["Tasks", state.fixture ? String(state.fixture.tasks.length) : "pending"],
+    ["Tools", state.fixture ? String(state.fixture.tools.length) : "pending"],
+    ["Task Success", state.run ? `${round(state.run.taskSuccessRate, 2)}` : "pending"],
+    ["Step Latency", state.run ? `${round(state.run.avgStepLatencyMs, 2)} ms` : "pending"],
+    ["Tool Success", state.run ? `${round(state.run.toolCallSuccessRate, 2)}` : "pending"],
+    ["Interventions", state.run ? String(state.run.userInterventionCount) : "pending"]
+  ]);
+}
+
+function renderEnvironment() {
+  renderCards(elements.metaGrid, [
+    ["Browser", `${state.environment.browser.name} ${state.environment.browser.version}`],
+    ["OS", `${state.environment.os.name} ${state.environment.os.version}`],
+    ["Device", state.environment.device.class],
+    ["CPU", state.environment.device.cpu],
+    ["Memory", state.environment.device.memory_gb ? `${state.environment.device.memory_gb} GB` : "unknown"],
+    ["Backend", state.environment.backend],
+    ["Fallback", String(state.environment.fallback_triggered)],
+    ["Worker", state.environment.worker_mode],
+    ["Workflow", state.run ? state.run.workflowId : (state.fixture ? state.fixture.workflowId : "pending")]
+  ]);
+}
+
+function renderLogs() {
+  elements.logList.innerHTML = "";
+  const entries = state.logs.length ? state.logs : ["No agent activity yet."];
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    elements.logList.appendChild(item);
+  }
+}
+
+function render() {
+  renderStatus();
+  renderWorkspace();
+  renderTasks();
+  renderMetrics();
+  renderEnvironment();
+  renderLogs();
+  elements.draftView.textContent = buildDraftText();
+  elements.resultJson.textContent = JSON.stringify(buildResult(), null, 2);
+}
+
+function downloadJson() {
+  const blob = new Blob([JSON.stringify(buildResult(), null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `exp-browser-agent-local-${state.run ? "readiness" : "pending"}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+  log("Downloaded browser agent readiness JSON draft.");
+}
+
+elements.probeCapability.addEventListener("click", () => {
+  probeCapability().catch((error) => {
+    state.active = false;
+    log(`Capability probe failed: ${error instanceof Error ? error.message : String(error)}`);
+    render();
+  });
+});
+
+elements.runAgent.addEventListener("click", () => {
+  runAgent().catch((error) => {
+    state.active = false;
+    log(`Agent run failed: ${error instanceof Error ? error.message : String(error)}`);
+    render();
+  });
+});
+
+elements.downloadJson.addEventListener("click", downloadJson);
+
+(async function init() {
+  await loadFixture();
+  log("Browser agent readiness harness ready.");
+  render();
+})();

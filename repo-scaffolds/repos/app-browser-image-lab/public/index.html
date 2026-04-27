@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>app-browser-image-lab Browser Image Lab Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --panel: #131b30;
+        --panel-alt: #192239;
+        --line: rgba(226, 232, 240, 0.12);
+        --text: #e5eef9;
+        --muted: #9db0cb;
+        --accent-a: #22d3ee;
+        --accent-b: #f59e0b;
+        --accent-c: #fb7185;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 28%),
+          radial-gradient(circle at top right, rgba(251, 113, 133, 0.14), transparent 24%),
+          linear-gradient(180deg, #0a1020 0%, #10172a 55%, #0d1425 100%);
+        color: var(--text);
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      main {
+        width: min(1240px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 40px;
+      }
+
+      .hero,
+      .section {
+        padding: 24px 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 18px;
+      }
+
+      .eyebrow {
+        color: var(--accent-a);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 1.05;
+      }
+
+      .lead {
+        max-width: 900px;
+        color: var(--muted);
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .status-row,
+      .controls,
+      .split,
+      .metrics,
+      .meta,
+      .links {
+        display: grid;
+        gap: 12px;
+      }
+
+      .status-row {
+        grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+      }
+
+      .controls {
+        grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
+        align-items: center;
+      }
+
+      button,
+      .button {
+        border: 1px solid var(--line);
+        background: rgba(19, 27, 48, 0.9);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.primary,
+      .button.primary {
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.24), rgba(245, 158, 11, 0.24));
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      .split {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
+      .panel {
+        background: rgba(19, 27, 48, 0.88);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        min-height: 100%;
+      }
+
+      .panel h2,
+      .panel h3 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+      }
+
+      .panel p,
+      .panel li {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      .scene-frame,
+      .canvas-frame {
+        aspect-ratio: 16 / 10;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: rgba(8, 15, 28, 0.9);
+      }
+
+      .scene-frame img,
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .list,
+      .meta-list,
+      .fixture-view,
+      .result-json {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .list li,
+      .meta-list li {
+        padding: 10px 0;
+        border-top: 1px solid rgba(226, 232, 240, 0.08);
+      }
+
+      .list li:first-child,
+      .meta-list li:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .muted { color: var(--muted); }
+
+      .metrics,
+      .meta {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+
+      .metric-card,
+      .meta-card {
+        background: rgba(25, 34, 57, 0.88);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+
+      .metric-card strong,
+      .meta-card strong {
+        display: block;
+        font-size: 1rem;
+        margin-top: 8px;
+      }
+
+      .metric-card span,
+      .meta-card span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(8, 15, 28, 0.9);
+        border: 1px solid var(--line);
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #dbe8f7;
+      }
+
+      .links {
+        grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
+      }
+
+      @media (max-width: 720px) {
+        main { width: min(100% - 20px, 1240px); }
+        .hero,
+        .section { padding: 18px 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Integrated Image App</div>
+        <h1>Browser Image Lab Demo</h1>
+        <p class="lead">`app-browser-image-lab` exposes an internal image showcase surface. One deterministic run ties source-scene inspection, multimodal question answering, prompt-to-image preview, and schema-aligned result export into the same app-shaped output.</p>
+        <div class="status-row" id="status-row"></div>
+        <p class="lead" id="summary">Run the image lab to inspect the source scene, answer multimodal questions, and generate a deterministic preview in one result document.</p>
+        <div class="controls">
+          <button class="primary" id="run-lab" type="button">Run Image Lab</button>
+          <button id="download-json" type="button" disabled>Download Result JSON</button>
+        </div>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Source Scene</h2>
+          <div class="scene-frame">
+            <img src="./scene-fixture.svg" alt="Deterministic studio scene fixture">
+          </div>
+          <p id="source-caption" class="muted"></p>
+          <ul class="meta-list" id="source-metadata"></ul>
+        </article>
+        <article class="panel">
+          <h2>Generated Preview</h2>
+          <div class="canvas-frame">
+            <canvas id="image-canvas" width="960" height="544"></canvas>
+          </div>
+          <ul class="meta-list" id="generation-metadata"></ul>
+        </article>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Vision Answers</h2>
+          <ul class="list" id="qa-view"></ul>
+        </article>
+        <article class="panel">
+          <h2>Fixture Summary</h2>
+          <pre id="fixture-view">Loading fixture summary...</pre>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="metrics" id="metric-grid"></div>
+      </section>
+
+      <section class="section">
+        <div class="meta" id="meta-grid"></div>
+      </section>
+
+      <section class="section split">
+        <article class="panel">
+          <h2>Activity Log</h2>
+          <pre id="log-list">No events yet.</pre>
+        </article>
+        <article class="panel">
+          <h2>Result Draft</h2>
+          <pre id="result-json">No result yet.</pre>
+        </article>
+      </section>
+
+      <section class="section">
+        <div class="links">
+          <a class="button primary" href="https://github.com/ai-webgpu-lab/app-browser-image-lab">Open Repository</a>
+          <a class="button" href="https://github.com/ai-webgpu-lab/app-browser-image-lab/blob/main/README.md">Read README</a>
+          <a class="button" href="https://github.com/ai-webgpu-lab/app-browser-image-lab/blob/main/RESULTS.md">View Results</a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./real-surface-sketch.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

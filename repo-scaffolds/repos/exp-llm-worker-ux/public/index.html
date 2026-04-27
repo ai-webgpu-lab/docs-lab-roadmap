@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>exp-llm-worker-ux LLM Worker UX Readiness</title>
+    <meta name="description" content="LLM worker UX readiness harness for AI WebGPU Lab">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101113;
+        --panel: #17191d;
+        --panel-strong: #22262c;
+        --border: #3b424d;
+        --text: #f6f8fb;
+        --muted: #b5beca;
+        --accent: #facc15;
+        --accent-strong: #eab308;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(135deg, #101113 0%, #181b20 52%, #121417 100%);
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto;
+        display: grid;
+        gap: 16px;
+      }
+      header, section {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      header {
+        padding: 28px;
+        display: grid;
+        gap: 12px;
+      }
+      h1, h2 { margin: 0; }
+      h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+      h2 { font-size: 18px; }
+      p { margin: 0; color: var(--muted); line-height: 1.65; }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 16px;
+      }
+      .stack { display: grid; gap: 16px; }
+      section { padding: 18px; }
+      .status-row, .actions, .links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button, a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--accent-strong);
+        color: #171400;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button.secondary, a.button.secondary {
+        background: var(--panel-strong);
+        border-color: var(--border);
+        color: var(--text);
+      }
+      textarea, input {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0d1014;
+        color: var(--text);
+        font: inherit;
+      }
+      textarea { min-height: 116px; resize: vertical; }
+      .metric-grid, .meta-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+      }
+      .card {
+        min-height: 86px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .value { font-size: 18px; font-weight: 650; overflow-wrap: anywhere; }
+      pre {
+        margin: 0;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border-radius: 8px;
+        background: #0d1014;
+        border: 1px solid var(--border);
+        color: #fef9c3;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+      li + li { margin-top: 8px; }
+      @media (max-width: 900px) {
+        main { width: min(100%, calc(100% - 16px)); margin: 8px auto; }
+        header { padding: 20px; }
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">AI WebGPU Lab Experiment</div>
+        <h1>LLM Worker UX Readiness</h1>
+        <p>`exp-llm-worker-ux` now exposes a worker/main comparison harness for local chat UX. It keeps prompt budget stable while recording TTFT, decode throughput, turn latency, and a lightweight responsiveness probe.</p>
+        <p>Use `?mode=main` to compare the main-thread path against the default dedicated worker path.</p>
+      </header>
+
+      <div class="layout">
+        <article class="stack">
+          <section>
+            <h2>Prompt</h2>
+            <textarea id="prompt-input">Explain how moving local chat work into a dedicated worker changes typing responsiveness, first token latency, and perceived stability in a browser demo.</textarea>
+          </section>
+          <section>
+            <h2>Responsiveness Probe</h2>
+            <input id="probe-input" value="type-here" aria-label="Responsiveness probe input">
+          </section>
+          <section>
+            <h2>Run Controls</h2>
+            <div class="status-row" id="status-row"></div>
+            <p id="summary">Run one chat turn to compare the active execution mode against the stable worker/main result contract.</p>
+            <div class="actions">
+              <button id="run-turn" type="button">Run Chat Turn</button>
+              <button id="download-json" class="secondary" type="button">Download JSON</button>
+            </div>
+          </section>
+          <section>
+            <h2>Output Stream</h2>
+            <pre id="output-view">No chat turn yet.</pre>
+          </section>
+        </article>
+
+        <article class="stack">
+          <section>
+            <h2>Metrics</h2>
+            <div class="metric-grid" id="metric-grid"></div>
+          </section>
+          <section>
+            <h2>Environment</h2>
+            <div class="meta-grid" id="meta-grid"></div>
+          </section>
+          <section>
+            <h2>Activity Log</h2>
+            <ul id="log-list"></ul>
+          </section>
+        </article>
+      </div>
+
+      <div class="layout">
+        <section>
+          <h2>Schema-Aligned Result Draft</h2>
+          <pre id="result-json">{
+  "status": "pending"
+}</pre>
+        </section>
+        <section>
+          <h2>Mode Notes</h2>
+          <ul>
+            <li>Default mode uses a dedicated worker for the simulated chat turn.</li>
+            <li>`?mode=main` keeps the same prompt/output budget but records main-thread execution metadata.</li>
+            <li>The responsiveness probe is summarized in `meta.notes` until a dedicated UX metric schema is added.</li>
+          </ul>
+        </section>
+      </div>
+
+      <nav class="links" aria-label="Repository links">
+        <a class="button" href="https://github.com/ai-webgpu-lab/exp-llm-worker-ux">Open Repository</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-llm-worker-ux/blob/main/README.md">Read README</a>
+        <a class="button secondary" href="https://github.com/ai-webgpu-lab/exp-llm-worker-ux/blob/main/RESULTS.md">View Results</a>
+      </nav>
+    </main>
+    <script type="module" src="./real-runtime-sketch.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "audioSeconds": 7.4,
+  "wakeWord": "aurora",
+  "reference": "aurora summarize browser voice benchmark status and mention fallback handling",
+  "segments": [
+    {
+      "text": "aurora summarize browser voice benchmark status",
+      "processingMs": 22
+    },
+    {
+      "text": "and mention fallback handling",
+      "processingMs": 28
+    }
+  ],
+  "intent": {
+    "id": "voice_benchmark_status",
+    "processingMs": 14
+  },
+  "reply": {
+    "text": "Voice roundtrip benchmark is ready. WebGPU and fallback modes keep latency, transcript quality, and TTS metadata aligned.",
+    "processingMs": 18
+  },
+  "ttsVoice": "alloy-benchmark",
+  "ttsChunks": [
+    {
+      "text": "Voice roundtrip benchmark is ready.",
+      "synthesisMs": 14
+    },
+    {
+      "text": "WebGPU and fallback modes keep latency and transcript quality aligned.",
+      "synthesisMs": 18
+    },
+    {
+      "text": "TTS metadata remains attached to every captured run.",
+      "synthesisMs": 16
+    }
+  ]
+}
