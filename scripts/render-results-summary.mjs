@@ -1214,6 +1214,27 @@ function repoMetricSummary(repoName, results) {
   }
 }
 
+function realRuntimeComparisonLines(repoName, results) {
+  if (repoName !== "bench-runtime-shootout") return [];
+  const realResult = results.find((result) => result.meta?.capture_url_search === "?mode=real-runtime");
+  const deterministicResult = results.find((result) => result.meta?.capture_url_search === "?mode=webgpu");
+  if (!realResult || !deterministicResult) return [];
+
+  const realAdapter = realResult.artifacts?.runtime_adapter || {};
+  const deterministicAdapter = deterministicResult.artifacts?.runtime_adapter || {};
+  const realStatus = realAdapter.status || "unknown";
+  const isRealConnected = realAdapter.isReal === true && realStatus === "connected";
+  const adapterLine = isRealConnected
+    ? `- runtime adapter: real=${realAdapter.id || "(connected)"}, deterministic=${deterministicAdapter.id || "deterministic-mock"}`
+    : `- runtime adapter: real=${realStatus} (no real adapter registered — falling back to deterministic), deterministic=${deterministicAdapter.id || "deterministic-mock"}`;
+  return [
+    adapterLine,
+    `- decode tok/s: real=${formatNumber(realResult.metrics.llm?.decode_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.decode_tok_per_sec, deterministicResult.metrics.llm?.decode_tok_per_sec)}`,
+    `- TTFT: real=${formatNumberWithUnit(realResult.metrics.llm?.ttft_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.llm?.ttft_ms, "ms")}, delta=${formatDelta(realResult.metrics.llm?.ttft_ms, deterministicResult.metrics.llm?.ttft_ms, 2, "ms")}`,
+    `- prefill tok/s: real=${formatNumber(realResult.metrics.llm?.prefill_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.prefill_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.prefill_tok_per_sec, deterministicResult.metrics.llm?.prefill_tok_per_sec)}`
+  ];
+}
+
 function fallbackComparisonLines(repoName, results) {
   if (!results.some((result) => result.environment?.fallback_triggered) || !results.some((result) => !result.environment?.fallback_triggered)) {
     return [];
@@ -1975,6 +1996,7 @@ function buildMarkdown(repoName, results, artifacts) {
   const first = sortedResults[0];
   const last = sortedResults[sortedResults.length - 1];
   const comparisonLines = fallbackComparisonLines(repoName, sortedResults);
+  const realRuntimeLines = realRuntimeComparisonLines(repoName, sortedResults);
   const status = sortedResults.every((result) => result.status === "success")
     ? "success"
     : sortedResults.some((result) => result.status === "failed")
@@ -2082,10 +2104,13 @@ function buildMarkdown(repoName, results, artifacts) {
     ...repoObservations(repoName, sortedResults),
     "",
     ...(comparisonLines.length ? ["## 8. WebGPU vs Fallback", ...comparisonLines, ""] : []),
-    `## ${comparisonLines.length ? "9" : "8"}. 결론`,
+    ...(realRuntimeLines.length
+      ? [`## ${comparisonLines.length ? "9" : "8"}. Real Runtime vs Deterministic`, ...realRuntimeLines, ""]
+      : []),
+    `## ${comparisonLines.length + realRuntimeLines.length === 0 ? "8" : comparisonLines.length && realRuntimeLines.length ? "10" : "9"}. 결론`,
     ...repoConclusions(repoName, sortedResults),
     "",
-    `## ${comparisonLines.length ? "10" : "9"}. 첨부`,
+    `## ${comparisonLines.length + realRuntimeLines.length === 0 ? "9" : comparisonLines.length && realRuntimeLines.length ? "11" : "10"}. 첨부`,
     `- 스크린샷: ${attachments.screenshots}`,
     `- 로그 파일: ${attachments.logs}`,
     `- raw json: ${attachments.rawJson}`,

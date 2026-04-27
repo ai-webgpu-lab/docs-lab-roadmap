@@ -391,3 +391,22 @@ Benchmark family 진행률: **14/18 = 78% specific**, 남은 4개 (model-load-an
 - `scripts/capture-all-baselines.sh`는 어댑터 추가 후에도 그대로 동작합니다 — 새 scenario는 자동으로 잡히지 않으므로 캡처 config 갱신이 필요합니다.
 - `scripts/validate-infra-fixtures.mjs`는 격주 단위로 돌리면 fixture drift를 잡아 인프라 baseline의 정확성을 유지합니다.
 - 어댑터별 회귀 비교(real vs deterministic)는 `bench-webgpu-vs-wasm-parity` 패턴을 그대로 차용해 같은 fallback comparison 섹션에서 처리합니다.
+
+## bench-runtime-shootout 첫 실측 캡처 (2026-04-27)
+첫 실측 통합 후 capture pipeline을 실제로 돌려본 결과를 기록합니다.
+
+### 캡처 설정 변경
+- `scripts/capture-p0-baseline-results.mjs`의 `bench-runtime-shootout` scenarios에 세 번째 시나리오 `03-runtime-benchmark-real-runtime` (`?mode=real-runtime`) 추가
+- 결과 raw JSON에 `meta.capture_scenario_id`와 `meta.capture_url_search`를 항상 채워 어떤 query mode로 캡처됐는지 사후 식별 가능
+- `scripts/render-results-summary.mjs`에 `realRuntimeComparisonLines()` 추가 — `?mode=real-runtime` raw 결과와 `?mode=webgpu` raw 결과를 짝지어 RESULTS.md "Real Runtime vs Deterministic" 섹션을 자동 생성
+
+### 첫 실측 결과 (오프라인 WSL2 + Chromium headless)
+- 환경: `--enable-unsafe-webgpu --use-angle=swiftshader` + 외부 CDN 차단
+- `?mode=real-runtime` 시 Transformers.js 모듈은 `https://esm.sh/@huggingface/transformers@3.0.0`에서 dynamic import를 시도하지만 네트워크가 차단되면 `connectRealRuntime()`이 reject되고 등록은 일어나지 않습니다.
+- `runtime-adapter.js` 의 `describe()`는 deterministic 디스크립터를 그대로 반환하므로 `runtime_adapter.status="deterministic"`로 기록됩니다.
+- 결과 메트릭은 deterministic webgpu와 동일 (decode≈148.6 tok/s, ttft≈20.2ms, prefill≈837 tok/s) — 등록 실패 시 deterministic 경로로 자연스럽게 fall back되는 §회귀 가드 동작 확인.
+
+### 다음 단계 (실제 GPU + 인터넷 머신)
+- 같은 caputre config를 GPU+인터넷이 가능한 데스크탑에서 실행하면 Transformers.js가 실제로 import되고 adapter가 register됩니다.
+- 다만 현재 `app.js`는 등록된 real adapter를 호출하지 않습니다 (deterministic profiles만 실행). real 경로를 활성화하려면 app.js가 `registry.list()`에서 real adapter를 발견했을 때 `loadRuntime/prefill/decode`를 호출해 `runtime-benchmark-real-<adapter-id>` scenario를 emit하도록 분기를 추가해야 합니다.
+- 이 분기를 추가한 후 첫 실측 cold/warm pair을 잡으면 RESULTS.md에 자동으로 비-zero delta가 채워집니다.

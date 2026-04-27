@@ -786,6 +786,13 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenarioPrefix: "runtime-benchmark-"
+      },
+      {
+        id: "03-runtime-benchmark-real-runtime",
+        label: "Runtime Benchmark / Real Runtime (Transformers.js)",
+        urlSearch: "?mode=real-runtime",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "runtime-benchmark-"
       }
     ]
   },
@@ -1182,7 +1189,7 @@ async function runCapture(options) {
         }
       } else {
         await page.locator(scenario.button).click();
-        await waitForResult(page, repoConfig, scenario, previousText, options.timeoutMs);
+        await waitForResult(page, repoConfig, scenario, previousText, options.timeoutMs, scenario.acceptedStatuses || ["success"]);
       }
 
       stopSignal.done = true;
@@ -1205,6 +1212,10 @@ async function runCapture(options) {
       result.meta.commit = commit;
       result.meta.owner = owner;
       result.meta.capture_context = captureContext;
+      result.meta.capture_scenario_id = scenario.id;
+      if (scenario.urlSearch) {
+        result.meta.capture_url_search = scenario.urlSearch;
+      }
       result.meta.notes = result.meta.notes
         ? `${result.meta.notes}; automation=playwright-chromium`
         : "automation=playwright-chromium";
