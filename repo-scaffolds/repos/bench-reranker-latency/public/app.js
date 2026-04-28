@@ -119,11 +119,52 @@ function resolveExecutionMode() {
 
 const executionMode = resolveExecutionMode();
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealBenchmarkMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealBenchmark() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealBenchmark(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealBenchmark();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealRerankerBenchBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   active: false,
+  realAdapterError: null,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -295,11 +336,55 @@ async function runProfile(profile) {
   };
 }
 
+async function runRealBenchmarkReranker(adapter) {
+  log(`Connecting real benchmark adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.createBenchmark({ name: "reranker-latency" })),
+    REAL_ADAPTER_LOAD_MS,
+    `createBenchmark(${adapter.id})`
+  );
+  await withTimeout(
+    Promise.resolve(adapter.runProfile({
+      profileId: "reranker-latency-default",
+      fn: () => null,
+      options: {}
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `runProfile(${adapter.id})`
+  );
+  const aggregate = await withTimeout(
+    Promise.resolve(adapter.aggregateResults()),
+    REAL_ADAPTER_LOAD_MS,
+    `aggregateResults(${adapter.id})`
+  );
+  log(`Real benchmark adapter '${adapter.id}' aggregate: profileCount=${aggregate?.profileCount || 0}.`);
+  return { adapter, aggregate };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
   state.run = null;
   render();
+
+  if (isRealBenchmarkMode) {
+    log(`Mode=${requestedMode} requested; awaiting real benchmark adapter registration.`);
+    const adapter = await awaitRealBenchmark();
+    if (adapter) {
+      try {
+        const { aggregate } = await runRealBenchmarkReranker(adapter);
+        state.realAdapterAggregate = aggregate;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real benchmark '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealRerankerBenchBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real benchmark adapter registered (${reason}); falling back to deterministic reranker benchmark.`);
+    }
+  }
 
   const results = [];
   for (const profile of PROFILES) {
@@ -313,11 +398,32 @@ async function runBenchmark() {
   state.run = {
     executionMode: executionMode.id,
     winner: results[0],
-    profiles: results
+    profiles: results,
+    realAdapter: state.realAdapter || null
   };
   state.active = false;
   log(`Winner: ${results[0].profile.label} (${executionMode.label}).`);
   render();
+}
+
+function describeBenchmarkAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-reranker-bench",
+    label: "Deterministic Reranker Bench",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["profile-comparison", "winner-selection", "real-benchmark"],
+    benchmarkType: "synthetic",
+    message: "Benchmark adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -330,9 +436,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "benchmark",
-      scenario: run ? `reranker-latency-${run.executionMode}` : "reranker-latency-pending",
+      scenario: (state.run && state.run.realAdapter) ? `reranker-latency-real-${state.run.realAdapter.id}` : (run ? `reranker-latency-${run.executionMode}` : "reranker-latency-pending"),
       notes: winner
-        ? `winner=${winner.profile.id}; candidates=${CANDIDATES.length}; bestRelevantRank=${winner.bestRelevantRank}; recallAt3=${round(winner.recallAt3, 4)}; executionMode=${run.executionMode}; backend=${state.environment.backend}`
+        ? `winner=${winner.profile.id}; candidates=${CANDIDATES.length}; bestRelevantRank=${winner.bestRelevantRank}; recallAt3=${round(winner.recallAt3, 4)}; executionMode=${run.executionMode}; backend=${state.environment.backend}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealBenchmarkMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the fixed reranker latency benchmark."
     },
     environment: state.environment,
@@ -363,7 +469,8 @@ function buildResult() {
     status: winner ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/bench-reranker-latency/"
+      deploy_url: "https://ai-webgpu-lab.github.io/bench-reranker-latency/",
+      benchmark_adapter: describeBenchmarkAdapter()
     }
   };
 }

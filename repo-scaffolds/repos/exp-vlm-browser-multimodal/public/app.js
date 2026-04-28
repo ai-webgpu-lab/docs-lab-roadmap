@@ -24,6 +24,45 @@ function resolveExecutionMode() {
 
 const executionMode = resolveExecutionMode();
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealRuntimeMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealRuntime() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealRuntime(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealRuntime();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealVlmBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   fixture: null,
@@ -31,6 +70,7 @@ const state = {
   capability: null,
   active: false,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -152,6 +192,27 @@ async function probeCapability() {
   render();
 }
 
+async function runRealRuntimeVlm(adapter) {
+  log(`Connecting real runtime adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.loadModel({ modelId: "vlm-browser-multimodal-default" })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadModel(${adapter.id})`
+  );
+  const prefill = await withTimeout(
+    Promise.resolve(adapter.prefill({ promptTokens: 96 })),
+    REAL_ADAPTER_LOAD_MS,
+    `prefill(${adapter.id})`
+  );
+  const decode = await withTimeout(
+    Promise.resolve(adapter.decode({ tokenBudget: 32 })),
+    REAL_ADAPTER_LOAD_MS,
+    `decode(${adapter.id})`
+  );
+  log(`Real runtime adapter '${adapter.id}' ready: prefill_tok_per_sec=${prefill?.tokPerSec ?? "?"}, decode_tok_per_sec=${decode?.tokPerSec ?? "?"}.`);
+  return { adapter, prefill, decode };
+}
+
 async function runLab() {
   if (state.active) return;
   if (!state.capability) await probeCapability();
@@ -159,6 +220,26 @@ async function runLab() {
   state.active = true;
   state.run = null;
   render();
+
+  if (isRealRuntimeMode) {
+    log(`Mode=${requestedMode} requested; awaiting real runtime adapter registration.`);
+    const adapter = await awaitRealRuntime();
+    if (adapter) {
+      try {
+        const { prefill, decode } = await runRealRuntimeVlm(adapter);
+        state.realAdapterPrefill = prefill;
+        state.realAdapterDecode = decode;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real runtime '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealVlmBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real runtime adapter registered (${reason}); falling back to deterministic VLM baseline.`);
+    }
+  }
 
   const fixture = await loadFixture();
   const preprocessStartedAt = performance.now();
@@ -196,7 +277,8 @@ async function runLab() {
     answerTotalMs: average(answers.map((item) => item.answerTotalMs)),
     accuracyTaskScore: average(answers.map((item) => (item.correct ? 1 : 0))),
     caption: fixture.caption,
-    answers
+    answers,
+    realAdapter: state.realAdapter || null
   };
   state.active = false;
   log(`Multimodal baseline complete: answer_total_ms ${round(state.run.answerTotalMs, 2)} with accuracy ${round(state.run.accuracyTaskScore, 2)}.`);
@@ -213,6 +295,26 @@ function buildPromptOutput() {
     .join("\n\n");
 }
 
+function describeRuntimeAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-vlm",
+    label: "Deterministic VLM",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["prefill", "decode", "fixed-output-budget"],
+    runtimeType: "synthetic",
+    message: "Runtime adapter registry unavailable; using inline deterministic mock."
+  };
+}
+
 function buildResult() {
   const run = state.run;
   return {
@@ -222,9 +324,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "multimodal",
-      scenario: run ? "vlm-browser-multimodal-readiness" : "vlm-browser-multimodal-pending",
+      scenario: (state.run && state.run.realAdapter) ? `vlm-browser-multimodal-real-${state.run.realAdapter.id}` : (run ? "vlm-browser-multimodal-readiness" : "vlm-browser-multimodal-pending"),
       notes: run
-        ? `image=${run.imageId}; patches=${run.patchCount}; prompts=${run.questionCount}; focus=${run.focusRegions.join("|")}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}; accuracy=${round(run.accuracyTaskScore, 2)}`
+        ? `image=${run.imageId}; patches=${run.patchCount}; prompts=${run.questionCount}; focus=${run.focusRegions.join("|")}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}; accuracy=${round(run.accuracyTaskScore, 2)}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealRuntimeMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Probe capability, then run the deterministic browser VLM readiness harness."
     },
     environment: state.environment,
@@ -253,7 +355,8 @@ function buildResult() {
     status: run ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/exp-vlm-browser-multimodal/"
+      deploy_url: "https://ai-webgpu-lab.github.io/exp-vlm-browser-multimodal/",
+      runtime_adapter: describeRuntimeAdapter()
     }
   };
 }

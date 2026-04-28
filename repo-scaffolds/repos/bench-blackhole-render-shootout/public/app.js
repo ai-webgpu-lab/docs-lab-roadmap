@@ -43,11 +43,52 @@ const profiles = [
   }
 ];
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealBenchmarkMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealBenchmark() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealBenchmark(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealBenchmark();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealBlackholeBenchBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   run: null,
   active: false,
+  realAdapterError: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -268,10 +309,54 @@ async function drawBenchmark(results) {
   }
 }
 
+async function runRealBenchmarkBlackhole(adapter) {
+  log(`Connecting real benchmark adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.createBenchmark({ name: "blackhole-render-shootout" })),
+    REAL_ADAPTER_LOAD_MS,
+    `createBenchmark(${adapter.id})`
+  );
+  await withTimeout(
+    Promise.resolve(adapter.runProfile({
+      profileId: "blackhole-render-shootout-default",
+      fn: () => null,
+      options: {}
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `runProfile(${adapter.id})`
+  );
+  const aggregate = await withTimeout(
+    Promise.resolve(adapter.aggregateResults()),
+    REAL_ADAPTER_LOAD_MS,
+    `aggregateResults(${adapter.id})`
+  );
+  log(`Real benchmark adapter '${adapter.id}' aggregate: profileCount=${aggregate?.profileCount || 0}.`);
+  return { adapter, aggregate };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
   render();
+
+  if (isRealBenchmarkMode) {
+    log(`Mode=${requestedMode} requested; awaiting real benchmark adapter registration.`);
+    const adapter = await awaitRealBenchmark();
+    if (adapter) {
+      try {
+        const { aggregate } = await runRealBenchmarkBlackhole(adapter);
+        state.realAdapterAggregate = aggregate;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real benchmark '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealBlackholeBenchBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real benchmark adapter registered (${reason}); falling back to deterministic blackhole benchmark.`);
+    }
+  }
 
   const startedAt = performance.now();
   await new Promise((resolve) => setTimeout(resolve, state.environment.fallback_triggered ? 44 : 26));
@@ -282,7 +367,8 @@ async function runBenchmark() {
   state.run = {
     totalMs: performance.now() - startedAt,
     profiles: results,
-    winner
+    winner,
+    realAdapter: state.realAdapter || null
   };
   state.active = false;
   log(`Blackhole render shootout complete: winner ${winner.profile.label}, score ${winner.score}.`);
@@ -296,6 +382,26 @@ function profileNotes() {
     .join(" | ");
 }
 
+function describeBenchmarkAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-blackhole-bench",
+    label: "Deterministic Blackhole Bench",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["profile-comparison", "winner-selection", "real-benchmark"],
+    benchmarkType: "synthetic",
+    message: "Benchmark adapter registry unavailable; using inline deterministic mock."
+  };
+}
+
 function buildResult() {
   const run = state.run;
   const winner = run?.winner;
@@ -306,9 +412,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "blackhole",
-      scenario: `blackhole-render-shootout-${executionMode()}`,
+      scenario: (state.run && state.run.realAdapter) ? `blackhole-render-shootout-real-${state.run.realAdapter.id}` : (`blackhole-render-shootout-${executionMode()}`),
       notes: run
-        ? `winner=${winner.profile.id}; profiles=${run.profiles.length}; ${profileNotes()}`
+        ? `winner=${winner.profile.id}; profiles=${run.profiles.length}; ${profileNotes()}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealBenchmarkMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the deterministic blackhole renderer shootout."
     },
     environment: state.environment,
@@ -341,7 +447,8 @@ function buildResult() {
     status: run ? "success" : "pending",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/bench-blackhole-render-shootout/"
+      deploy_url: "https://ai-webgpu-lab.github.io/bench-blackhole-render-shootout/",
+      benchmark_adapter: describeBenchmarkAdapter()
     }
   };
 }

@@ -289,6 +289,14 @@ const CAPTURE_CONFIG = {
         button: "#run-benchmark",
         expectedScenario: "compute-stress-suite-benchmark",
         runWaitMs: 1800
+      },
+      {
+        id: "10-compute-stress-suite-real-compute-bench",
+        label: "Compute Stress Suite / Real Compute Bench",
+        urlSearch: "?mode=real-compute-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "compute-stress-suite-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -301,6 +309,14 @@ const CAPTURE_CONFIG = {
         button: "#run-benchmark",
         expectedScenario: "atomics-and-memory-benchmark",
         runWaitMs: 1800
+      },
+      {
+        id: "10-atomics-and-memory-real-atomics-bench",
+        label: "Atomics and Memory / Real Atomics Bench",
+        urlSearch: "?mode=real-atomics-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "atomics-and-memory-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -313,6 +329,14 @@ const CAPTURE_CONFIG = {
         button: "#run-benchmark",
         expectedScenario: "texture-upload-and-streaming-benchmark",
         runWaitMs: 1800
+      },
+      {
+        id: "10-texture-upload-and-streaming-real-texture-bench",
+        label: "Texture Upload Streaming / Real Texture Bench",
+        urlSearch: "?mode=real-texture-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "texture-upload-and-streaming-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -475,6 +499,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "blackhole-render-shootout-fallback"
+      },
+      {
+        id: "10-blackhole-render-shootout-real-blackhole-bench",
+        label: "Blackhole Render Shootout / Real Blackhole Bench",
+        urlSearch: "?mode=real-blackhole-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "blackhole-render-shootout-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -551,6 +583,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "embeddings-latency-quality-fallback"
+      },
+      {
+        id: "10-embeddings-latency-quality-real-embeddings-bench",
+        label: "Embeddings Latency Quality / Real Embeddings Bench",
+        urlSearch: "?mode=real-embeddings-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "embeddings-latency-quality-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -569,6 +609,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "reranker-latency-fallback"
+      },
+      {
+        id: "10-reranker-latency-real-reranker-bench",
+        label: "Reranker Latency / Real Reranker Bench",
+        urlSearch: "?mode=real-reranker-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "reranker-latency-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -587,6 +635,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "rag-endtoend-fallback"
+      },
+      {
+        id: "10-rag-endtoend-real-rag-bench",
+        label: "RAG End-to-End / Real RAG Bench",
+        urlSearch: "?mode=real-rag-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "rag-endtoend-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -605,6 +661,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "llm-prefill-decode-fallback"
+      },
+      {
+        id: "10-llm-prefill-decode-real-llm-bench",
+        label: "LLM Prefill Decode / Real LLM Bench",
+        urlSearch: "?mode=real-llm-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "llm-prefill-decode-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -623,6 +687,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "stt-streaming-latency-fallback"
+      },
+      {
+        id: "10-stt-streaming-latency-real-stt-bench",
+        label: "STT Streaming / Real STT Bench",
+        urlSearch: "?mode=real-stt-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "stt-streaming-latency-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -641,6 +713,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "voice-roundtrip-fallback"
+      },
+      {
+        id: "10-voice-roundtrip-real-voice-bench",
+        label: "Voice Roundtrip / Real Voice Bench",
+        urlSearch: "?mode=real-voice-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "voice-roundtrip-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -659,6 +739,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "multimodal-latency-fallback"
+      },
+      {
+        id: "10-multimodal-latency-real-multimodal-bench",
+        label: "Multimodal Latency / Real Multimodal Bench",
+        urlSearch: "?mode=real-multimodal-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "multimodal-latency-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -677,6 +765,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "diffusion-browser-shootout-fallback"
+      },
+      {
+        id: "10-diffusion-browser-shootout-real-diffusion-bench",
+        label: "Diffusion Shootout / Real Diffusion Bench",
+        urlSearch: "?mode=real-diffusion-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "diffusion-browser-shootout-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -696,6 +792,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "agent-step-latency-fallback"
+      },
+      {
+        id: "10-agent-step-latency-real-agent-bench",
+        label: "Agent Step Latency / Real Agent Bench",
+        urlSearch: "?mode=real-agent-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "agent-step-latency-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -714,6 +818,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-benchmark",
         expectedScenario: "webgpu-wasm-parity-fallback"
+      },
+      {
+        id: "10-webgpu-wasm-parity-real-parity-bench",
+        label: "WebGPU vs WASM Parity / Real Parity Bench",
+        urlSearch: "?mode=real-parity-bench",
+        button: "#run-benchmark",
+        expectedScenarioPrefix: "webgpu-wasm-parity-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -766,6 +878,14 @@ const CAPTURE_CONFIG = {
         label: "Voice Assistant Local Readiness",
         button: "#run-assistant",
         expectedScenario: "voice-assistant-local-readiness"
+      },
+      {
+        id: "10-voice-assistant-local-real-voice-assistant",
+        label: "Voice Assistant Local / Real Voice Assistant",
+        urlSearch: "?mode=real-voice-assistant",
+        button: "#run-assistant",
+        expectedScenarioPrefix: "voice-assistant-local-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -781,6 +901,17 @@ const CAPTURE_CONFIG = {
         runButton: "#run-lab",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1800
+      },
+      {
+        id: "10-vlm-browser-multimodal-real-vlm",
+        label: "VLM Browser / Real VLM",
+        urlSearch: "?mode=real-vlm",
+        probeButton: "#probe-capability",
+        probeExpectedScenario: "vlm-browser-multimodal-pending",
+        runOnProbeStatuses: ["success", "partial"],
+        runButton: "#run-lab",
+        expectedScenarioPrefix: "vlm-browser-multimodal-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -796,6 +927,17 @@ const CAPTURE_CONFIG = {
         runButton: "#run-generation",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 2200
+      },
+      {
+        id: "10-diffusion-webgpu-browser-real-diffusion",
+        label: "Diffusion Browser / Real Diffusion",
+        urlSearch: "?mode=real-diffusion",
+        probeButton: "#probe-capability",
+        probeExpectedScenario: "diffusion-webgpu-browser-pending",
+        runOnProbeStatuses: ["success", "partial"],
+        runButton: "#run-generation",
+        expectedScenarioPrefix: "diffusion-webgpu-browser-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -811,6 +953,17 @@ const CAPTURE_CONFIG = {
         runButton: "#run-agent",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 2000
+      },
+      {
+        id: "10-browser-agent-local-real-browser-agent",
+        label: "Browser Agent Local / Real Browser Agent",
+        urlSearch: "?mode=real-browser-agent",
+        probeButton: "#probe-capability",
+        probeExpectedScenario: "browser-agent-local-pending",
+        runOnProbeStatuses: ["success", "partial"],
+        runButton: "#run-agent",
+        expectedScenarioPrefix: "browser-agent-local-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -831,6 +984,14 @@ const CAPTURE_CONFIG = {
         label: "Browser Reranker",
         button: "#run-reranker",
         expectedScenario: "browser-reranker-readiness"
+      },
+      {
+        id: "10-browser-reranker-real-reranker",
+        label: "Browser Reranker / Real Reranker",
+        urlSearch: "?mode=real-reranker",
+        button: "#run-reranker",
+        expectedScenarioPrefix: "browser-reranker-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -849,6 +1010,14 @@ const CAPTURE_CONFIG = {
         urlSearch: "?mode=fallback",
         button: "#run-inference",
         expectedScenario: "ort-webgpu-baseline-fallback"
+      },
+      {
+        id: "10-ort-webgpu-baseline-real-ort",
+        label: "ORT WebGPU / Real ORT",
+        urlSearch: "?mode=real-ort",
+        button: "#run-inference",
+        expectedScenarioPrefix: "ort-webgpu-baseline-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -931,6 +1100,14 @@ const CAPTURE_CONFIG = {
         label: "WebLLM Browser Chat",
         button: "#run-chat",
         expectedScenario: "webllm-browser-chat-readiness-webgpu"
+      },
+      {
+        id: "10-webllm-browser-chat-real-webllm",
+        label: "WebLLM Browser Chat / Real WebLLM",
+        urlSearch: "?mode=real-webllm",
+        button: "#run-chat",
+        expectedScenarioPrefix: "webllm-browser-chat-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -951,6 +1128,14 @@ const CAPTURE_CONFIG = {
         button: "#run-turn",
         expectedScenario: "llm-worker-ux-main",
         typingSelector: "#probe-input"
+      },
+      {
+        id: "10-llm-worker-ux-real-worker-ux",
+        label: "LLM Worker UX / Real Worker UX",
+        urlSearch: "?mode=real-worker-ux",
+        button: "#run-turn",
+        expectedScenarioPrefix: "llm-worker-ux-",
+        timeoutMs: 180000
       }
     ]
   },

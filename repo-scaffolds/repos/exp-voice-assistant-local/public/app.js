@@ -32,6 +32,45 @@ function resolveExecutionMode() {
 
 const executionMode = resolveExecutionMode();
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealRuntimeMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealRuntime() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealRuntime(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealRuntime();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealVoiceAssistantBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
@@ -40,6 +79,7 @@ const state = {
   run: null,
   transcript: "",
   reply: "",
+  realAdapterError: null,
   logs: []
 };
 
@@ -177,6 +217,27 @@ async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function runRealRuntimeVoiceAssistant(adapter) {
+  log(`Connecting real runtime adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.loadModel({ modelId: "voice-assistant-local-default" })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadModel(${adapter.id})`
+  );
+  const prefill = await withTimeout(
+    Promise.resolve(adapter.prefill({ promptTokens: 96 })),
+    REAL_ADAPTER_LOAD_MS,
+    `prefill(${adapter.id})`
+  );
+  const decode = await withTimeout(
+    Promise.resolve(adapter.decode({ tokenBudget: 32 })),
+    REAL_ADAPTER_LOAD_MS,
+    `decode(${adapter.id})`
+  );
+  log(`Real runtime adapter '${adapter.id}' ready: prefill_tok_per_sec=${prefill?.tokPerSec ?? "?"}, decode_tok_per_sec=${decode?.tokPerSec ?? "?"}.`);
+  return { adapter, prefill, decode };
+}
+
 async function runAssistantTurn() {
   if (state.active) return;
   state.active = true;
@@ -186,6 +247,26 @@ async function runAssistantTurn() {
   renderTranscript("");
   renderReply("");
   render();
+
+  if (isRealRuntimeMode) {
+    log(`Mode=${requestedMode} requested; awaiting real runtime adapter registration.`);
+    const adapter = await awaitRealRuntime();
+    if (adapter) {
+      try {
+        const { prefill, decode } = await runRealRuntimeVoiceAssistant(adapter);
+        state.realAdapterPrefill = prefill;
+        state.realAdapterDecode = decode;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real runtime '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealVoiceAssistantBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real runtime adapter registered (${reason}); falling back to deterministic voice assistant baseline.`);
+    }
+  }
 
   const fixture = await loadFixture();
   const startedAt = performance.now();
@@ -254,11 +335,32 @@ async function runAssistantTurn() {
     intentMs,
     replyMs,
     ttsMs,
-    ttsVoice: fixture.ttsVoice
+    ttsVoice: fixture.ttsVoice,
+    realAdapter: state.realAdapter || null
   };
   state.active = false;
   log(`Voice turn complete: final ${round(state.run.finalLatencyMs, 2)} ms, roundtrip ${round(state.run.roundtripMs, 2)} ms.`);
   render();
+}
+
+function describeRuntimeAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRuntimeRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-voice-assistant",
+    label: "Deterministic Voice Assistant",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["prefill", "decode", "fixed-output-budget"],
+    runtimeType: "synthetic",
+    message: "Runtime adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -270,9 +372,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "audio",
-      scenario: run ? "voice-assistant-local-readiness" : "voice-assistant-local-pending",
+      scenario: (state.run && state.run.realAdapter) ? `voice-assistant-local-real-${state.run.realAdapter.id}` : (run ? "voice-assistant-local-readiness" : "voice-assistant-local-pending"),
       notes: run
-        ? `wakeWord=${run.wakeWord}; segments=${run.segmentCount}; intent=${run.intentId}; ttsVoice=${run.ttsVoice}; firstAudioMs=${round(run.firstAudioMs, 2)}; roundtripMs=${round(run.roundtripMs, 2)}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}`
+        ? `wakeWord=${run.wakeWord}; segments=${run.segmentCount}; intent=${run.intentId}; ttsVoice=${run.ttsVoice}; firstAudioMs=${round(run.firstAudioMs, 2)}; roundtripMs=${round(run.roundtripMs, 2)}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealRuntimeMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the deterministic voice assistant readiness harness."
     },
     environment: state.environment,
@@ -303,7 +405,8 @@ function buildResult() {
     status: run ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/exp-voice-assistant-local/"
+      deploy_url: "https://ai-webgpu-lab.github.io/exp-voice-assistant-local/",
+      runtime_adapter: describeRuntimeAdapter()
     }
   };
 }

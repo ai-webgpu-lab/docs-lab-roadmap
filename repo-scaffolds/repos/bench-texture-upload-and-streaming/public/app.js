@@ -69,12 +69,53 @@ const INLINE_FIXTURE = {
 
 const EXECUTION_MODE = resolveExecutionMode();
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealBenchmarkMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealBenchmark() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealBenchmark(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealBenchmark();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealTextureBenchBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   fixture: null,
   environment: buildEnvironment(),
   active: false,
+  realAdapterError: null,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -297,11 +338,55 @@ function simulateCase(caseDef, index) {
   };
 }
 
+async function runRealBenchmarkTexture(adapter) {
+  log(`Connecting real benchmark adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.createBenchmark({ name: "texture-upload-streaming" })),
+    REAL_ADAPTER_LOAD_MS,
+    `createBenchmark(${adapter.id})`
+  );
+  await withTimeout(
+    Promise.resolve(adapter.runProfile({
+      profileId: "texture-upload-streaming-default",
+      fn: () => null,
+      options: {}
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `runProfile(${adapter.id})`
+  );
+  const aggregate = await withTimeout(
+    Promise.resolve(adapter.aggregateResults()),
+    REAL_ADAPTER_LOAD_MS,
+    `aggregateResults(${adapter.id})`
+  );
+  log(`Real benchmark adapter '${adapter.id}' aggregate: profileCount=${aggregate?.profileCount || 0}.`);
+  return { adapter, aggregate };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
   state.run = null;
   render();
+
+  if (isRealBenchmarkMode) {
+    log(`Mode=${requestedMode} requested; awaiting real benchmark adapter registration.`);
+    const adapter = await awaitRealBenchmark();
+    if (adapter) {
+      try {
+        const { aggregate } = await runRealBenchmarkTexture(adapter);
+        state.realAdapterAggregate = aggregate;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real benchmark '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealTextureBenchBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real benchmark adapter registered (${reason}); falling back to deterministic texture benchmark.`);
+    }
+  }
 
   const fixture = await loadFixture();
   const cases = [];
@@ -336,13 +421,34 @@ async function runBenchmark() {
       winnerId: winner.id,
       winnerLabel: winner.label,
       winnerScore: winner.stress_score
-    }
+    },
+    realAdapter: state.realAdapter || null
   };
 
   state.active = false;
   log(`Suite complete: winner=${state.run.overall.winnerId}, stream=${state.run.overall.sustainedStreamMbps} MB/s, upload=${state.run.overall.uploadFrameMs} ms.`);
   drawPreview();
   render();
+}
+
+function describeBenchmarkAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-texture-bench",
+    label: "Deterministic Texture Bench",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["profile-comparison", "winner-selection", "real-benchmark"],
+    benchmarkType: "synthetic",
+    message: "Benchmark adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -354,9 +460,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "benchmark",
-      scenario: run ? "texture-upload-and-streaming-benchmark" : "texture-upload-and-streaming-pending",
+      scenario: (state.run && state.run.realAdapter) ? `texture-upload-and-streaming-real-${state.run.realAdapter.id}` : (run ? "texture-upload-and-streaming-benchmark" : "texture-upload-and-streaming-pending"),
       notes: run
-        ? `cases=${run.overall.caseCount}; winner=${run.overall.winnerId}; backend=${state.environment.backend}; peakTextures=${run.overall.textureCount}; atlasMemory=${run.overall.atlasMemoryMb}; maxDimension=${run.overall.maxTextureDimension}; suite=${state.fixture?.id || INLINE_FIXTURE.id}`
+        ? `cases=${run.overall.caseCount}; winner=${run.overall.winnerId}; backend=${state.environment.backend}; peakTextures=${run.overall.textureCount}; atlasMemory=${run.overall.atlasMemoryMb}; maxDimension=${run.overall.maxTextureDimension}; suite=${state.fixture?.id || INLINE_FIXTURE.id}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealBenchmarkMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the deterministic texture upload and streaming benchmark."
     },
     environment: state.environment,
@@ -395,7 +501,8 @@ function buildResult() {
     artifacts: {
       raw_logs: state.logs.slice(0, 6),
       cases: run ? run.cases : [],
-      deploy_url: "https://ai-webgpu-lab.github.io/bench-texture-upload-and-streaming/"
+      deploy_url: "https://ai-webgpu-lab.github.io/bench-texture-upload-and-streaming/",
+      benchmark_adapter: describeBenchmarkAdapter()
     }
   };
 }

@@ -33,11 +33,52 @@ function resolveExecutionMode() {
 
 const executionMode = resolveExecutionMode();
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealBenchmarkMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealBenchmark() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealBenchmark(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealBenchmark();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealParityBenchBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   active: false,
+  realAdapterError: null,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -192,11 +233,55 @@ async function runCase(caseDef, index) {
   };
 }
 
+async function runRealBenchmarkParity(adapter) {
+  log(`Connecting real benchmark adapter '${adapter.id}'.`);
+  await withTimeout(
+    Promise.resolve(adapter.createBenchmark({ name: "webgpu-wasm-parity" })),
+    REAL_ADAPTER_LOAD_MS,
+    `createBenchmark(${adapter.id})`
+  );
+  await withTimeout(
+    Promise.resolve(adapter.runProfile({
+      profileId: "webgpu-wasm-parity-default",
+      fn: () => null,
+      options: {}
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `runProfile(${adapter.id})`
+  );
+  const aggregate = await withTimeout(
+    Promise.resolve(adapter.aggregateResults()),
+    REAL_ADAPTER_LOAD_MS,
+    `aggregateResults(${adapter.id})`
+  );
+  log(`Real benchmark adapter '${adapter.id}' aggregate: profileCount=${aggregate?.profileCount || 0}.`);
+  return { adapter, aggregate };
+}
+
 async function runBenchmark() {
   if (state.active) return;
   state.active = true;
   state.run = null;
   render();
+
+  if (isRealBenchmarkMode) {
+    log(`Mode=${requestedMode} requested; awaiting real benchmark adapter registration.`);
+    const adapter = await awaitRealBenchmark();
+    if (adapter) {
+      try {
+        const { aggregate } = await runRealBenchmarkParity(adapter);
+        state.realAdapterAggregate = aggregate;
+        state.realAdapter = adapter;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real benchmark '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealParityBenchBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real benchmark adapter registered (${reason}); falling back to deterministic parity benchmark.`);
+    }
+  }
 
   const results = [];
   for (let index = 0; index < CASES.length; index += 1) {
@@ -215,11 +300,32 @@ async function runBenchmark() {
     totalMs,
     passRate: passCount / results.length,
     maxAbsError: Math.max(...results.map((result) => result.maxAbsError)),
-    maxRelError: Math.max(...results.map((result) => result.maxRelError))
+    maxRelError: Math.max(...results.map((result) => result.maxRelError)),
+    realAdapter: state.realAdapter || null
   };
   state.active = false;
   log(`Parity complete: passRate=${round(state.run.passRate)}, maxAbs=${round(state.run.maxAbsError, 6)}.`);
   render();
+}
+
+function describeBenchmarkAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabBenchmarkRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-parity-bench",
+    label: "Deterministic Parity Bench",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["profile-comparison", "winner-selection", "real-benchmark"],
+    benchmarkType: "synthetic",
+    message: "Benchmark adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -231,9 +337,9 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "benchmark",
-      scenario: run ? `webgpu-wasm-parity-${run.executionMode}` : "webgpu-wasm-parity-pending",
+      scenario: (state.run && state.run.realAdapter) ? `webgpu-wasm-parity-real-${state.run.realAdapter.id}` : (run ? `webgpu-wasm-parity-${run.executionMode}` : "webgpu-wasm-parity-pending"),
       notes: run
-        ? `cases=${run.cases.length}; passRate=${round(run.passRate, 4)}; maxAbsError=${round(run.maxAbsError, 8)}; maxRelError=${round(run.maxRelError, 8)}; executionMode=${run.executionMode}; backend=${state.environment.backend}`
+        ? `cases=${run.cases.length}; passRate=${round(run.passRate, 4)}; maxAbsError=${round(run.maxAbsError, 8)}; maxRelError=${round(run.maxRelError, 8)}; executionMode=${run.executionMode}; backend=${state.environment.backend}${state.run && state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealBenchmarkMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the fixed WebGPU versus Wasm parity benchmark."
     },
     environment: state.environment,
@@ -256,7 +362,8 @@ function buildResult() {
     status: run ? (run.passRate === 1 ? "success" : "partial") : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/bench-webgpu-vs-wasm-parity/"
+      deploy_url: "https://ai-webgpu-lab.github.io/bench-webgpu-vs-wasm-parity/",
+      benchmark_adapter: describeBenchmarkAdapter()
     }
   };
 }

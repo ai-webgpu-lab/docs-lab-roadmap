@@ -1233,7 +1233,29 @@ const REAL_MODE_BY_REPO = {
   "exp-blackhole-kerr-engine": "?mode=real-kerr",
   "exp-blackhole-webgpu-fromscratch": "?mode=real-bhraw",
   "exp-nbody-webgpu-core": "?mode=real-nbody",
-  "exp-fluid-webgpu-core": "?mode=real-fluid"
+  "exp-fluid-webgpu-core": "?mode=real-fluid",
+  "bench-agent-step-latency": "?mode=real-agent-bench",
+  "bench-atomics-and-memory": "?mode=real-atomics-bench",
+  "bench-blackhole-render-shootout": "?mode=real-blackhole-bench",
+  "bench-compute-stress-suite": "?mode=real-compute-bench",
+  "bench-diffusion-browser-shootout": "?mode=real-diffusion-bench",
+  "bench-embeddings-latency-quality": "?mode=real-embeddings-bench",
+  "bench-llm-prefill-decode": "?mode=real-llm-bench",
+  "bench-multimodal-latency": "?mode=real-multimodal-bench",
+  "bench-rag-endtoend": "?mode=real-rag-bench",
+  "bench-reranker-latency": "?mode=real-reranker-bench",
+  "bench-stt-streaming-latency": "?mode=real-stt-bench",
+  "bench-texture-upload-and-streaming": "?mode=real-texture-bench",
+  "bench-voice-roundtrip": "?mode=real-voice-bench",
+  "bench-webgpu-vs-wasm-parity": "?mode=real-parity-bench",
+  "exp-browser-agent-local": "?mode=real-browser-agent",
+  "exp-diffusion-webgpu-browser": "?mode=real-diffusion",
+  "exp-llm-worker-ux": "?mode=real-worker-ux",
+  "exp-ort-webgpu-baseline": "?mode=real-ort",
+  "exp-reranker-browser": "?mode=real-reranker",
+  "exp-vlm-browser-multimodal": "?mode=real-vlm",
+  "exp-voice-assistant-local": "?mode=real-voice-assistant",
+  "exp-webllm-browser-chat": "?mode=real-webllm"
 };
 
 const ADAPTER_ARTIFACT_KEY_BY_REPO = {
@@ -1255,7 +1277,57 @@ const ADAPTER_ARTIFACT_KEY_BY_REPO = {
   "exp-blackhole-kerr-engine": "renderer_adapter",
   "exp-blackhole-webgpu-fromscratch": "renderer_adapter",
   "exp-nbody-webgpu-core": "renderer_adapter",
-  "exp-fluid-webgpu-core": "renderer_adapter"
+  "exp-fluid-webgpu-core": "renderer_adapter",
+  "bench-agent-step-latency": "benchmark_adapter",
+  "bench-atomics-and-memory": "benchmark_adapter",
+  "bench-blackhole-render-shootout": "benchmark_adapter",
+  "bench-compute-stress-suite": "benchmark_adapter",
+  "bench-diffusion-browser-shootout": "benchmark_adapter",
+  "bench-embeddings-latency-quality": "benchmark_adapter",
+  "bench-llm-prefill-decode": "benchmark_adapter",
+  "bench-multimodal-latency": "benchmark_adapter",
+  "bench-rag-endtoend": "benchmark_adapter",
+  "bench-reranker-latency": "benchmark_adapter",
+  "bench-stt-streaming-latency": "benchmark_adapter",
+  "bench-texture-upload-and-streaming": "benchmark_adapter",
+  "bench-voice-roundtrip": "benchmark_adapter",
+  "bench-webgpu-vs-wasm-parity": "benchmark_adapter",
+  "exp-browser-agent-local": "runtime_adapter",
+  "exp-diffusion-webgpu-browser": "runtime_adapter",
+  "exp-llm-worker-ux": "runtime_adapter",
+  "exp-ort-webgpu-baseline": "runtime_adapter",
+  "exp-reranker-browser": "runtime_adapter",
+  "exp-vlm-browser-multimodal": "runtime_adapter",
+  "exp-voice-assistant-local": "runtime_adapter",
+  "exp-webllm-browser-chat": "runtime_adapter"
+};
+
+const RUNTIME_FALLBACK_LABEL_BY_REPO = {
+  "exp-browser-agent-local": "deterministic-browser-agent",
+  "exp-diffusion-webgpu-browser": "deterministic-diffusion",
+  "exp-llm-worker-ux": "deterministic-worker-ux",
+  "exp-ort-webgpu-baseline": "deterministic-ort",
+  "exp-reranker-browser": "deterministic-reranker",
+  "exp-vlm-browser-multimodal": "deterministic-vlm",
+  "exp-voice-assistant-local": "deterministic-voice-assistant",
+  "exp-webllm-browser-chat": "deterministic-webllm"
+};
+
+const BENCHMARK_FALLBACK_LABEL_BY_REPO = {
+  "bench-agent-step-latency": "deterministic-agent-bench",
+  "bench-atomics-and-memory": "deterministic-atomics-memory",
+  "bench-blackhole-render-shootout": "deterministic-blackhole-bench",
+  "bench-compute-stress-suite": "deterministic-compute-suite",
+  "bench-diffusion-browser-shootout": "deterministic-diffusion-bench",
+  "bench-embeddings-latency-quality": "deterministic-embeddings-bench",
+  "bench-llm-prefill-decode": "deterministic-llm-bench",
+  "bench-multimodal-latency": "deterministic-multimodal-bench",
+  "bench-rag-endtoend": "deterministic-rag-bench",
+  "bench-reranker-latency": "deterministic-reranker-bench",
+  "bench-stt-streaming-latency": "deterministic-stt-bench",
+  "bench-texture-upload-and-streaming": "deterministic-texture-bench",
+  "bench-voice-roundtrip": "deterministic-voice-bench",
+  "bench-webgpu-vs-wasm-parity": "deterministic-parity-bench"
 };
 
 const RENDERER_FALLBACK_LABEL_BY_REPO = {
@@ -1374,6 +1446,20 @@ function realRuntimeComparisonLines(repoName, results) {
       `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
       `- p95_frametime: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`,
       `- scene_load_ms: real=${formatNumberWithUnit(realResult.metrics.graphics?.scene_load_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.scene_load_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.scene_load_ms, deterministicResult.metrics.graphics?.scene_load_ms, 2, "ms")}`
+    ];
+  }
+  if (BENCHMARK_FALLBACK_LABEL_BY_REPO[repoName]) {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, BENCHMARK_FALLBACK_LABEL_BY_REPO[repoName]),
+      `- adapter_run: real=${realAdapter.status || "unknown"}, deterministic=${deterministicAdapter.status || "deterministic"}`,
+      `- success_rate: real=${formatNumber(realResult.metrics.common?.success_rate)}, deterministic=${formatNumber(deterministicResult.metrics.common?.success_rate)}`
+    ];
+  }
+  if (RUNTIME_FALLBACK_LABEL_BY_REPO[repoName]) {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, RUNTIME_FALLBACK_LABEL_BY_REPO[repoName]),
+      `- adapter_run: real=${realAdapter.status || "unknown"}, deterministic=${deterministicAdapter.status || "deterministic"}`,
+      `- success_rate: real=${formatNumber(realResult.metrics.common?.success_rate)}, deterministic=${formatNumber(deterministicResult.metrics.common?.success_rate)}`
     ];
   }
   return [];

@@ -1371,3 +1371,81 @@ for entry in "${RENDERER_BATCH[@]}"; do
   assert_contains "${out_dir}/${repo}/reports/raw/02-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
   assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
 done
+
+# Benchmark family rollout: each repo gets deterministic + real-* benchmark capture
+BENCHMARK_BATCH=(
+  "bench-agent-step-latency:agent-step-latency:real-agent-bench"
+  "bench-atomics-and-memory:atomics-and-memory:real-atomics-bench"
+  "bench-blackhole-render-shootout:blackhole-render-shootout:real-blackhole-bench"
+  "bench-compute-stress-suite:compute-stress-suite:real-compute-bench"
+  "bench-diffusion-browser-shootout:diffusion-browser-shootout:real-diffusion-bench"
+  "bench-embeddings-latency-quality:embeddings-latency-quality:real-embeddings-bench"
+  "bench-llm-prefill-decode:llm-prefill-decode:real-llm-bench"
+  "bench-multimodal-latency:multimodal-latency:real-multimodal-bench"
+  "bench-rag-endtoend:rag-endtoend:real-rag-bench"
+  "bench-reranker-latency:reranker-latency:real-reranker-bench"
+  "bench-stt-streaming-latency:stt-streaming-latency:real-stt-bench"
+  "bench-texture-upload-and-streaming:texture-upload-and-streaming:real-texture-bench"
+  "bench-voice-roundtrip:voice-roundtrip:real-voice-bench"
+  "bench-webgpu-vs-wasm-parity:webgpu-wasm-parity:real-parity-bench"
+)
+
+for entry in "${BENCHMARK_BATCH[@]}"; do
+  IFS=':' read -r repo base mode <<<"${entry}"
+  out_dir="${TMP_DIR}/out-bench-batch-${repo}"
+  bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+    --mode local \
+    --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+    --repo "${repo}" \
+    --output-root "${out_dir}" \
+    --no-sync \
+    --refresh-generated \
+    --refresh-readme
+
+  node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+    --repo-dir "${out_dir}/${repo}" \
+    --repo-name "${repo}" \
+    --commit "bench-batch-test" \
+    --owner "test-owner" \
+    --captured-by "test-runner"
+
+  assert_file "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json"
+  assert_contains "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
+  assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
+done
+
+# Runtime family rollout: each repo gets deterministic + real-* runtime capture
+RUNTIME_BATCH=(
+  "exp-browser-agent-local:browser-agent-local:real-browser-agent"
+  "exp-diffusion-webgpu-browser:diffusion-webgpu-browser:real-diffusion"
+  "exp-llm-worker-ux:llm-worker-ux:real-worker-ux"
+  "exp-ort-webgpu-baseline:ort-webgpu-baseline:real-ort"
+  "exp-reranker-browser:browser-reranker:real-reranker"
+  "exp-vlm-browser-multimodal:vlm-browser-multimodal:real-vlm"
+  "exp-voice-assistant-local:voice-assistant-local:real-voice-assistant"
+  "exp-webllm-browser-chat:webllm-browser-chat:real-webllm"
+)
+
+for entry in "${RUNTIME_BATCH[@]}"; do
+  IFS=':' read -r repo base mode <<<"${entry}"
+  out_dir="${TMP_DIR}/out-runtime-batch-${repo}"
+  bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+    --mode local \
+    --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+    --repo "${repo}" \
+    --output-root "${out_dir}" \
+    --no-sync \
+    --refresh-generated \
+    --refresh-readme
+
+  node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+    --repo-dir "${out_dir}/${repo}" \
+    --repo-name "${repo}" \
+    --commit "runtime-batch-test" \
+    --owner "test-owner" \
+    --captured-by "test-runner"
+
+  assert_file "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json"
+  assert_contains "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
+  assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
+done
