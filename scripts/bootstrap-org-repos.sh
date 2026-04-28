@@ -1913,6 +1913,12 @@ render_org_repo() {
 - 실험/벤치 저장소의 결과 리포팅 규칙은 `docs-lab-roadmap`의 계획 문서와 일치해야 합니다.
 - 이 저장소의 변경은 조직 전체 UX에 영향을 주므로 문구 변경도 목적과 파급 범위를 명확히 남겨야 합니다.
 
+## 조직 상태 대시보드
+- 전체 repo/Pages 상태: `docs-lab-roadmap/docs/PAGES-STATUS.md`
+- 통합 sketch/adapter 상태: `docs-lab-roadmap/docs/INTEGRATION-STATUS.md`
+- sketch capabilities: `docs-lab-roadmap/docs/SKETCH-METRICS.md`
+- 조직 프로필은 `.github/profile/README.md`에서 관리합니다.
+
 ## 갱신 기준
 - 새 저장소 유형이 추가되면 대응 이슈 폼 또는 템플릿을 함께 추가합니다.
 - 리뷰 흐름이 바뀌면 `CODEOWNERS`, PR 템플릿, 조직 프로필을 함께 갱신합니다.
@@ -1976,6 +1982,12 @@ Browser-first research organization for WebGPU graphics, scientific visualizatio
 - WebGPU-first, with fallback paths recorded explicitly.
 - Repositories are reviewed on a promote / continue / archive cadence.
 
+## Live Status
+- Pages/demo status: `docs-lab-roadmap/docs/PAGES-STATUS.md`
+- Integration status: `docs-lab-roadmap/docs/INTEGRATION-STATUS.md`
+- Sketch metrics: `docs-lab-roadmap/docs/SKETCH-METRICS.md`
+- Representative real-mode smoke targets: `bench-runtime-shootout`, `exp-three-webgpu-core`, `bench-renderer-shootout`, `app-blackhole-observatory`
+
 ## Start Here
 - Master summary: `docs-lab-roadmap/docs/00-master-summary.md`
 - Repository map: `docs-lab-roadmap/docs/01-org-repo-map.md`
@@ -2012,6 +2024,11 @@ render_shared_bench_schema_repo() {
 - \`templates/example-result.json\`
 - \`templates/RESULTS-template.md\`
 - \`docs/RESULT-RULES.md\`
+
+## 조직 상태 대시보드
+- 전체 Pages/demo 상태는 \`docs-lab-roadmap/docs/PAGES-STATUS.md\`에서 확인합니다.
+- 이 저장소의 live demo는 \`https://ai-webgpu-lab.github.io/${repo}/\`에서 확인합니다.
+- 결과 스키마 변경은 \`docs-lab-roadmap/docs/INTEGRATION-STATUS.md\`와 각 \`RESULTS.md\` 운영 규칙에 맞춰 반영합니다.
 
 ## 사용 방식
 - 실험, 벤치마크, 앱 저장소는 이 저장소의 스키마와 템플릿을 기준으로 결과 파일을 복제합니다.
@@ -2068,6 +2085,11 @@ render_shared_repo() {
 ## 기본 구조
 - \`src/\` - 재사용 가능한 모듈 또는 스크립트 구현
 - \`docs/\` - 사용법, 설계 메모, 소비자 통합 가이드
+
+## 조직 상태 대시보드
+- 전체 Pages/demo 상태는 \`docs-lab-roadmap/docs/PAGES-STATUS.md\`에서 확인합니다.
+- 이 저장소의 live demo는 \`https://ai-webgpu-lab.github.io/${repo}/\`에서 확인합니다.
+- 통합 sketch/adapter 상태는 \`docs-lab-roadmap/docs/INTEGRATION-STATUS.md\`에서 확인합니다.
 
 ## 운영 규칙
 - 공통화 후보는 둘 이상의 저장소에서 반복 사용되는 경우에만 승격합니다.
@@ -2546,6 +2568,12 @@ render_docs_repo() {
 - \`schemas/\` - 결과 JSON 스키마
 - \`tests/\` - 문서/부트스트랩 정합성 검증
 
+## 조직 상태 대시보드
+- Pages/demo 상태: \`docs/PAGES-STATUS.md\`
+- 통합 sketch/adapter 상태: \`docs/INTEGRATION-STATUS.md\`
+- sketch capabilities: \`docs/SKETCH-METRICS.md\`
+- 실제 Pages smoke 검증: \`node scripts/check-org-pages.mjs --fail-on-error\`
+
 ## 유지 규칙
 - 저장소 인벤토리가 바뀌면 관련 문서와 자동 검증 스크립트를 함께 수정합니다.
 - 실행 계획 문서는 실제 bootstrap/seed 절차와 충돌하면 안 됩니다.
@@ -2910,6 +2938,12 @@ ${pages_bootstrap_status}
 ${baseline_status_block}
 
 ${pages_section}
+
+## 조직 상태 대시보드
+- 전체 Pages/demo 상태는 \`docs-lab-roadmap/docs/PAGES-STATUS.md\`에서 확인합니다.
+- 이 저장소의 live demo는 \`${pages_url}\`입니다.
+- 통합 sketch/adapter 상태는 \`docs-lab-roadmap/docs/INTEGRATION-STATUS.md\`에서 확인합니다.
+- sketch capabilities는 \`docs-lab-roadmap/docs/SKETCH-METRICS.md\`에서 확인합니다.
 
 ## 측정 및 검증 포인트
 ${measurement_block}

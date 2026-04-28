@@ -121,12 +121,16 @@ done
 
 assert_file "${TMP_DIR}/out-.github/.github/public/community-files-fixture.json"
 assert_contains "${TMP_DIR}/out-.github/.github/public/app.js" "dotgithub-community-baseline"
+assert_contains "${TMP_DIR}/out-.github/.github/README.md" "## 조직 상태 대시보드"
+assert_contains "${TMP_DIR}/out-.github/.github/profile/README.md" "## Live Status"
 assert_file "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/public/schema-fixture.json"
 assert_contains "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/public/app.js" "shared-bench-schema-baseline"
+assert_contains "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/README.md" "docs-lab-roadmap/docs/PAGES-STATUS.md"
 assert_file "${TMP_DIR}/out-shared-github-actions/shared-github-actions/public/workflow-fixture.json"
 assert_contains "${TMP_DIR}/out-shared-github-actions/shared-github-actions/public/app.js" "shared-github-actions-baseline"
 assert_file "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/public/docs-fixture.json"
 assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/public/app.js" "docs-lab-roadmap-baseline"
+assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/README.md" "node scripts/check-org-pages.mjs --fail-on-error"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
@@ -143,6 +147,7 @@ assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/index.html" "M
 assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/app.js" "minimal-webgpu-starter"
 assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/README.md" "Repository-specific runnable baseline active"
 assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/README.md" "repo-scaffolds/p0/tpl-webgpu-vanilla/"
+assert_contains "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/README.md" "docs-lab-roadmap/docs/PAGES-STATUS.md"
 node --check "${TMP_DIR}/out-vanilla/tpl-webgpu-vanilla/public/app.js"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
