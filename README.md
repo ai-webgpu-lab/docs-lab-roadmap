@@ -50,6 +50,9 @@
 - `scripts/render-projects-config.mjs` — Projects v2 board + 시드 issue 30개 dry-render (`--apply <script.sh>`로 preflight/dry-run/reuse-project 지원 gh CLI 스크립트 emit)
 - `scripts/capture-all-baselines.sh` — 인벤토리 일괄 capture wrapper (priority/category/repo 필터, TSV + markdown summary)
 - `scripts/check-org-pages.mjs` — 54개 하위 repo의 GitHub Pages/deploy/HTTP/real-mode smoke 상태 리포트 생성 (`docs/PAGES-STATUS.md`)
+- `scripts/check-org-readmes.mjs` — 54개 하위 repo README drift 상태 리포트 생성 (`docs/README-STATUS.md`)
+- `scripts/check-org-workflows.mjs` — 54개 하위 repo Actions/deploy workflow 상태 리포트 생성 (`docs/WORKFLOW-STATUS.md`)
+- `scripts/check-project-status.mjs` — Master Project와 seed issue 연결 상태 리포트 생성 (`docs/PROJECT-STATUS.md`)
 - `scripts/validate-infra-fixtures.mjs` — 5개 인프라 harness fixture vs 실제 surface drift 자동 검증 (67 checks, validate-lab-planning에서 hook)
 - `tests/run-all.sh` — `tests/test-*.sh` 실행 wrapper (`--mode fast|full|nightly`, `--capture-groups <list>`, `--filter <pattern>`, `--bail`, `--quiet` 지원, pass/fail 요약과 elapsed 출력)
 
@@ -65,6 +68,9 @@
 - `docs/08-bootstrap-and-execution-runbook.md` — 실제 운영 순서와 phase gate 체크리스트
 - `docs/09-runtime-integration-plan.md` — 4 family 어댑터 컨트랙트와 47개 specific real-*-sketch.js의 통합 계획
 - `docs/PAGES-STATUS.md` — 자동 생성 dashboard (54 repo × Pages/deploy/HTTP/real-mode smoke 상태)
+- `docs/README-STATUS.md` — 자동 생성 dashboard (54 repo × README/profile drift 상태)
+- `docs/WORKFLOW-STATUS.md` — 자동 생성 dashboard (54 repo × Actions/deploy workflow 상태)
+- `docs/PROJECT-STATUS.md` — 자동 생성 dashboard (Project/seeded issue/item 연결 상태)
 - `docs/INTEGRATION-STATUS.md` — 자동 생성 dashboard (54 repo × 어댑터/스케치/scaffold 상태)
 - `docs/SKETCH-METRICS.md` — 자동 생성 dashboard (47 specific sketch × CDN/backend/capabilities)
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개
@@ -102,6 +108,9 @@ bash tests/test-bootstrap-org-repos.sh
 bash tests/test-bootstrap-org-repos-full-inventory.sh
 bash tests/test-seed-org-issues.sh
 node scripts/check-org-pages.mjs --fail-on-error
+node scripts/check-org-readmes.mjs --fail-on-error
+node scripts/check-org-workflows.mjs --fail-on-error
+node scripts/check-project-status.mjs
 bash tests/run-all.sh --mode fast
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups renderer-batch
 bash tests/run-all.sh --filter render-sketch-metrics --quiet

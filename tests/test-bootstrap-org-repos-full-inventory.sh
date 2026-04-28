@@ -64,6 +64,7 @@ assert_file "${TMP_DIR}/out/shared-bench-schema/.github/workflows/deploy-pages.y
 assert_dir "${TMP_DIR}/out/shared-bench-schema/reports/raw"
 assert_file "${TMP_DIR}/out/shared-bench-schema/RESULTS.md"
 assert_contains "${TMP_DIR}/out/shared-bench-schema/public/app.js" "shared-bench-schema-baseline"
+assert_contains "${TMP_DIR}/out/shared-bench-schema/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 
 assert_file "${TMP_DIR}/out/shared-webgpu-capability/src/index.mjs"
 assert_file "${TMP_DIR}/out/shared-webgpu-capability/docs/capability-contract.md"
@@ -74,6 +75,7 @@ assert_file "${TMP_DIR}/out/shared-webgpu-capability/.github/workflows/deploy-pa
 assert_dir "${TMP_DIR}/out/shared-webgpu-capability/reports/raw"
 assert_file "${TMP_DIR}/out/shared-webgpu-capability/RESULTS.md"
 assert_contains "${TMP_DIR}/out/shared-webgpu-capability/public/app.js" "shared-webgpu-capability-baseline"
+assert_contains "${TMP_DIR}/out/shared-webgpu-capability/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 
 assert_file "${TMP_DIR}/out/shared-github-actions/public/index.html"
 assert_file "${TMP_DIR}/out/shared-github-actions/public/app.js"
@@ -82,6 +84,7 @@ assert_file "${TMP_DIR}/out/shared-github-actions/.github/workflows/deploy-pages
 assert_dir "${TMP_DIR}/out/shared-github-actions/reports/raw"
 assert_file "${TMP_DIR}/out/shared-github-actions/RESULTS.md"
 assert_contains "${TMP_DIR}/out/shared-github-actions/public/app.js" "shared-github-actions-baseline"
+assert_contains "${TMP_DIR}/out/shared-github-actions/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 
 assert_file "${TMP_DIR}/out/docs-lab-roadmap/README.md"
 assert_dir "${TMP_DIR}/out/docs-lab-roadmap/docs"
@@ -93,6 +96,9 @@ assert_file "${TMP_DIR}/out/docs-lab-roadmap/.github/workflows/deploy-pages.yml"
 assert_dir "${TMP_DIR}/out/docs-lab-roadmap/reports/raw"
 assert_file "${TMP_DIR}/out/docs-lab-roadmap/RESULTS.md"
 assert_contains "${TMP_DIR}/out/docs-lab-roadmap/public/app.js" "docs-lab-roadmap-baseline"
+assert_contains "${TMP_DIR}/out/docs-lab-roadmap/README.md" "docs/README-STATUS.md"
+assert_contains "${TMP_DIR}/out/docs-lab-roadmap/README.md" "docs/WORKFLOW-STATUS.md"
+assert_contains "${TMP_DIR}/out/docs-lab-roadmap/README.md" "docs/PROJECT-STATUS.md"
 
 assert_file "${TMP_DIR}/out/exp-embeddings-browser-throughput/RESULTS.md"
 assert_file "${TMP_DIR}/out/exp-embeddings-browser-throughput/schemas/ai-webgpu-lab-result.schema.json"

@@ -99,6 +99,7 @@ assert_dir "${TMP_DIR}/out-capability/shared-webgpu-capability/reports/raw"
 assert_file "${TMP_DIR}/out-capability/shared-webgpu-capability/RESULTS.md"
 assert_file "${TMP_DIR}/out-capability/shared-webgpu-capability/schemas/ai-webgpu-lab-result.schema.json"
 assert_contains "${TMP_DIR}/out-capability/shared-webgpu-capability/public/app.js" "shared-webgpu-capability-baseline"
+assert_contains "${TMP_DIR}/out-capability/shared-webgpu-capability/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 node --check "${TMP_DIR}/out-capability/shared-webgpu-capability/public/app.js"
 
 for repo in .github shared-bench-schema shared-github-actions docs-lab-roadmap; do
@@ -126,11 +127,16 @@ assert_contains "${TMP_DIR}/out-.github/.github/profile/README.md" "## Live Stat
 assert_file "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/public/schema-fixture.json"
 assert_contains "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/public/app.js" "shared-bench-schema-baseline"
 assert_contains "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/README.md" "docs-lab-roadmap/docs/PAGES-STATUS.md"
+assert_contains "${TMP_DIR}/out-shared-bench-schema/shared-bench-schema/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 assert_file "${TMP_DIR}/out-shared-github-actions/shared-github-actions/public/workflow-fixture.json"
 assert_contains "${TMP_DIR}/out-shared-github-actions/shared-github-actions/public/app.js" "shared-github-actions-baseline"
+assert_contains "${TMP_DIR}/out-shared-github-actions/shared-github-actions/README.md" "docs-lab-roadmap/docs/SKETCH-METRICS.md"
 assert_file "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/public/docs-fixture.json"
 assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/public/app.js" "docs-lab-roadmap-baseline"
 assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/README.md" "node scripts/check-org-pages.mjs --fail-on-error"
+assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/README.md" "docs/README-STATUS.md"
+assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/README.md" "docs/WORKFLOW-STATUS.md"
+assert_contains "${TMP_DIR}/out-docs-lab-roadmap/docs-lab-roadmap/README.md" "docs/PROJECT-STATUS.md"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \

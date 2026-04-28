@@ -2029,6 +2029,7 @@ render_shared_bench_schema_repo() {
 - 전체 Pages/demo 상태는 \`docs-lab-roadmap/docs/PAGES-STATUS.md\`에서 확인합니다.
 - 이 저장소의 live demo는 \`https://ai-webgpu-lab.github.io/${repo}/\`에서 확인합니다.
 - 결과 스키마 변경은 \`docs-lab-roadmap/docs/INTEGRATION-STATUS.md\`와 각 \`RESULTS.md\` 운영 규칙에 맞춰 반영합니다.
+- sketch capabilities는 \`docs-lab-roadmap/docs/SKETCH-METRICS.md\`에서 확인합니다.
 
 ## 사용 방식
 - 실험, 벤치마크, 앱 저장소는 이 저장소의 스키마와 템플릿을 기준으로 결과 파일을 복제합니다.
@@ -2090,6 +2091,7 @@ render_shared_repo() {
 - 전체 Pages/demo 상태는 \`docs-lab-roadmap/docs/PAGES-STATUS.md\`에서 확인합니다.
 - 이 저장소의 live demo는 \`https://ai-webgpu-lab.github.io/${repo}/\`에서 확인합니다.
 - 통합 sketch/adapter 상태는 \`docs-lab-roadmap/docs/INTEGRATION-STATUS.md\`에서 확인합니다.
+- sketch capabilities는 \`docs-lab-roadmap/docs/SKETCH-METRICS.md\`에서 확인합니다.
 
 ## 운영 규칙
 - 공통화 후보는 둘 이상의 저장소에서 반복 사용되는 경우에만 승격합니다.
@@ -2572,6 +2574,9 @@ render_docs_repo() {
 - Pages/demo 상태: \`docs/PAGES-STATUS.md\`
 - 통합 sketch/adapter 상태: \`docs/INTEGRATION-STATUS.md\`
 - sketch capabilities: \`docs/SKETCH-METRICS.md\`
+- README drift 상태: \`docs/README-STATUS.md\`
+- Actions/deploy workflow 상태: \`docs/WORKFLOW-STATUS.md\`
+- GitHub Projects/seeded issue 상태: \`docs/PROJECT-STATUS.md\`
 - 실제 Pages smoke 검증: \`node scripts/check-org-pages.mjs --fail-on-error\`
 
 ## 유지 규칙
