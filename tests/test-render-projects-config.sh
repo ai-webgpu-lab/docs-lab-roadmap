@@ -61,6 +61,9 @@ assert_contains "${APPLY_CONTENT}" "DRY_RUN"
 assert_contains "${APPLY_CONTENT}" "preflight()"
 assert_contains "${APPLY_CONTENT}" "gh auth status"
 assert_contains "${APPLY_CONTENT}" "gh repo view"
+assert_contains "${APPLY_CONTENT}" "REUSE_PROJECT"
+assert_contains "${APPLY_CONTENT}" "gh issue list"
+assert_contains "${APPLY_CONTENT}" "Reusing issue:"
 
 bash -n "${APPLY_FILE}" || fail "apply script has shell syntax errors"
 
@@ -76,6 +79,8 @@ cat >"${FAKE_BIN}/gh" <<'SH'
 printf '%s\n' "$*" >>"${GH_LOG}"
 if [[ "$1 $2" == "project create" ]]; then
   printf '{"number":321}\n'
+elif [[ "$1 $2" == "issue list" && -n "${GH_REUSE_ISSUE_URL:-}" ]]; then
+  printf '%s\n' "${GH_REUSE_ISSUE_URL}"
 elif [[ "$1 $2" == "issue create" ]]; then
   repo=""
   while [[ $# -gt 0 ]]; do
@@ -100,7 +105,19 @@ chmod +x "${FAKE_BIN}/jq"
 GH_LOG_FILE="${TMP_DIR}/gh.log"
 GH_LOG="${GH_LOG_FILE}" ORG="test-org" PROJECT_TITLE="Test Project" SKIP_PREFLIGHT=1 PATH="${FAKE_BIN}:${PATH}" bash "${APPLY_FILE}" >/dev/null
 assert_contains "$(cat "${GH_LOG_FILE}")" "label create priority:p0 --color BFD4F2 --description Auto-generated from inventory --repo test-org/bench-runtime-shootout"
+assert_contains "$(cat "${GH_LOG_FILE}")" "issue list --repo test-org/bench-runtime-shootout"
 assert_contains "$(cat "${GH_LOG_FILE}")" "issue create --repo test-org/bench-runtime-shootout"
 assert_contains "$(cat "${GH_LOG_FILE}")" "project item-add 321 --owner test-org --url https://github.com/test-org/bench-runtime-shootout/issues/1"
+
+REUSE_LOG_FILE="${TMP_DIR}/gh-reuse.log"
+GH_LOG="${REUSE_LOG_FILE}" GH_REUSE_ISSUE_URL="https://github.com/test-org/bench-runtime-shootout/issues/99" ORG="test-org" PROJECT_TITLE="Test Project" PROJECT_NUMBER=654 SKIP_PREFLIGHT=1 PATH="${FAKE_BIN}:${PATH}" bash "${APPLY_FILE}" >/dev/null
+assert_contains "$(cat "${REUSE_LOG_FILE}")" "issue list --repo test-org/bench-runtime-shootout"
+if grep -Fq "project create" "${REUSE_LOG_FILE}"; then
+  fail "PROJECT_NUMBER reuse should skip project create"
+fi
+if grep -Fq "issue create" "${REUSE_LOG_FILE}"; then
+  fail "existing issue reuse should skip issue create"
+fi
+assert_contains "$(cat "${REUSE_LOG_FILE}")" "project item-add 654 --owner test-org"
 
 echo "render-projects-config test passed"

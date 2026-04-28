@@ -50,6 +50,7 @@ assert_contains "${HELP_OUTPUT}" "--bail"
 assert_contains "${HELP_OUTPUT}" "--quiet"
 assert_contains "${HELP_OUTPUT}" "--json"
 assert_contains "${HELP_OUTPUT}" "--mode"
+assert_contains "${HELP_OUTPUT}" "--capture-groups"
 
 # 6. Filter matching multiple fast tests still prints expected counts
 MULTI_OUTPUT="$(bash "${REPO_ROOT}/tests/run-all.sh" --filter render-sketch --quiet 2>&1)"
@@ -61,8 +62,8 @@ JSON_OUTPUT="$(bash "${REPO_ROOT}/tests/run-all.sh" --filter render-sketch-metri
 if grep -Fq -e "run-all summary:" <<<"${JSON_OUTPUT}"; then
   fail "--json should not emit human summary line"
 fi
-PARSED="$(node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8"));process.stdout.write([j.total,j.passed,j.failed,j.mode,j.bail,Array.isArray(j.failures),Array.isArray(j.passed_names),typeof j.elapsed_seconds].join("|"));' <<<"${JSON_OUTPUT}")"
-[[ "${PARSED}" == "1|1|0|fast|false|true|true|number" ]] || fail "json shape mismatch: ${PARSED}"
+PARSED="$(node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8"));process.stdout.write([j.total,j.passed,j.failed,j.mode,j.capture_groups,j.bail,Array.isArray(j.failures),Array.isArray(j.passed_names),typeof j.elapsed_seconds].join("|"));' <<<"${JSON_OUTPUT}")"
+[[ "${PARSED}" == "1|1|0|fast||false|true|true|number" ]] || fail "json shape mismatch: ${PARSED}"
 
 # 8. --bail short-circuits at first failure when fixture suite contains a failing test
 TMP_TESTS_DIR="$(mktemp -d)"
@@ -122,6 +123,7 @@ cat >"${MODE_TESTS_DIR}/test-mode-env.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ "${AI_WEBGPU_LAB_CAPTURE_SUITE:-}" == "${EXPECTED_CAPTURE_SUITE}" ]]
+[[ "${AI_WEBGPU_LAB_CAPTURE_GROUPS:-}" == "${EXPECTED_CAPTURE_GROUPS:-}" ]]
 EOF
 chmod +x "${MODE_TESTS_DIR}/test-mode-env.sh"
 
@@ -132,6 +134,10 @@ assert_contains "${FAST_MODE_OUT}" "mode=fast"
 FULL_MODE_OUT="$(EXPECTED_CAPTURE_SUITE=full bash "${REPO_ROOT}/tests/run-all.sh" --tests-dir "${MODE_TESTS_DIR}" --mode full --quiet 2>&1)"
 assert_contains "${FULL_MODE_OUT}" "run-all summary: 1 passed, 0 failed, total=1"
 assert_contains "${FULL_MODE_OUT}" "mode=full"
+
+GROUP_MODE_OUT="$(EXPECTED_CAPTURE_SUITE=full EXPECTED_CAPTURE_GROUPS=renderer-batch bash "${REPO_ROOT}/tests/run-all.sh" --tests-dir "${MODE_TESTS_DIR}" --mode full --capture-groups renderer-batch --quiet 2>&1)"
+assert_contains "${GROUP_MODE_OUT}" "run-all summary: 1 passed, 0 failed, total=1"
+assert_contains "${GROUP_MODE_OUT}" "capture_groups=renderer-batch"
 
 if UNKNOWN_MODE_OUTPUT="$(bash "${REPO_ROOT}/tests/run-all.sh" --mode invalid --quiet 2>&1)"; then
   fail "unknown mode should exit non-zero"

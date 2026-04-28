@@ -42,7 +42,46 @@ bash tests/test-seed-org-issues.sh
 - P0 및 조기 승격 후보 browser harness capture smoke test 통과
 - 시드 이슈 dry-run 출력 통과
 
-### 3. GitHub 조직 반영
+### 3. CI와 capture sweep 검증
+```bash
+bash tests/run-all.sh --mode fast --quiet
+bash scripts/check-coverage.sh --preset full --quiet
+bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups smoke --quiet
+bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups runtime-batch --quiet
+```
+
+통과 기준:
+- fast suite는 pull request/push 기본 검증으로 사용하며 70개 테스트가 모두 통과해야 한다.
+- `check-coverage --preset full`은 실제 validator/dashboard 경로를 한 번 실행해야 한다.
+- full capture는 GitHub Actions matrix에서 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch`로 병렬 실행한다.
+- 로컬에서 baseline 전체를 한 번에 확인할 때는 호환 그룹 `baseline`을 사용할 수 있다.
+- 실패 분석이 필요하면 `AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out`을 지정해 raw JSON, screenshots, logs를 보존한다.
+
+예시:
+```bash
+AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out \
+  bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups baseline-a --quiet
+```
+
+### 4. GitHub Projects 적용 dry-run
+```bash
+node scripts/render-projects-config.mjs --output tmp/projects-config.json --apply tmp/apply-projects.sh
+DRY_RUN=1 bash tmp/apply-projects.sh
+```
+
+통과 기준:
+- `gh project create`, `gh project field-create`, `gh label create`, `gh issue create`, `gh project item-add` 명령이 의도한 org/repo/title로 출력됨
+- 실제 적용 전 `gh auth status`와 org/repo 접근 권한이 충족됨
+- 기존 프로젝트를 재사용할 때는 `PROJECT_NUMBER=<number>` 또는 `REUSE_PROJECT=1`을 지정함
+- 기존 issue title이 발견되면 새 issue를 만들지 않고 기존 URL을 Projects item으로 연결함
+
+예시:
+```bash
+PROJECT_NUMBER=12 bash tmp/apply-projects.sh
+REUSE_PROJECT=1 bash tmp/apply-projects.sh
+```
+
+### 5. GitHub 조직 반영
 ```bash
 bash scripts/bootstrap-org-repos.sh
 bash scripts/bootstrap-org-repos.sh --refresh-readme --no-sync

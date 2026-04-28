@@ -62,6 +62,7 @@ function buildApplyScript(config) {
     `: "${"$"}{PROJECT_TITLE:=${config.project}}"`,
     `: "${"$"}{DRY_RUN:=0}"`,
     `: "${"$"}{SKIP_PREFLIGHT:=0}"`,
+    `: "${"$"}{REUSE_PROJECT:=0}"`,
     "",
     "print_command() {",
     "  printf '+'",
@@ -96,11 +97,15 @@ function buildApplyScript(config) {
     "  require_command jq",
     "  gh auth status >/dev/null",
     "  gh api \"orgs/${ORG}\" >/dev/null",
-    "  local existing_title",
-    "  existing_title=\"$(gh project list --owner \"${ORG}\" --format json --jq '.projects[].title' 2>/dev/null | grep -Fx \"${PROJECT_TITLE}\" || true)\"",
-    "  if [[ -n \"${existing_title}\" ]]; then",
+    "  local existing_project_number",
+    "  existing_project_number=\"$(gh project list --owner \"${ORG}\" --format json --jq \".projects[] | select(.title == \\\"${PROJECT_TITLE}\\\") | .number\" 2>/dev/null | head -1 || true)\"",
+    "  if [[ -n \"${existing_project_number}\" && \"${REUSE_PROJECT}\" != \"1\" && -z \"${PROJECT_NUMBER:-}\" ]]; then",
     "    echo \"project already exists: ${PROJECT_TITLE}\" >&2",
+    "    echo \"set REUSE_PROJECT=1 or PROJECT_NUMBER=${existing_project_number} to reuse it\" >&2",
     "    exit 1",
+    "  fi",
+    "  if [[ -z \"${PROJECT_NUMBER:-}\" && \"${REUSE_PROJECT}\" == \"1\" && -n \"${existing_project_number}\" ]]; then",
+    "    PROJECT_NUMBER=\"${existing_project_number}\"",
     "  fi",
     "  echo \"checking repo access for " + repos.length + " repos\"",
   ];
@@ -114,11 +119,14 @@ function buildApplyScript(config) {
     "",
     "preflight",
     "",
-    "echo \"Creating project '${PROJECT_TITLE}' under org '${ORG}'\"",
-    "if [[ \"${DRY_RUN}\" == \"1\" ]]; then",
+    "if [[ -n \"${PROJECT_NUMBER:-}\" ]]; then",
+    "  echo \"Reusing project '${PROJECT_TITLE}' under org '${ORG}' (number: ${PROJECT_NUMBER})\"",
+    "elif [[ \"${DRY_RUN}\" == \"1\" ]]; then",
+    "  echo \"Creating project '${PROJECT_TITLE}' under org '${ORG}'\"",
     "  print_command gh project create --owner \"${ORG}\" --title \"${PROJECT_TITLE}\" --format json",
     "  PROJECT_NUMBER=\"${PROJECT_NUMBER:-0}\"",
     "else",
+    "  echo \"Creating project '${PROJECT_TITLE}' under org '${ORG}'\"",
     "  PROJECT_NUMBER=\"$(gh project create --owner \"${ORG}\" --title \"${PROJECT_TITLE}\" --format json | jq -r .number)\"",
     "fi",
     "echo \"project number: ${PROJECT_NUMBER}\"",
@@ -128,10 +136,10 @@ function buildApplyScript(config) {
   for (const field of config.fields) {
     if (field.type === "single_select") {
       lines.push(`echo "Adding field ${field.name} (${field.type})"`);
-      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type SINGLE_SELECT --single-select-options ${field.options.map(quote).join(",")}`);
+      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type SINGLE_SELECT --single-select-options ${field.options.map(quote).join(",")} || true`);
     } else {
       lines.push(`echo "Adding field ${field.name} (${field.type})"`);
-      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type TEXT`);
+      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type TEXT || true`);
     }
   }
   lines.push("");
@@ -156,7 +164,12 @@ function buildApplyScript(config) {
     lines.push(`  print_command gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)}`);
     lines.push(`  ISSUE_URL="https://github.com/${"$"}{ORG}/${item.repo}/issues/DRY-RUN"`);
     lines.push("else");
-    lines.push(`  ISSUE_URL="$(gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)} | tail -1)"`);
+    lines.push(`  ISSUE_URL="$(gh issue list --repo "${"$"}{ORG}/${item.repo}" --state all --search ${quote(`in:title ${item.title}`)} --json title,url --jq ${quote(`.[] | select(.title == ${JSON.stringify(item.title)}) | .url`)} | head -1 || true)"`);
+    lines.push("  if [[ -n \"${ISSUE_URL}\" ]]; then");
+    lines.push(`    echo "Reusing issue: ${item.title}"`);
+    lines.push("  else");
+    lines.push(`    ISSUE_URL="$(gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)} | tail -1)"`);
+    lines.push("  fi");
     lines.push("fi");
     lines.push(`run gh project item-add "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --url "${"$"}{ISSUE_URL}"`);
     lines.push("");

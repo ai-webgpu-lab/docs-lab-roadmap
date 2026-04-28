@@ -36,12 +36,25 @@ jobs:
       - run: bash tests/run-all.sh --mode fast --quiet
 
   full-capture:
-    name: Full browser capture sweep
+    name: Full browser capture sweep (${{ matrix.capture_group }})
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.run_full_capture == 'true')
-    timeout-minutes: 120
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        capture_group:
+          - smoke
+          - baseline-a
+          - baseline-b
+          - baseline-c
+          - baseline-d
+          - real-adapters
+          - renderer-batch
+          - benchmark-batch
+          - runtime-batch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,4 +63,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --quiet
+      - name: Run capture group
+        env:
+          AI_WEBGPU_LAB_CAPTURE_TMP_DIR: ${{ runner.temp }}/capture-${{ matrix.capture_group }}
+        run: bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups "${{ matrix.capture_group }}" --quiet
+      - name: Upload capture artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capture-${{ matrix.capture_group }}
+          path: ${{ runner.temp }}/capture-${{ matrix.capture_group }}
+          if-no-files-found: ignore

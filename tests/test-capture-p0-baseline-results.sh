@@ -4,12 +4,26 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "${TMP_DIR}"' EXIT
+if [[ -n "${AI_WEBGPU_LAB_CAPTURE_TMP_DIR:-}" ]]; then
+  TMP_DIR="${AI_WEBGPU_LAB_CAPTURE_TMP_DIR}/work"
+  rm -rf "${TMP_DIR}"
+  mkdir -p "${TMP_DIR}"
+else
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "${TMP_DIR}"' EXIT
+fi
 
 CAPTURE_SUITE="${AI_WEBGPU_LAB_CAPTURE_SUITE:-smoke}"
 if [[ "${AI_WEBGPU_LAB_FULL_CAPTURE_TESTS:-0}" == "1" ]]; then
   CAPTURE_SUITE="full"
+fi
+CAPTURE_GROUPS="${AI_WEBGPU_LAB_CAPTURE_GROUPS:-}"
+if [[ -z "${CAPTURE_GROUPS}" ]]; then
+  if [[ "${CAPTURE_SUITE}" == "smoke" ]]; then
+    CAPTURE_GROUPS="smoke"
+  else
+    CAPTURE_GROUPS="all"
+  fi
 fi
 
 case "${CAPTURE_SUITE}" in
@@ -20,6 +34,29 @@ case "${CAPTURE_SUITE}" in
     exit 1
     ;;
 esac
+
+IFS=',' read -r -a CAPTURE_GROUP_LIST <<<"${CAPTURE_GROUPS}"
+for group in "${CAPTURE_GROUP_LIST[@]}"; do
+  case "${group}" in
+    all|smoke|baseline|baseline-a|baseline-b|baseline-c|baseline-d|real-adapters|renderer-batch|benchmark-batch|runtime-batch)
+      ;;
+    *)
+      echo "test failed: unknown AI_WEBGPU_LAB_CAPTURE_GROUPS entry '${group}'" >&2
+      exit 1
+      ;;
+  esac
+done
+
+capture_group_enabled() {
+  local group="$1"
+  if [[ "${CAPTURE_GROUPS}" == "all" ]]; then
+    return 0
+  fi
+  case ",${CAPTURE_GROUPS}," in
+    *",${group},"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 fail() {
   echo "test failed: $1" >&2
@@ -42,6 +79,7 @@ assert_contains() {
 
 [[ -d "${REPO_ROOT}/node_modules/playwright" ]] || fail "playwright dependency missing; run npm install"
 
+if capture_group_enabled smoke; then
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
@@ -117,12 +155,14 @@ assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/rep
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/03-cold-index-fallback.json" "\"fallback_triggered\": true"
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "## 8. WebGPU vs Fallback"
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "cold cache: docs/s"
+fi
 
 if [[ "${CAPTURE_SUITE}" == "smoke" ]]; then
   echo "capture-p0 baseline smoke test passed"
   exit 0
 fi
 
+if capture_group_enabled baseline || capture_group_enabled baseline-a; then
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
@@ -438,7 +478,9 @@ assert_file "${TMP_DIR}/out-agent/exp-browser-agent-local/reports/logs/01-browse
 assert_contains "${TMP_DIR}/out-agent/exp-browser-agent-local/reports/raw/01-browser-agent-local-readiness.json" "\"scenario\": \"browser-agent-local-readiness\""
 assert_contains "${TMP_DIR}/out-agent/exp-browser-agent-local/RESULTS.md" "Browser Agent Local Readiness"
 assert_contains "${TMP_DIR}/out-agent/exp-browser-agent-local/RESULTS.md" "agent metadata"
+fi
 
+if capture_group_enabled baseline || capture_group_enabled baseline-b; then
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
@@ -604,7 +646,9 @@ assert_file "${TMP_DIR}/out-blackhole-app/app-blackhole-observatory/reports/logs
 assert_contains "${TMP_DIR}/out-blackhole-app/app-blackhole-observatory/reports/raw/01-blackhole-observatory.json" "\"scenario\": \"blackhole-observatory-demo\""
 assert_contains "${TMP_DIR}/out-blackhole-app/app-blackhole-observatory/RESULTS.md" "Blackhole Observatory"
 assert_contains "${TMP_DIR}/out-blackhole-app/app-blackhole-observatory/RESULTS.md" "renderer_consensus_score"
+fi
 
+if capture_group_enabled baseline || capture_group_enabled baseline-c; then
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
@@ -904,7 +948,9 @@ assert_file "${TMP_DIR}/out-particles/exp-three-webgpu-particles-stress/reports/
 assert_contains "${TMP_DIR}/out-particles/exp-three-webgpu-particles-stress/reports/raw/01-three-particles-stress-readiness.json" "\"scenario\": \"three-webgpu-particles-stress-readiness\""
 assert_contains "${TMP_DIR}/out-particles/exp-three-webgpu-particles-stress/RESULTS.md" "Three Particles Stress Readiness"
 assert_contains "${TMP_DIR}/out-particles/exp-three-webgpu-particles-stress/RESULTS.md" "particle stress metadata"
+fi
 
+if capture_group_enabled baseline || capture_group_enabled baseline-d; then
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
@@ -1176,7 +1222,9 @@ assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/reports/raw/01-doc
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/reports/raw/01-docs-lab-roadmap-baseline.json" "\"track\": \"docs\""
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/RESULTS.md" "docs-lab-roadmap Inventory"
 assert_contains "${TMP_DIR}/out-docs-roadmap/docs-lab-roadmap/RESULTS.md" "inventory_repo_count"
+fi
 
+if capture_group_enabled real-adapters; then
 # bench-runtime-shootout: deterministic + real-runtime capture, with capture metadata
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
@@ -1351,7 +1399,9 @@ node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
 assert_file "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json"
 assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json" "\"capture_url_search\": \"?mode=real-voice-agent\""
 assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/RESULTS.md" "Real Adapter vs Deterministic"
+fi
 
+if capture_group_enabled renderer-batch; then
 # Renderer family rollout: each repo gets deterministic + real-* capture
 RENDERER_BATCH=(
   "exp-babylon-webgpu-core:babylon-webgpu-scene:real-babylon"
@@ -1390,7 +1440,9 @@ for entry in "${RENDERER_BATCH[@]}"; do
   assert_contains "${out_dir}/${repo}/reports/raw/02-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
   assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
 done
+fi
 
+if capture_group_enabled benchmark-batch; then
 # Benchmark family rollout: each repo gets deterministic + real-* benchmark capture
 BENCHMARK_BATCH=(
   "bench-agent-step-latency:agent-step-latency:real-agent-bench"
@@ -1432,9 +1484,9 @@ for entry in "${BENCHMARK_BATCH[@]}"; do
   assert_contains "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
   assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
 done
+fi
 
-echo "capture-p0 baseline full test passed"
-
+if capture_group_enabled runtime-batch; then
 # Runtime family rollout: each repo gets deterministic + real-* runtime capture
 RUNTIME_BATCH=(
   "exp-browser-agent-local:browser-agent-local:real-browser-agent"
@@ -1470,3 +1522,6 @@ for entry in "${RUNTIME_BATCH[@]}"; do
   assert_contains "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
   assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
 done
+fi
+
+echo "capture-p0 baseline full test passed (${CAPTURE_GROUPS})"

@@ -3,7 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="${CHECK_COVERAGE_REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
+SCRIPT_ROOT="${CHECK_COVERAGE_SCRIPT_ROOT:-${REPO_ROOT}/scripts}"
+TEST_ROOT="${CHECK_COVERAGE_TEST_ROOT:-${REPO_ROOT}/tests}"
 
 INCLUDE_BOOTSTRAP=0
 INCLUDE_INTEGRATION_STATUS=1
@@ -119,28 +121,28 @@ step() {
 PASSED=()
 FAILED=()
 
-step "validate-lab-planning" bash "${REPO_ROOT}/scripts/validate-lab-planning.sh"
+step "validate-lab-planning" bash "${SCRIPT_ROOT}/validate-lab-planning.sh"
 
 if [[ "${SKIP_ADAPTER_FAMILY_COVERAGE}" -eq 0 ]]; then
-  step "adapter-family-coverage" bash "${REPO_ROOT}/tests/test-adapter-family-coverage.sh"
+  step "adapter-family-coverage" bash "${TEST_ROOT}/test-adapter-family-coverage.sh"
 fi
 
 if [[ "${INCLUDE_FAMILY_COVERAGE}" -eq 1 ]]; then
-  step "real-sketch-family-coverage" bash "${REPO_ROOT}/tests/test-real-sketch-family-coverage.sh"
+  step "real-sketch-family-coverage" bash "${TEST_ROOT}/test-real-sketch-family-coverage.sh"
 fi
 
-step "real-sketch-conformance" bash "${REPO_ROOT}/tests/test-real-sketch-conformance.sh"
-step "real-sketch-contract" bash "${REPO_ROOT}/tests/test-real-sketch-contract.sh"
+step "real-sketch-conformance" bash "${TEST_ROOT}/test-real-sketch-conformance.sh"
+step "real-sketch-contract" bash "${TEST_ROOT}/test-real-sketch-contract.sh"
 
 if [[ "${INCLUDE_INTEGRATION_STATUS}" -eq 1 ]]; then
-  step "render-integration-status" node "${REPO_ROOT}/scripts/render-integration-status.mjs" --output "${REPO_ROOT}/docs/INTEGRATION-STATUS.md"
-  step "render-sketch-metrics" node "${REPO_ROOT}/scripts/render-sketch-metrics.mjs" --output "${REPO_ROOT}/docs/SKETCH-METRICS.md"
-  step "render-capabilities-matrix" node "${REPO_ROOT}/scripts/render-capabilities-matrix.mjs" --output "${REPO_ROOT}/docs/CAPABILITIES-MATRIX.md"
+  step "render-integration-status" node "${SCRIPT_ROOT}/render-integration-status.mjs" --output "${REPO_ROOT}/docs/INTEGRATION-STATUS.md"
+  step "render-sketch-metrics" node "${SCRIPT_ROOT}/render-sketch-metrics.mjs" --output "${REPO_ROOT}/docs/SKETCH-METRICS.md"
+  step "render-capabilities-matrix" node "${SCRIPT_ROOT}/render-capabilities-matrix.mjs" --output "${REPO_ROOT}/docs/CAPABILITIES-MATRIX.md"
 fi
 
 if [[ "${INCLUDE_BOOTSTRAP}" -eq 1 ]]; then
-  step "bootstrap-org-repos" bash "${REPO_ROOT}/tests/test-bootstrap-org-repos.sh"
-  step "bootstrap-org-repos-full-inventory" bash "${REPO_ROOT}/tests/test-bootstrap-org-repos-full-inventory.sh"
+  step "bootstrap-org-repos" bash "${TEST_ROOT}/test-bootstrap-org-repos.sh"
+  step "bootstrap-org-repos-full-inventory" bash "${TEST_ROOT}/test-bootstrap-org-repos-full-inventory.sh"
 fi
 
 echo

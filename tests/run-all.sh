@@ -11,6 +11,7 @@ JSON=0
 FILTER=""
 TESTS_DIR_OVERRIDE=""
 MODE="fast"
+CAPTURE_GROUPS=""
 
 usage() {
   cat <<'EOF'
@@ -22,6 +23,11 @@ Options:
   --mode fast|full|nightly
                        fast runs the default smoke suite; full/nightly enable
                        long browser capture sweeps
+  --capture-groups <list>
+                       Comma-separated capture groups for capture-p0 tests
+                       (smoke,baseline,baseline-a,baseline-b,baseline-c,
+                       baseline-d,real-adapters,renderer-batch,
+                       benchmark-batch,runtime-batch)
   --filter <pattern>     Only run tests whose filename contains <pattern>
   --bail                 Stop at first failure
   --quiet                Suppress per-test progress (still prints the final summary)
@@ -39,6 +45,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mode)
       MODE="$2"
+      shift 2
+      ;;
+    --capture-groups)
+      CAPTURE_GROUPS="$2"
       shift 2
       ;;
     --full)
@@ -113,6 +123,9 @@ for test in "${TESTS[@]}"; do
   if [[ "${MODE}" != "fast" ]]; then
     test_env=("AI_WEBGPU_LAB_CAPTURE_SUITE=full")
   fi
+  if [[ -n "${CAPTURE_GROUPS}" ]]; then
+    test_env+=("AI_WEBGPU_LAB_CAPTURE_GROUPS=${CAPTURE_GROUPS}")
+  fi
 
   if log="$(env "${test_env[@]}" bash "${test}" 2>&1)"; then
     PASSED+=("${name}")
@@ -142,7 +155,7 @@ if [[ "${JSON}" -eq 1 ]]; then
     printf '%s' "$s"
   }
 
-  out='{"total":'"${#TESTS[@]}"',"passed":'"${#PASSED[@]}"',"failed":'"${#FAILED[@]}"',"elapsed_seconds":'"${ELAPSED}"',"mode":"'"$(json_escape "${MODE}")"'","bail":'
+  out='{"total":'"${#TESTS[@]}"',"passed":'"${#PASSED[@]}"',"failed":'"${#FAILED[@]}"',"elapsed_seconds":'"${ELAPSED}"',"mode":"'"$(json_escape "${MODE}")"'","capture_groups":"'"$(json_escape "${CAPTURE_GROUPS}")"'","bail":'
   if [[ "${BAIL}" -eq 1 ]]; then out+='true'; else out+='false'; fi
   out+=',"filter":"'"$(json_escape "${FILTER}")"'","passed_names":['
   first=1
@@ -162,7 +175,11 @@ if [[ "${JSON}" -eq 1 ]]; then
   printf '%s\n' "${out}"
 else
   echo
-  echo "run-all summary: ${#PASSED[@]} passed, ${#FAILED[@]} failed, total=${#TESTS[@]} (${ELAPSED}s, mode=${MODE})"
+  summary_suffix="mode=${MODE}"
+  if [[ -n "${CAPTURE_GROUPS}" ]]; then
+    summary_suffix+=", capture_groups=${CAPTURE_GROUPS}"
+  fi
+  echo "run-all summary: ${#PASSED[@]} passed, ${#FAILED[@]} failed, total=${#TESTS[@]} (${ELAPSED}s, ${summary_suffix})"
   for name in "${FAILED[@]}"; do
     echo "  ❌ ${name}"
   done
