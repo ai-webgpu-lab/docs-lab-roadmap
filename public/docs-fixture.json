@@ -1,0 +1,38 @@
+{
+  "id": "docs-lab-roadmap-v1",
+  "title": "docs-lab-roadmap inventory snapshot",
+  "objective": "Snapshot the docs/scripts/templates surface so the org's roadmap repository stays consistent with bootstrap automation.",
+  "doc_files": [
+    "docs/00-master-summary.md",
+    "docs/01-org-repo-map.md",
+    "docs/02-graphics-and-blackhole-track.md",
+    "docs/03-ml-llm-track.md",
+    "docs/04-github-projects-design.md",
+    "docs/05-templates-and-results.md",
+    "docs/06-six-week-execution-plan.md",
+    "docs/07-master-experiment-plan.md",
+    "docs/08-bootstrap-and-execution-runbook.md"
+  ],
+  "scripts": [
+    "scripts/bootstrap-org-repos.sh",
+    "scripts/seed-org-issues.sh",
+    "scripts/sync-org-labels.sh",
+    "scripts/sync-org-repo-topics.sh",
+    "scripts/validate-lab-planning.sh",
+    "scripts/capture-p0-baseline-results.mjs",
+    "scripts/render-results-summary.mjs"
+  ],
+  "templates": [
+    "templates/RESULTS-template.md",
+    "templates/example-result.json"
+  ],
+  "schemas": [
+    "schemas/ai-webgpu-lab-result.schema.json"
+  ],
+  "inventory_repo_count": 54,
+  "priority_p0_count": 13,
+  "priority_p1_count": 19,
+  "priority_p2_count": 22,
+  "category_count": 13,
+  "categories": ["org", "template", "shared", "docs", "graphics", "blackhole", "ml", "llm", "audio", "multimodal", "agent", "benchmark", "app"]
+}
