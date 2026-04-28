@@ -1332,3 +1332,42 @@ node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
 assert_file "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json"
 assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json" "\"capture_url_search\": \"?mode=real-voice-agent\""
 assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/RESULTS.md" "Real Adapter vs Deterministic"
+
+# Renderer family rollout: each repo gets deterministic + real-* capture
+RENDERER_BATCH=(
+  "exp-babylon-webgpu-core:babylon-webgpu-scene:real-babylon"
+  "exp-pixi-webgpu-2d:pixi-webgpu-2d:real-pixi"
+  "exp-playcanvas-webgpu-core:playcanvas-webgpu-scene:real-playcanvas"
+  "exp-luma-webgpu-viz:luma-webgpu-viz:real-luma"
+  "exp-deckgl-webgpu-readiness:deckgl-webgpu:real-deckgl"
+  "exp-three-webgpu-particles-stress:three-webgpu-particles-stress:real-particles"
+  "exp-blackhole-three-singularity:blackhole-three-singularity:real-blackhole-three"
+  "exp-blackhole-kerr-engine:blackhole-kerr-engine:real-kerr"
+  "exp-blackhole-webgpu-fromscratch:blackhole-webgpu-fromscratch:real-bhraw"
+  "exp-nbody-webgpu-core:nbody-webgpu-core:real-nbody"
+  "exp-fluid-webgpu-core:fluid-webgpu-core:real-fluid"
+)
+
+for entry in "${RENDERER_BATCH[@]}"; do
+  IFS=':' read -r repo base mode <<<"${entry}"
+  out_dir="${TMP_DIR}/out-renderer-batch-${repo}"
+  bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+    --mode local \
+    --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+    --repo "${repo}" \
+    --output-root "${out_dir}" \
+    --no-sync \
+    --refresh-generated \
+    --refresh-readme
+
+  node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+    --repo-dir "${out_dir}/${repo}" \
+    --repo-name "${repo}" \
+    --commit "renderer-batch-test" \
+    --owner "test-owner" \
+    --captured-by "test-runner"
+
+  assert_file "${out_dir}/${repo}/reports/raw/02-${base}-${mode}.json"
+  assert_contains "${out_dir}/${repo}/reports/raw/02-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
+  assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
+done

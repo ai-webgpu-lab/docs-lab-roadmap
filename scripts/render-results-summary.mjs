@@ -1222,7 +1222,18 @@ const REAL_MODE_BY_REPO = {
   "app-browser-image-lab": "?mode=real-image-lab",
   "app-local-chat-arena": "?mode=real-chat-arena",
   "app-private-rag-lab": "?mode=real-private-rag",
-  "app-voice-agent-lab": "?mode=real-voice-agent"
+  "app-voice-agent-lab": "?mode=real-voice-agent",
+  "exp-babylon-webgpu-core": "?mode=real-babylon",
+  "exp-pixi-webgpu-2d": "?mode=real-pixi",
+  "exp-playcanvas-webgpu-core": "?mode=real-playcanvas",
+  "exp-luma-webgpu-viz": "?mode=real-luma",
+  "exp-deckgl-webgpu-readiness": "?mode=real-deckgl",
+  "exp-three-webgpu-particles-stress": "?mode=real-particles",
+  "exp-blackhole-three-singularity": "?mode=real-blackhole-three",
+  "exp-blackhole-kerr-engine": "?mode=real-kerr",
+  "exp-blackhole-webgpu-fromscratch": "?mode=real-bhraw",
+  "exp-nbody-webgpu-core": "?mode=real-nbody",
+  "exp-fluid-webgpu-core": "?mode=real-fluid"
 };
 
 const ADAPTER_ARTIFACT_KEY_BY_REPO = {
@@ -1233,7 +1244,32 @@ const ADAPTER_ARTIFACT_KEY_BY_REPO = {
   "app-browser-image-lab": "app_surface_adapter",
   "app-local-chat-arena": "app_surface_adapter",
   "app-private-rag-lab": "app_surface_adapter",
-  "app-voice-agent-lab": "app_surface_adapter"
+  "app-voice-agent-lab": "app_surface_adapter",
+  "exp-babylon-webgpu-core": "renderer_adapter",
+  "exp-pixi-webgpu-2d": "renderer_adapter",
+  "exp-playcanvas-webgpu-core": "renderer_adapter",
+  "exp-luma-webgpu-viz": "renderer_adapter",
+  "exp-deckgl-webgpu-readiness": "renderer_adapter",
+  "exp-three-webgpu-particles-stress": "renderer_adapter",
+  "exp-blackhole-three-singularity": "renderer_adapter",
+  "exp-blackhole-kerr-engine": "renderer_adapter",
+  "exp-blackhole-webgpu-fromscratch": "renderer_adapter",
+  "exp-nbody-webgpu-core": "renderer_adapter",
+  "exp-fluid-webgpu-core": "renderer_adapter"
+};
+
+const RENDERER_FALLBACK_LABEL_BY_REPO = {
+  "exp-babylon-webgpu-core": "deterministic-babylon-style",
+  "exp-pixi-webgpu-2d": "deterministic-pixi-style",
+  "exp-playcanvas-webgpu-core": "deterministic-playcanvas-style",
+  "exp-luma-webgpu-viz": "deterministic-luma-style",
+  "exp-deckgl-webgpu-readiness": "deterministic-deckgl-style",
+  "exp-three-webgpu-particles-stress": "deterministic-particles-stress",
+  "exp-blackhole-three-singularity": "deterministic-blackhole-three",
+  "exp-blackhole-kerr-engine": "deterministic-kerr",
+  "exp-blackhole-webgpu-fromscratch": "deterministic-blackhole-raw",
+  "exp-nbody-webgpu-core": "deterministic-nbody",
+  "exp-fluid-webgpu-core": "deterministic-fluid"
 };
 
 function selectRealAndDeterministic(repoName, results) {
@@ -1330,6 +1366,14 @@ function realRuntimeComparisonLines(repoName, results) {
       adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-voice-agent"),
       `- roundtrip_ms: real=${formatNumberWithUnit(realResult.metrics.stt?.roundtrip_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.stt?.roundtrip_ms, "ms")}, delta=${formatDelta(realResult.metrics.stt?.roundtrip_ms, deterministicResult.metrics.stt?.roundtrip_ms, 2, "ms")}`,
       `- task_success_rate: real=${formatNumber(realResult.metrics.agent?.task_success_rate)}, deterministic=${formatNumber(deterministicResult.metrics.agent?.task_success_rate)}, delta=${formatDelta(realResult.metrics.agent?.task_success_rate, deterministicResult.metrics.agent?.task_success_rate)}`
+    ];
+  }
+  if (RENDERER_FALLBACK_LABEL_BY_REPO[repoName]) {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, RENDERER_FALLBACK_LABEL_BY_REPO[repoName]),
+      `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
+      `- p95_frametime: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`,
+      `- scene_load_ms: real=${formatNumberWithUnit(realResult.metrics.graphics?.scene_load_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.scene_load_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.scene_load_ms, deterministicResult.metrics.graphics?.scene_load_ms, 2, "ms")}`
     ];
   }
   return [];

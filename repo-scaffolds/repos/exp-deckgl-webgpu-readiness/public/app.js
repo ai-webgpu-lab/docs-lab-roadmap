@@ -15,12 +15,52 @@ const points = buildPointData(sceneConfig.pointCount);
 const arcs = buildArcData(sceneConfig.arcCount);
 const polygons = buildPolygonData(sceneConfig.polygonCount);
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealRendererMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealRenderer() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRendererRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealRenderer(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealRenderer();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealDeckBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   capability: null,
   run: null,
   active: false,
+  realAdapterError: null,
   logs: []
 };
 
@@ -315,6 +355,54 @@ function drawFrame(ctx, frame, checksum) {
   ctx.fillText(`${attributeBufferMB} MB attributes, checksum ${checksum}`, 18, 72);
 }
 
+async function runRealRendererDeck(adapter) {
+  log(`Connecting real renderer adapter '${adapter.id}'.`);
+  const startedAt = performance.now();
+  const sceneLoadStartedAt = performance.now();
+  const realCanvas = document.createElement("canvas");
+  realCanvas.width = elements.canvas.width;
+  realCanvas.height = elements.canvas.height;
+  realCanvas.style.display = "none";
+  document.body.appendChild(realCanvas);
+  try {
+    await withTimeout(
+      Promise.resolve(adapter.createRenderer({ canvas: realCanvas })),
+      REAL_ADAPTER_LOAD_MS,
+      `createRenderer(${adapter.id})`
+    );
+    await withTimeout(
+      Promise.resolve(adapter.loadScene({ nodeCount: 24 })),
+      REAL_ADAPTER_LOAD_MS,
+      `loadScene(${adapter.id})`
+    );
+    const sceneLoadMs = performance.now() - sceneLoadStartedAt;
+
+    const frameTimes = [];
+    for (let index = 0; index < 32; index += 1) {
+      const frameInfo = await withTimeout(
+        Promise.resolve(adapter.renderFrame({ frameIndex: index })),
+        REAL_ADAPTER_LOAD_MS,
+        `renderFrame(${adapter.id})`
+      );
+      frameTimes.push(typeof frameInfo?.frameMs === "number" ? frameInfo.frameMs : 0);
+    }
+
+    const totalMs = performance.now() - startedAt;
+    const avgFrame = frameTimes.reduce((sum, value) => sum + value, 0) / Math.max(frameTimes.length, 1);
+    return {
+      totalMs,
+      sceneLoadMs,
+      avgFps: 1000 / Math.max(avgFrame, 0.001),
+      p95FrameMs: percentile(frameTimes, 0.95) || 0,
+      frameTimes,
+      sampleCount: frameTimes.length,
+      realAdapter: adapter
+    };
+  } finally {
+    realCanvas.remove();
+  }
+}
+
 async function runSceneBaseline() {
   if (state.active) return;
   if (!state.capability) {
@@ -323,6 +411,27 @@ async function runSceneBaseline() {
 
   state.active = true;
   render();
+
+  if (isRealRendererMode) {
+    log(`Mode=${requestedMode} requested; awaiting real renderer adapter registration.`);
+    const adapter = await awaitRealRenderer();
+    if (adapter) {
+      try {
+        state.run = await runRealRendererDeck(adapter);
+        state.active = false;
+        log(`Real renderer '${adapter.id}' complete: avg fps ${round(state.run.avgFps, 2)}, p95 frame ${round(state.run.p95FrameMs, 2)} ms.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real renderer '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealDeckBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real renderer adapter registered (${reason}); falling back to deterministic deck.gl scene baseline.`);
+    }
+  }
   const ctx = elements.canvas.getContext("2d");
   const frameTimes = [];
   const viewportTimes = [];
@@ -358,12 +467,33 @@ async function runSceneBaseline() {
     checksum,
     artifactNote: state.environment.fallback_triggered
       ? "fallback canvas map layer path; deterministic deck.gl-style fixture only"
-      : "synthetic deck.gl-style WebGPU map layer path; no real deck.gl package yet"
+      : "synthetic deck.gl-style WebGPU map layer path; no real deck.gl package yet",
+    realAdapter: null
   };
   state.active = false;
 
   log(`Deck.gl readiness complete: avg fps ${round(state.run.avgFps, 2)}, p95 frame ${round(state.run.p95FrameMs, 2)} ms.`);
   render();
+}
+
+function describeRendererAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRendererRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-deckgl-style",
+    label: "Deterministic deck.gl-style",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["scene-load", "frame-pace", "fallback-record"],
+    backendHint: "synthetic",
+    message: "Renderer adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -375,9 +505,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "graphics",
-      scenario: run ? "deckgl-webgpu-readiness" : "deckgl-webgpu-pending",
+      scenario: run
+        ? (run.realAdapter ? `deckgl-webgpu-real-${run.realAdapter.id}` : "deckgl-webgpu-readiness")
+        : "deckgl-webgpu-pending",
       notes: run
-        ? `pointCount=${sceneConfig.pointCount}; arcCount=${sceneConfig.arcCount}; polygonCount=${sceneConfig.polygonCount}; layerCount=${sceneConfig.layerCount}; tileCount=${sceneConfig.tileCount}; pickingSamples=${sceneConfig.pickingSamples}; attributeBufferMB=${attributeBufferMB}; avgViewportUpdateMs=${round(run.avgViewportUpdateMs, 4)}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}`
+        ? `pointCount=${sceneConfig.pointCount}; arcCount=${sceneConfig.arcCount}; polygonCount=${sceneConfig.polygonCount}; layerCount=${sceneConfig.layerCount}; tileCount=${sceneConfig.tileCount}; pickingSamples=${sceneConfig.pickingSamples}; attributeBufferMB=${attributeBufferMB}; avgViewportUpdateMs=${round(run.avgViewportUpdateMs, 4)}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealRendererMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Probe capability and run the deterministic deck.gl-style map layer scene."
     },
     environment: state.environment,
@@ -410,7 +542,8 @@ function buildResult() {
     status: run ? "success" : state.capability ? "partial" : "pending",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/exp-deckgl-webgpu-readiness/"
+      deploy_url: "https://ai-webgpu-lab.github.io/exp-deckgl-webgpu-readiness/",
+      renderer_adapter: describeRendererAdapter()
     }
   };
 }

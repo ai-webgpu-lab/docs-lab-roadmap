@@ -76,6 +76,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-babylon-webgpu-scene-real-babylon",
+        label: "Babylon Scene / Real Babylon",
+        urlSearch: "?mode=real-babylon",
+        probeExpectedScenario: "babylon-webgpu-scene-pending",
+        expectedScenarioPrefix: "babylon-webgpu-scene-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -91,6 +103,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-playcanvas-webgpu-scene-real-playcanvas",
+        label: "PlayCanvas Scene / Real PlayCanvas",
+        urlSearch: "?mode=real-playcanvas",
+        probeExpectedScenario: "playcanvas-webgpu-scene-pending",
+        expectedScenarioPrefix: "playcanvas-webgpu-scene-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -106,6 +130,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-blackhole-three-singularity-real-blackhole-three",
+        label: "Blackhole Three Singularity / Real Three blackhole",
+        urlSearch: "?mode=real-blackhole-three",
+        probeExpectedScenario: "blackhole-three-singularity-pending",
+        expectedScenarioPrefix: "blackhole-three-singularity-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -121,6 +157,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-blackhole-kerr-engine-real-kerr",
+        label: "Blackhole Kerr Engine / Real Kerr engine",
+        urlSearch: "?mode=real-kerr",
+        probeExpectedScenario: "blackhole-kerr-engine-pending",
+        expectedScenarioPrefix: "blackhole-kerr-engine-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -136,6 +184,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-blackhole-webgpu-fromscratch-real-bhraw",
+        label: "Blackhole From Scratch / Real Raw WebGPU blackhole",
+        urlSearch: "?mode=real-bhraw",
+        probeExpectedScenario: "blackhole-webgpu-fromscratch-pending",
+        expectedScenarioPrefix: "blackhole-webgpu-fromscratch-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -151,6 +211,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-simulation",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1800
+      },
+      {
+        id: "02-nbody-webgpu-core-real-nbody",
+        label: "N-body Core / Real N-body",
+        urlSearch: "?mode=real-nbody",
+        probeExpectedScenario: "nbody-webgpu-core-pending",
+        expectedScenarioPrefix: "nbody-webgpu-core-",
+        probeButton: "#probe-capability",
+        runButton: "#run-simulation",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -166,6 +238,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-simulation",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1800
+      },
+      {
+        id: "02-fluid-webgpu-core-real-fluid",
+        label: "Fluid Core / Real Fluid",
+        urlSearch: "?mode=real-fluid",
+        probeExpectedScenario: "fluid-webgpu-core-pending",
+        expectedScenarioPrefix: "fluid-webgpu-core-",
+        probeButton: "#probe-capability",
+        runButton: "#run-simulation",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -181,6 +265,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-stress",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1800
+      },
+      {
+        id: "02-three-webgpu-particles-stress-real-particles",
+        label: "Three Particles Stress / Real Three particles",
+        urlSearch: "?mode=real-particles",
+        probeExpectedScenario: "three-webgpu-particles-stress-pending",
+        expectedScenarioPrefix: "three-webgpu-particles-stress-",
+        probeButton: "#probe-capability",
+        runButton: "#run-stress",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -295,6 +391,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-pixi-webgpu-2d-real-pixi",
+        label: "Pixi 2D / Real PixiJS",
+        urlSearch: "?mode=real-pixi",
+        probeExpectedScenario: "pixi-webgpu-2d-pending",
+        expectedScenarioPrefix: "pixi-webgpu-2d-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -310,6 +418,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-luma-webgpu-viz-real-luma",
+        label: "Luma Viz / Real Luma",
+        urlSearch: "?mode=real-luma",
+        probeExpectedScenario: "luma-webgpu-viz-pending",
+        expectedScenarioPrefix: "luma-webgpu-viz-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },
@@ -325,6 +445,18 @@ const CAPTURE_CONFIG = {
         runButton: "#run-scene",
         runOnProbeStatuses: ["success", "partial"],
         runWaitMs: 1500
+      },
+      {
+        id: "02-deckgl-webgpu-real-deckgl",
+        label: "deck.gl Readiness / Real deck.gl",
+        urlSearch: "?mode=real-deckgl",
+        probeExpectedScenario: "deckgl-webgpu-pending",
+        expectedScenarioPrefix: "deckgl-webgpu-",
+        probeButton: "#probe-capability",
+        runButton: "#run-scene",
+        runOnProbeStatuses: ["success", "partial"],
+        runWaitMs: 1500,
+        timeoutMs: 180000
       }
     ]
   },

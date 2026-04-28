@@ -12,12 +12,52 @@ const simulationConfig = {
 const emitters = buildEmitters(simulationConfig.emitterCount);
 const particles = buildParticles(simulationConfig.visibleParticles);
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealRendererMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealRenderer() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRendererRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealRenderer(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealRenderer();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealParticlesBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   capability: null,
   run: null,
   active: false,
+  realAdapterError: null,
   logs: []
 };
 
@@ -310,6 +350,54 @@ function drawFrame(ctx, frame, stress) {
   drawParticles(ctx, frame, stress);
 }
 
+async function runRealRendererParticles(adapter) {
+  log(`Connecting real renderer adapter '${adapter.id}'.`);
+  const startedAt = performance.now();
+  const sceneLoadStartedAt = performance.now();
+  const realCanvas = document.createElement("canvas");
+  realCanvas.width = elements.canvas.width;
+  realCanvas.height = elements.canvas.height;
+  realCanvas.style.display = "none";
+  document.body.appendChild(realCanvas);
+  try {
+    await withTimeout(
+      Promise.resolve(adapter.createRenderer({ canvas: realCanvas })),
+      REAL_ADAPTER_LOAD_MS,
+      `createRenderer(${adapter.id})`
+    );
+    await withTimeout(
+      Promise.resolve(adapter.loadScene({ nodeCount: 24 })),
+      REAL_ADAPTER_LOAD_MS,
+      `loadScene(${adapter.id})`
+    );
+    const sceneLoadMs = performance.now() - sceneLoadStartedAt;
+
+    const frameTimes = [];
+    for (let index = 0; index < 32; index += 1) {
+      const frameInfo = await withTimeout(
+        Promise.resolve(adapter.renderFrame({ frameIndex: index })),
+        REAL_ADAPTER_LOAD_MS,
+        `renderFrame(${adapter.id})`
+      );
+      frameTimes.push(typeof frameInfo?.frameMs === "number" ? frameInfo.frameMs : 0);
+    }
+
+    const totalMs = performance.now() - startedAt;
+    const avgFrame = frameTimes.reduce((sum, value) => sum + value, 0) / Math.max(frameTimes.length, 1);
+    return {
+      totalMs,
+      sceneLoadMs,
+      avgFps: 1000 / Math.max(avgFrame, 0.001),
+      p95FrameMs: percentile(frameTimes, 0.95) || 0,
+      frameTimes,
+      sampleCount: frameTimes.length,
+      realAdapter: adapter
+    };
+  } finally {
+    realCanvas.remove();
+  }
+}
+
 async function runStressBaseline() {
   if (state.active) return;
   if (!state.capability) {
@@ -318,6 +406,27 @@ async function runStressBaseline() {
 
   state.active = true;
   render();
+
+  if (isRealRendererMode) {
+    log(`Mode=${requestedMode} requested; awaiting real renderer adapter registration.`);
+    const adapter = await awaitRealRenderer();
+    if (adapter) {
+      try {
+        state.run = await runRealRendererParticles(adapter);
+        state.active = false;
+        log(`Real renderer '${adapter.id}' complete: avg fps ${round(state.run.avgFps, 2)}, p95 frame ${round(state.run.p95FrameMs, 2)} ms.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real renderer '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealParticlesBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real renderer adapter registered (${reason}); falling back to deterministic Three particles stress baseline.`);
+    }
+  }
   const ctx = elements.canvas.getContext("2d");
   const frameTimes = [];
   const overdrawSamples = [];
@@ -365,12 +474,33 @@ async function runStressBaseline() {
     avgFillPct: round(avgFillPct, 2),
     avgPassCostMs: round(avgPassCostMs, 4),
     energy: round(energy, 4),
-    drawCalls
+    drawCalls,
+    realAdapter: null
   };
   state.active = false;
 
   log(`Particle stress baseline complete: avg fps=${round(state.run.avgFps, 2)}, overdraw=${state.run.avgOverdrawRatioPct}%.`);
   render();
+}
+
+function describeRendererAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabRendererRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-particles-stress",
+    label: "Deterministic Three particles stress",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["scene-load", "frame-pace", "fallback-record"],
+    backendHint: "synthetic",
+    message: "Renderer adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -384,9 +514,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "blackhole",
-      scenario: state.run ? "three-webgpu-particles-stress-readiness" : "three-webgpu-particles-stress-pending",
+      scenario: state.run
+        ? (state.run.realAdapter ? `three-webgpu-particles-stress-real-${state.run.realAdapter.id}` : "three-webgpu-particles-stress-readiness")
+        : "three-webgpu-particles-stress-pending",
       notes: state.run
-        ? `particleCount=${simulationConfig.particleCount}; visibleParticles=${simulationConfig.visibleParticles}; emitterCount=${simulationConfig.emitterCount}; postFxPasses=${simulationConfig.postFxPasses}; billboardLayers=${simulationConfig.billboardLayers}; resolutionScale=${simulationConfig.resolutionScale}; drawCalls=${state.run.drawCalls}; avgOverdrawRatioPct=${state.run.avgOverdrawRatioPct}; peakOverdrawRatioPct=${state.run.peakOverdrawRatioPct}; avgFillPct=${state.run.avgFillPct}; avgPassCostMs=${state.run.avgPassCostMs}; energy=${state.run.energy}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}`
+        ? `particleCount=${simulationConfig.particleCount}; visibleParticles=${simulationConfig.visibleParticles}; emitterCount=${simulationConfig.emitterCount}; postFxPasses=${simulationConfig.postFxPasses}; billboardLayers=${simulationConfig.billboardLayers}; resolutionScale=${simulationConfig.resolutionScale}; drawCalls=${state.run.drawCalls}; avgOverdrawRatioPct=${state.run.avgOverdrawRatioPct}; peakOverdrawRatioPct=${state.run.peakOverdrawRatioPct}; avgFillPct=${state.run.avgFillPct}; avgPassCostMs=${state.run.avgPassCostMs}; energy=${state.run.energy}; backend=${state.environment.backend}; fallback=${state.environment.fallback_triggered}${state.run.realAdapter ? `; realAdapter=${state.run.realAdapter.id}` : (isRealRendererMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Probe capability and run the deterministic particle/VFX stress loop to export graphics-stress metrics."
     },
     environment: state.environment,
@@ -427,7 +559,8 @@ function buildResult() {
     status: runStatus,
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/exp-three-webgpu-particles-stress/"
+      deploy_url: "https://ai-webgpu-lab.github.io/exp-three-webgpu-particles-stress/",
+      renderer_adapter: describeRendererAdapter()
     }
   };
 }
