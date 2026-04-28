@@ -36,11 +36,51 @@ const EVAL_QUESTIONS = [
   }
 ];
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealSurfaceMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealSurface() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealSurface(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealSurface();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealPrivateRagBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   active: false,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -198,11 +238,7 @@ async function runQuestion(question, embeddedChunks) {
   };
 }
 
-async function runLab() {
-  if (state.active) return;
-  state.active = true;
-  render();
-
+async function executeRagWorkload() {
   log("Private RAG lab: ingesting bundled notes.");
   const ingestStartedAt = performance.now();
   const chunks = PRIVATE_NOTES.flatMap((document) => chunkDocument(document));
@@ -228,7 +264,7 @@ async function runLab() {
   const citationHits = answers.filter((answer) => answer.citationHit).length;
   const avg = (values) => values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
 
-  state.run = {
+  return {
     documents: PRIVATE_NOTES.length,
     chunkCount: chunks.length,
     questionCount: questions.length,
@@ -241,9 +277,87 @@ async function runLab() {
     citationHitRate: citationHits / questions.length,
     answers
   };
+}
+
+async function runRealSurfacePrivateRag(adapter) {
+  log(`Connecting real app-surface adapter '${adapter.id}'.`);
+  const dataset = await withTimeout(
+    Promise.resolve(adapter.loadDataset({ corpusId: "private-notes" })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadDataset(${adapter.id})`
+  );
+  const renderInfo = await withTimeout(
+    Promise.resolve(adapter.renderSurface({ frameIndex: 0 })),
+    REAL_ADAPTER_LOAD_MS,
+    `renderSurface(${adapter.id})`
+  );
+
+  const result = await executeRagWorkload();
+
+  await withTimeout(
+    Promise.resolve(adapter.recordTelemetry({
+      kind: "private-rag-run",
+      questionCount: result.questionCount,
+      citationHitRate: result.citationHitRate
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `recordTelemetry(${adapter.id})`
+  );
+  log(`Real adapter '${adapter.id}' ingested corpus ${dataset?.preset?.id || "private-notes"} (frame ${renderInfo?.frameIndex ?? 0}).`);
+  return { ...result, realAdapter: adapter, realDataset: dataset, realRenderInfo: renderInfo };
+}
+
+async function runLab() {
+  if (state.active) return;
+  state.active = true;
+  state.realAdapterError = null;
+  render();
+
+  if (isRealSurfaceMode) {
+    log(`Mode=${requestedMode} requested; awaiting real app-surface adapter registration.`);
+    const adapter = await awaitRealSurface();
+    if (adapter) {
+      try {
+        state.run = await runRealSurfacePrivateRag(adapter);
+        state.active = false;
+        log(`Real app-surface '${adapter.id}' complete: hit-rate ${round(state.run.citationHitRate, 2)} across ${state.run.questionCount} questions.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real surface '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealPrivateRagBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real app-surface adapter registered (${reason}); falling back to deterministic private RAG demo.`);
+    }
+  }
+
+  state.run = { ...(await executeRagWorkload()), realAdapter: null };
   state.active = false;
   log(`Private RAG lab complete: hit-rate ${round(state.run.citationHitRate, 2)} across ${state.run.questionCount} questions.`);
   render();
+}
+
+function describeAppSurfaceAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-private-rag",
+    label: "Deterministic Private RAG",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["preset-replay", "renderer-scorecard", "telemetry-record"],
+    surfaceType: "synthetic",
+    message: "App surface adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildAnswerText() {
@@ -262,9 +376,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "integration",
-      scenario: run ? "private-rag-lab-demo" : "private-rag-lab-pending",
+      scenario: run
+        ? (run.realAdapter ? `private-rag-lab-real-${run.realAdapter.id}` : "private-rag-lab-demo")
+        : "private-rag-lab-pending",
       notes: run
-        ? `private fixture; docs=${run.documents}; chunks=${run.chunkCount}; questions=${run.questionCount}; local_only=true`
+        ? `private fixture; docs=${run.documents}; chunks=${run.chunkCount}; questions=${run.questionCount}; local_only=true${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealSurfaceMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the private RAG lab demo."
     },
     environment: state.environment,
@@ -296,7 +412,8 @@ function buildResult() {
     status: run ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/app-private-rag-lab/"
+      deploy_url: "https://ai-webgpu-lab.github.io/app-private-rag-lab/",
+      app_surface_adapter: describeAppSurfaceAdapter()
     }
   };
 }

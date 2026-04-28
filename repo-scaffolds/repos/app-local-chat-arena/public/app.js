@@ -19,11 +19,51 @@ const ARENA_PROFILES = [
   }
 ];
 
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealSurfaceMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealSurface() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealSurface(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealSurface();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealChatArenaBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   active: false,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -151,12 +191,77 @@ function profileScore(result) {
   return result.decodeTokPerSec - (result.ttftMs / 90);
 }
 
+async function runRealSurfaceArena(adapter, promptTokens) {
+  log(`Connecting real app-surface adapter '${adapter.id}'.`);
+  const dataset = await withTimeout(
+    Promise.resolve(adapter.loadDataset({ matchupId: "arena-default" })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadDataset(${adapter.id})`
+  );
+  const renderInfo = await withTimeout(
+    Promise.resolve(adapter.renderSurface({ frameIndex: 0 })),
+    REAL_ADAPTER_LOAD_MS,
+    `renderSurface(${adapter.id})`
+  );
+
+  const results = [];
+  for (const profile of ARENA_PROFILES) {
+    log(`Running ${profile.label}.`);
+    const result = await simulateProfile(profile, promptTokens);
+    results.push(result);
+    log(`${profile.label} complete: TTFT ${round(result.ttftMs, 2)} ms, decode ${round(result.decodeTokPerSec, 2)} tok/s.`);
+  }
+  results.sort((left, right) => profileScore(right) - profileScore(left));
+
+  await withTimeout(
+    Promise.resolve(adapter.recordTelemetry({
+      kind: "arena-run",
+      winnerId: results[0].profile.id,
+      decodeTokPerSec: results[0].decodeTokPerSec
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `recordTelemetry(${adapter.id})`
+  );
+  log(`Real adapter '${adapter.id}' rendered matchup ${dataset?.preset?.id || "default"} (frame ${renderInfo?.frameIndex ?? 0}).`);
+  return {
+    promptTokens: promptTokens.length,
+    profiles: results,
+    winner: results[0],
+    realAdapter: adapter,
+    realDataset: dataset,
+    realRenderInfo: renderInfo
+  };
+}
+
 async function runArena() {
   if (state.active) return;
   state.active = true;
+  state.realAdapterError = null;
   render();
 
   const promptTokens = tokenize(elements.promptInput.value);
+
+  if (isRealSurfaceMode) {
+    log(`Mode=${requestedMode} requested; awaiting real app-surface adapter registration.`);
+    const adapter = await awaitRealSurface();
+    if (adapter) {
+      try {
+        state.run = await runRealSurfaceArena(adapter, promptTokens);
+        state.active = false;
+        log(`Real app-surface '${adapter.id}' complete.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real surface '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealChatArenaBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real app-surface adapter registered (${reason}); falling back to deterministic arena demo.`);
+    }
+  }
+
   const results = [];
   for (const profile of ARENA_PROFILES) {
     log(`Running ${profile.label}.`);
@@ -169,10 +274,31 @@ async function runArena() {
   state.run = {
     promptTokens: promptTokens.length,
     profiles: results,
-    winner: results[0]
+    winner: results[0],
+    realAdapter: null
   };
   state.active = false;
   render();
+}
+
+function describeAppSurfaceAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-chat-arena",
+    label: "Deterministic Chat Arena",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["preset-replay", "renderer-scorecard", "telemetry-record"],
+    surfaceType: "synthetic",
+    message: "App surface adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function matrixText() {
@@ -192,9 +318,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "integration",
-      scenario: winner ? "local-chat-arena-demo" : "local-chat-arena-pending",
+      scenario: winner
+        ? (run.realAdapter ? `local-chat-arena-real-${run.realAdapter.id}` : "local-chat-arena-demo")
+        : "local-chat-arena-pending",
       notes: run
-        ? run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")
+        ? `${run.profiles.map((result) => `${result.profile.id}:ttft=${round(result.ttftMs, 2)},decode=${round(result.decodeTokPerSec, 2)},turn=${round(result.turnLatencyMs, 2)}`).join("; ")}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealSurfaceMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the local chat arena demo."
     },
     environment: state.environment,
@@ -224,7 +352,8 @@ function buildResult() {
     status: winner ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 5),
-      deploy_url: "https://ai-webgpu-lab.github.io/app-local-chat-arena/"
+      deploy_url: "https://ai-webgpu-lab.github.io/app-local-chat-arena/",
+      app_surface_adapter: describeAppSurfaceAdapter()
     }
   };
 }

@@ -1248,3 +1248,87 @@ node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
 assert_file "${TMP_DIR}/out-observatory/app-blackhole-observatory/reports/raw/02-blackhole-observatory-real-surface.json"
 assert_contains "${TMP_DIR}/out-observatory/app-blackhole-observatory/reports/raw/02-blackhole-observatory-real-surface.json" "\"capture_url_search\": \"?mode=real-surface\""
 assert_contains "${TMP_DIR}/out-observatory/app-blackhole-observatory/RESULTS.md" "Real Adapter vs Deterministic"
+
+# app-browser-image-lab: deterministic + real-image-lab capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "app-browser-image-lab" \
+  --output-root "${TMP_DIR}/out-image-lab-real" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-image-lab-real/app-browser-image-lab" \
+  --repo-name "app-browser-image-lab" \
+  --commit "real-image-lab-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-image-lab-real/app-browser-image-lab/reports/raw/02-browser-image-lab-real-image-lab.json"
+assert_contains "${TMP_DIR}/out-image-lab-real/app-browser-image-lab/reports/raw/02-browser-image-lab-real-image-lab.json" "\"capture_url_search\": \"?mode=real-image-lab\""
+assert_contains "${TMP_DIR}/out-image-lab-real/app-browser-image-lab/RESULTS.md" "Real Adapter vs Deterministic"
+
+# app-local-chat-arena: deterministic + real-chat-arena capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "app-local-chat-arena" \
+  --output-root "${TMP_DIR}/out-chat-arena-real" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-chat-arena-real/app-local-chat-arena" \
+  --repo-name "app-local-chat-arena" \
+  --commit "real-chat-arena-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-chat-arena-real/app-local-chat-arena/reports/raw/02-local-chat-arena-real-chat-arena.json"
+assert_contains "${TMP_DIR}/out-chat-arena-real/app-local-chat-arena/reports/raw/02-local-chat-arena-real-chat-arena.json" "\"capture_url_search\": \"?mode=real-chat-arena\""
+assert_contains "${TMP_DIR}/out-chat-arena-real/app-local-chat-arena/RESULTS.md" "Real Adapter vs Deterministic"
+
+# app-private-rag-lab: deterministic + real-private-rag capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "app-private-rag-lab" \
+  --output-root "${TMP_DIR}/out-private-rag-real" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-private-rag-real/app-private-rag-lab" \
+  --repo-name "app-private-rag-lab" \
+  --commit "real-private-rag-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-private-rag-real/app-private-rag-lab/reports/raw/02-private-rag-lab-real-private-rag.json"
+assert_contains "${TMP_DIR}/out-private-rag-real/app-private-rag-lab/reports/raw/02-private-rag-lab-real-private-rag.json" "\"capture_url_search\": \"?mode=real-private-rag\""
+assert_contains "${TMP_DIR}/out-private-rag-real/app-private-rag-lab/RESULTS.md" "Real Adapter vs Deterministic"
+
+# app-voice-agent-lab: deterministic + real-voice-agent capture
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \
+  --repo "app-voice-agent-lab" \
+  --output-root "${TMP_DIR}/out-voice-agent-real" \
+  --no-sync \
+  --refresh-generated \
+  --refresh-readme
+
+node "${REPO_ROOT}/scripts/capture-p0-baseline-results.mjs" \
+  --repo-dir "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab" \
+  --repo-name "app-voice-agent-lab" \
+  --commit "real-voice-agent-test" \
+  --owner "test-owner" \
+  --captured-by "test-runner"
+
+assert_file "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json"
+assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/reports/raw/02-voice-agent-lab-real-voice-agent.json" "\"capture_url_search\": \"?mode=real-voice-agent\""
+assert_contains "${TMP_DIR}/out-voice-agent-real/app-voice-agent-lab/RESULTS.md" "Real Adapter vs Deterministic"

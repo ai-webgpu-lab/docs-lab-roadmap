@@ -1,9 +1,49 @@
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealSurfaceMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealSurface() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealSurface(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealSurface();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealImageLabBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   fixture: null,
   active: false,
   run: null,
+  realAdapterError: null,
   logs: []
 };
 
@@ -265,21 +305,95 @@ async function runGeneration(fixture) {
   };
 }
 
+async function runRealSurfaceImageLab(adapter) {
+  log(`Connecting real app-surface adapter '${adapter.id}'.`);
+  const fixture = await loadFixture();
+
+  const dataset = await withTimeout(
+    Promise.resolve(adapter.loadDataset({ promptId: fixture.generation.seed })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadDataset(${adapter.id})`
+  );
+  const renderInfo = await withTimeout(
+    Promise.resolve(adapter.renderSurface({ canvas: elements.canvas, frameIndex: 0 })),
+    REAL_ADAPTER_LOAD_MS,
+    `renderSurface(${adapter.id})`
+  );
+
+  const vision = await runVision(fixture);
+  const generation = await runGeneration(fixture);
+
+  await withTimeout(
+    Promise.resolve(adapter.recordTelemetry({
+      kind: "image-lab-run",
+      promptId: fixture.generation.seed,
+      answerTotalMs: vision.answerTotalMs,
+      secPerImage: generation.secPerImage
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `recordTelemetry(${adapter.id})`
+  );
+  log(`Real adapter '${adapter.id}' rendered prompt ${dataset?.preset?.id || fixture.generation.seed} (frame ${renderInfo?.frameIndex ?? 0}).`);
+  return { vision, generation, realAdapter: adapter, realDataset: dataset, realRenderInfo: renderInfo };
+}
+
 async function runLab() {
   if (state.active) return;
   state.active = true;
   state.run = null;
+  state.realAdapterError = null;
   render();
+
+  if (isRealSurfaceMode) {
+    log(`Mode=${requestedMode} requested; awaiting real app-surface adapter registration.`);
+    const adapter = await awaitRealSurface();
+    if (adapter) {
+      try {
+        state.run = await runRealSurfaceImageLab(adapter);
+        state.active = false;
+        log(`Real app-surface '${adapter.id}' complete.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real surface '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealImageLabBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real app-surface adapter registered (${reason}); falling back to deterministic image lab demo.`);
+    }
+  }
 
   const fixture = await loadFixture();
   log("Image lab run started.");
   const vision = await runVision(fixture);
   const generation = await runGeneration(fixture);
 
-  state.run = { vision, generation };
+  state.run = { vision, generation, realAdapter: null };
   state.active = false;
   log(`Image lab complete: answer_total_ms ${vision.answerTotalMs}, sec_per_image ${generation.secPerImage}.`);
   render();
+}
+
+function describeAppSurfaceAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-image-lab",
+    label: "Deterministic Image Lab",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["preset-replay", "renderer-scorecard", "telemetry-record"],
+    surfaceType: "synthetic",
+    message: "App surface adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -291,9 +405,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "integration",
-      scenario: run ? "browser-image-lab-demo" : "browser-image-lab-pending",
+      scenario: run
+        ? (run.realAdapter ? `browser-image-lab-real-${run.realAdapter.id}` : "browser-image-lab-demo")
+        : "browser-image-lab-pending",
       notes: run
-        ? `image=${run.vision.imageId}; vision_answers=${run.vision.answers.length}; diffusion_seed=${run.generation.seed}; scheduler=${run.generation.scheduler}`
+        ? `image=${run.vision.imageId}; vision_answers=${run.vision.answers.length}; diffusion_seed=${run.generation.seed}; scheduler=${run.generation.scheduler}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealSurfaceMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the browser image lab demo."
     },
     environment: state.environment,
@@ -328,7 +444,8 @@ function buildResult() {
     status: run ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 8),
-      deploy_url: "https://ai-webgpu-lab.github.io/app-browser-image-lab/"
+      deploy_url: "https://ai-webgpu-lab.github.io/app-browser-image-lab/",
+      app_surface_adapter: describeAppSurfaceAdapter()
     }
   };
 }

@@ -1218,14 +1218,22 @@ const REAL_MODE_BY_REPO = {
   "bench-runtime-shootout": "?mode=real-runtime",
   "exp-three-webgpu-core": "?mode=real-three",
   "app-blackhole-observatory": "?mode=real-surface",
-  "bench-renderer-shootout": "?mode=real-benchmark"
+  "bench-renderer-shootout": "?mode=real-benchmark",
+  "app-browser-image-lab": "?mode=real-image-lab",
+  "app-local-chat-arena": "?mode=real-chat-arena",
+  "app-private-rag-lab": "?mode=real-private-rag",
+  "app-voice-agent-lab": "?mode=real-voice-agent"
 };
 
 const ADAPTER_ARTIFACT_KEY_BY_REPO = {
   "bench-runtime-shootout": "runtime_adapter",
   "exp-three-webgpu-core": "renderer_adapter",
   "app-blackhole-observatory": "app_surface_adapter",
-  "bench-renderer-shootout": "benchmark_adapter"
+  "bench-renderer-shootout": "benchmark_adapter",
+  "app-browser-image-lab": "app_surface_adapter",
+  "app-local-chat-arena": "app_surface_adapter",
+  "app-private-rag-lab": "app_surface_adapter",
+  "app-voice-agent-lab": "app_surface_adapter"
 };
 
 function selectRealAndDeterministic(repoName, results) {
@@ -1294,6 +1302,34 @@ function realRuntimeComparisonLines(repoName, results) {
       adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-renderer-shootout"),
       `- avg_fps: real=${formatNumber(realResult.metrics.graphics?.avg_fps)}, deterministic=${formatNumber(deterministicResult.metrics.graphics?.avg_fps)}, delta=${formatDelta(realResult.metrics.graphics?.avg_fps, deterministicResult.metrics.graphics?.avg_fps)}`,
       `- p95_frametime: real=${formatNumberWithUnit(realResult.metrics.graphics?.p95_frametime_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.graphics?.p95_frametime_ms, "ms")}, delta=${formatDelta(realResult.metrics.graphics?.p95_frametime_ms, deterministicResult.metrics.graphics?.p95_frametime_ms, 2, "ms")}`
+    ];
+  }
+  if (repoName === "app-browser-image-lab") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-image-lab"),
+      `- answer_total_ms: real=${formatNumberWithUnit(realResult.metrics.vlm?.answer_total_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.vlm?.answer_total_ms, "ms")}, delta=${formatDelta(realResult.metrics.vlm?.answer_total_ms, deterministicResult.metrics.vlm?.answer_total_ms, 2, "ms")}`,
+      `- sec_per_image: real=${formatNumber(realResult.metrics.diffusion?.sec_per_image)}, deterministic=${formatNumber(deterministicResult.metrics.diffusion?.sec_per_image)}, delta=${formatDelta(realResult.metrics.diffusion?.sec_per_image, deterministicResult.metrics.diffusion?.sec_per_image)}`
+    ];
+  }
+  if (repoName === "app-local-chat-arena") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-chat-arena"),
+      `- decode tok/s: real=${formatNumber(realResult.metrics.llm?.decode_tok_per_sec)}, deterministic=${formatNumber(deterministicResult.metrics.llm?.decode_tok_per_sec)}, delta=${formatDelta(realResult.metrics.llm?.decode_tok_per_sec, deterministicResult.metrics.llm?.decode_tok_per_sec)}`,
+      `- TTFT: real=${formatNumberWithUnit(realResult.metrics.llm?.ttft_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.llm?.ttft_ms, "ms")}, delta=${formatDelta(realResult.metrics.llm?.ttft_ms, deterministicResult.metrics.llm?.ttft_ms, 2, "ms")}`
+    ];
+  }
+  if (repoName === "app-private-rag-lab") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-private-rag"),
+      `- citation_hit_rate: real=${formatNumber(realResult.metrics.rag?.citation_hit_rate)}, deterministic=${formatNumber(deterministicResult.metrics.rag?.citation_hit_rate)}, delta=${formatDelta(realResult.metrics.rag?.citation_hit_rate, deterministicResult.metrics.rag?.citation_hit_rate)}`,
+      `- answer_total_ms: real=${formatNumberWithUnit(realResult.metrics.rag?.answer_total_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.rag?.answer_total_ms, "ms")}, delta=${formatDelta(realResult.metrics.rag?.answer_total_ms, deterministicResult.metrics.rag?.answer_total_ms, 2, "ms")}`
+    ];
+  }
+  if (repoName === "app-voice-agent-lab") {
+    return [
+      adapterStatusLine(realAdapter, deterministicAdapter, "deterministic-voice-agent"),
+      `- roundtrip_ms: real=${formatNumberWithUnit(realResult.metrics.stt?.roundtrip_ms, "ms")}, deterministic=${formatNumberWithUnit(deterministicResult.metrics.stt?.roundtrip_ms, "ms")}, delta=${formatDelta(realResult.metrics.stt?.roundtrip_ms, deterministicResult.metrics.stt?.roundtrip_ms, 2, "ms")}`,
+      `- task_success_rate: real=${formatNumber(realResult.metrics.agent?.task_success_rate)}, deterministic=${formatNumber(deterministicResult.metrics.agent?.task_success_rate)}, delta=${formatDelta(realResult.metrics.agent?.task_success_rate, deterministicResult.metrics.agent?.task_success_rate)}`
     ];
   }
   return [];

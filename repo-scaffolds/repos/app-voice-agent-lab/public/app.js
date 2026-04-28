@@ -1,9 +1,49 @@
+const requestedMode = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("mode")
+  : null;
+const isRealSurfaceMode = typeof requestedMode === "string" && requestedMode.startsWith("real-");
+const REAL_ADAPTER_WAIT_MS = 5000;
+const REAL_ADAPTER_LOAD_MS = 20000;
+
+function withTimeout(promise, timeoutMs, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs} ms`)), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
+function findRegisteredRealSurface() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  if (!registry || typeof registry.list !== "function") return null;
+  return registry.list().find((adapter) => adapter && adapter.isReal === true) || null;
+}
+
+async function awaitRealSurface(timeoutMs = REAL_ADAPTER_WAIT_MS) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt < timeoutMs) {
+    const adapter = findRegisteredRealSurface();
+    if (adapter) return adapter;
+    if (typeof window !== "undefined" && window.__aiWebGpuLabRealVoiceAgentBootstrapError) {
+      return null;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return null;
+}
+
 const state = {
   startedAt: performance.now(),
   environment: buildEnvironment(),
   fixture: null,
   active: false,
   run: null,
+  realAdapterError: null,
   transcript: "",
   reply: "",
   logs: []
@@ -237,15 +277,7 @@ function buildReply(draftLines) {
   ].join("\n");
 }
 
-async function runLab() {
-  if (state.active) return;
-  state.active = true;
-  state.run = null;
-  state.transcript = "";
-  state.reply = "";
-  render();
-
-  const fixture = await loadFixture();
+async function executeVoiceAgentWorkload(fixture) {
   const wallStartedAt = performance.now();
   const voice = await runVoiceTurn(fixture);
   const agent = await runAgentTasks(fixture);
@@ -255,7 +287,7 @@ async function runLab() {
   log("Integrated reply draft prepared.");
   const tts = await runTts(fixture);
 
-  state.run = {
+  return {
     wakeWord: fixture.wakeWord,
     intentId: fixture.intent.id,
     route: fixture.intent.route,
@@ -281,10 +313,91 @@ async function runLab() {
     userInterventionCount: agent.userInterventionCount,
     ttsMs: tts.ttsMs
   };
+}
 
+async function runRealSurfaceVoiceAgent(adapter, fixture) {
+  log(`Connecting real app-surface adapter '${adapter.id}'.`);
+  const dataset = await withTimeout(
+    Promise.resolve(adapter.loadDataset({ taskId: fixture.intent.id })),
+    REAL_ADAPTER_LOAD_MS,
+    `loadDataset(${adapter.id})`
+  );
+  const renderInfo = await withTimeout(
+    Promise.resolve(adapter.renderSurface({ frameIndex: 0 })),
+    REAL_ADAPTER_LOAD_MS,
+    `renderSurface(${adapter.id})`
+  );
+  const result = await executeVoiceAgentWorkload(fixture);
+  await withTimeout(
+    Promise.resolve(adapter.recordTelemetry({
+      kind: "voice-agent-run",
+      route: result.route,
+      taskSuccessRate: result.taskSuccessRate,
+      roundtripMs: result.roundtripMs
+    })),
+    REAL_ADAPTER_LOAD_MS,
+    `recordTelemetry(${adapter.id})`
+  );
+  log(`Real adapter '${adapter.id}' executed task ${dataset?.preset?.id || fixture.intent.id} (frame ${renderInfo?.frameIndex ?? 0}).`);
+  return { ...result, realAdapter: adapter, realDataset: dataset, realRenderInfo: renderInfo };
+}
+
+async function runLab() {
+  if (state.active) return;
+  state.active = true;
+  state.run = null;
+  state.realAdapterError = null;
+  state.transcript = "";
+  state.reply = "";
+  render();
+
+  const fixture = await loadFixture();
+
+  if (isRealSurfaceMode) {
+    log(`Mode=${requestedMode} requested; awaiting real app-surface adapter registration.`);
+    const adapter = await awaitRealSurface();
+    if (adapter) {
+      try {
+        state.run = await runRealSurfaceVoiceAgent(adapter, fixture);
+        state.active = false;
+        log(`Real app-surface '${adapter.id}' complete: roundtrip ${round(state.run.roundtripMs)} ms.`);
+        render();
+        return;
+      } catch (error) {
+        state.realAdapterError = error?.message || String(error);
+        log(`Real surface '${adapter.id}' failed: ${state.realAdapterError}; falling back to deterministic.`);
+      }
+    } else {
+      const reason = (typeof window !== "undefined" && window.__aiWebGpuLabRealVoiceAgentBootstrapError) || "timed out waiting for adapter registration";
+      state.realAdapterError = reason;
+      log(`No real app-surface adapter registered (${reason}); falling back to deterministic voice agent demo.`);
+    }
+  }
+
+  state.run = { ...(await executeVoiceAgentWorkload(fixture)), realAdapter: null };
   state.active = false;
   log(`Voice agent demo complete: roundtrip ${round(state.run.roundtripMs)} ms, task_success_rate ${round(state.run.taskSuccessRate, 2)}.`);
   render();
+}
+
+function describeAppSurfaceAdapter() {
+  const registry = typeof window !== "undefined" ? window.__aiWebGpuLabAppSurfaceRegistry : null;
+  const requested = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("mode")
+    : null;
+  if (registry) {
+    return registry.describe(requested);
+  }
+  return {
+    id: "deterministic-voice-agent",
+    label: "Deterministic Voice Agent",
+    status: "deterministic",
+    isReal: false,
+    version: "1.0.0",
+    capabilities: ["preset-replay", "renderer-scorecard", "telemetry-record"],
+    surfaceType: "synthetic",
+    message: "App surface adapter registry unavailable; using inline deterministic mock."
+  };
 }
 
 function buildResult() {
@@ -296,9 +409,11 @@ function buildResult() {
       timestamp: new Date().toISOString(),
       owner: "ai-webgpu-lab",
       track: "integration",
-      scenario: run ? "voice-agent-lab-demo" : "voice-agent-lab-pending",
+      scenario: run
+        ? (run.realAdapter ? `voice-agent-lab-real-${run.realAdapter.id}` : "voice-agent-lab-demo")
+        : "voice-agent-lab-pending",
       notes: run
-        ? `wake_word=${run.wakeWord}; intent=${run.intentId}; route=${run.route}; workflow=${run.workflowId}; page=${run.page}; tasks=${run.taskCount}; local_only=true; tts_voice=${run.ttsVoice}`
+        ? `wake_word=${run.wakeWord}; intent=${run.intentId}; route=${run.route}; workflow=${run.workflowId}; page=${run.page}; tasks=${run.taskCount}; local_only=true; tts_voice=${run.ttsVoice}${run.realAdapter ? `; realAdapter=${run.realAdapter.id}` : (isRealSurfaceMode && state.realAdapterError ? `; realAdapter=fallback(${state.realAdapterError})` : "")}`
         : "Run the integrated voice agent lab demo."
     },
     environment: state.environment,
@@ -335,7 +450,8 @@ function buildResult() {
     status: run ? "success" : "partial",
     artifacts: {
       raw_logs: state.logs.slice(0, 6),
-      deploy_url: "https://ai-webgpu-lab.github.io/app-voice-agent-lab/"
+      deploy_url: "https://ai-webgpu-lab.github.io/app-voice-agent-lab/",
+      app_surface_adapter: describeAppSurfaceAdapter()
     }
   };
 }

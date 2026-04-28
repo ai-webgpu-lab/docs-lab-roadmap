@@ -727,6 +727,14 @@ const CAPTURE_CONFIG = {
         label: "Private RAG Lab",
         button: "#run-lab",
         expectedScenario: "private-rag-lab-demo"
+      },
+      {
+        id: "02-private-rag-lab-real-private-rag",
+        label: "Private RAG Lab / Real Surface",
+        urlSearch: "?mode=real-private-rag",
+        button: "#run-lab",
+        expectedScenarioPrefix: "private-rag-lab-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -737,6 +745,14 @@ const CAPTURE_CONFIG = {
         label: "Voice Agent Lab",
         button: "#run-lab",
         expectedScenario: "voice-agent-lab-demo"
+      },
+      {
+        id: "02-voice-agent-lab-real-voice-agent",
+        label: "Voice Agent Lab / Real Surface",
+        urlSearch: "?mode=real-voice-agent",
+        button: "#run-lab",
+        expectedScenarioPrefix: "voice-agent-lab-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -747,6 +763,14 @@ const CAPTURE_CONFIG = {
         label: "Browser Image Lab",
         button: "#run-lab",
         expectedScenario: "browser-image-lab-demo"
+      },
+      {
+        id: "02-browser-image-lab-real-image-lab",
+        label: "Browser Image Lab / Real Surface",
+        urlSearch: "?mode=real-image-lab",
+        button: "#run-lab",
+        expectedScenarioPrefix: "browser-image-lab-",
+        timeoutMs: 180000
       }
     ]
   },
@@ -864,6 +888,14 @@ const CAPTURE_CONFIG = {
         label: "Local Chat Arena",
         button: "#run-arena",
         expectedScenario: "local-chat-arena-demo"
+      },
+      {
+        id: "02-local-chat-arena-real-chat-arena",
+        label: "Local Chat Arena / Real Surface",
+        urlSearch: "?mode=real-chat-arena",
+        button: "#run-arena",
+        expectedScenarioPrefix: "local-chat-arena-",
+        timeoutMs: 180000
       }
     ]
   }
