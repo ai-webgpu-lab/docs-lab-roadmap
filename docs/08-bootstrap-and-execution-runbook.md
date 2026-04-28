@@ -46,13 +46,15 @@ bash tests/test-seed-org-issues.sh
 ```bash
 bash tests/run-all.sh --mode fast --quiet
 bash scripts/check-coverage.sh --preset full --quiet
+node scripts/check-org-pages.mjs --fail-on-error
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups smoke --quiet
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups runtime-batch --quiet
 ```
 
 통과 기준:
-- fast suite는 pull request/push 기본 검증으로 사용하며 70개 테스트가 모두 통과해야 한다.
+- fast suite는 pull request/push 기본 검증으로 사용하며 모든 `tests/test-*.sh`가 통과해야 한다.
 - `check-coverage --preset full`은 실제 validator/dashboard 경로를 한 번 실행해야 한다.
+- `check-org-pages`는 54개 저장소의 Pages 설정, 최신 deploy workflow, HTTP 200, 저장소 전용 demo surface, real sketch/adapter 원격 반영, 대표 real-mode URL을 확인해야 한다.
 - full capture는 GitHub Actions matrix에서 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch`로 병렬 실행한다.
 - 로컬에서 baseline 전체를 한 번에 확인할 때는 호환 그룹 `baseline`을 사용할 수 있다.
 - 실패 분석이 필요하면 `AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out`을 지정해 raw JSON, screenshots, logs를 보존한다.
@@ -81,7 +83,19 @@ PROJECT_NUMBER=12 bash tmp/apply-projects.sh
 REUSE_PROJECT=1 bash tmp/apply-projects.sh
 ```
 
-### 5. GitHub 조직 반영
+### 5. GitHub Pages 상태 리포트
+```bash
+node scripts/check-org-pages.mjs --fail-on-error
+```
+
+통과 기준:
+- `docs/PAGES-STATUS.md`에 54개 저장소가 모두 집계됨
+- 모든 저장소가 GitHub Pages `workflow` source, 최신 `deploy-pages.yml` success, HTTP 200 상태임
+- 모든 저장소가 generic baseline이 아닌 repo-specific demo title을 노출함
+- 실험/벤치/앱 저장소의 원격 `public/`에 기대한 `real-*-sketch.js`와 `*-adapter.js`가 존재함
+- 대표 real-mode URL `bench-runtime-shootout?mode=real-runtime`, `exp-three-webgpu-core?mode=real-three`, `bench-renderer-shootout?mode=real-benchmark`, `app-blackhole-observatory?mode=real-surface`가 HTTP 200을 반환함
+
+### 6. GitHub 조직 반영
 ```bash
 bash scripts/bootstrap-org-repos.sh
 bash scripts/bootstrap-org-repos.sh --refresh-readme --no-sync
