@@ -165,12 +165,8 @@ has_scaffold() {
 }
 
 selected=()
-while IFS=, read -r repo category purpose priority; do
-  repo="${repo//$'\r'/}"
-  category="${category//$'\r'/}"
-  priority="${priority//$'\r'/}"
-
-  if [[ -z "${repo}" || "${repo}" == "repo" ]]; then
+while IFS=$'\x1f' read -r repo category purpose priority; do
+  if [[ -z "${repo}" ]]; then
     continue
   fi
 
@@ -191,7 +187,7 @@ while IFS=, read -r repo category purpose priority; do
   fi
 
   selected+=("${repo}|${category}|${priority}")
-done < <(sed '1s/^\xEF\xBB\xBF//' "${INVENTORY}")
+done < <(python3 "${REPO_ROOT}/scripts/lib/read-inventory.py" "${INVENTORY}")
 
 if [[ ${#selected[@]} -eq 0 ]]; then
   echo "no repos matched the requested filters" >&2

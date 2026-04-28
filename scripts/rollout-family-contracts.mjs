@@ -12,6 +12,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readCsv } from "./lib/csv.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -79,14 +80,7 @@ function familiesForRepo(repo, category) {
 }
 
 async function readInventory() {
-  const csv = await fs.readFile(path.join(REPO_ROOT, "docs/repo-inventory.csv"), "utf8");
-  const cleaned = csv.replace(/^﻿/, "");
-  const lines = cleaned.split(/\r?\n/).filter((line) => line.length);
-  const headers = lines.shift().split(",");
-  return lines.map((line) => {
-    const cells = line.split(",");
-    return Object.fromEntries(headers.map((header, index) => [header.trim(), (cells[index] || "").trim()]));
-  });
+  return readCsv(path.join(REPO_ROOT, "docs/repo-inventory.csv"));
 }
 
 async function fileExists(file) {

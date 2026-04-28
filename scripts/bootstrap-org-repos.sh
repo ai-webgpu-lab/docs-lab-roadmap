@@ -3119,17 +3119,8 @@ process_inventory() {
   local purpose
   local priority
 
-  while IFS=, read -r repo category purpose priority; do
-    repo="${repo//$'\r'/}"
-    category="${category//$'\r'/}"
-    purpose="${purpose//$'\r'/}"
-    priority="${priority//$'\r'/}"
-
+  while IFS=$'\x1f' read -r repo category purpose priority; do
     if [[ -z "${repo}" ]]; then
-      continue
-    fi
-
-    if [[ "${repo}" == "repo" ]]; then
       continue
     fi
 
@@ -3142,7 +3133,7 @@ process_inventory() {
     else
       process_repo_github "${repo}" "${category}" "${purpose}" "${priority}"
     fi
-  done < <(sed '1s/^\xEF\xBB\xBF//' "${INVENTORY_PATH}")
+  done < <(python3 "${SCRIPT_DIR}/lib/read-inventory.py" "${INVENTORY_PATH}")
 }
 
 process_inventory

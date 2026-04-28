@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readCsv } from "./lib/csv.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -48,6 +49,7 @@ function quote(value) {
 }
 
 function buildApplyScript(config) {
+  const repos = [...new Set(config.items.map((item) => item.repo))].sort();
   const lines = [
     "#!/usr/bin/env bash",
     "",
@@ -58,33 +60,91 @@ function buildApplyScript(config) {
     "",
     `: "${"$"}{ORG:=${config.org}}"`,
     `: "${"$"}{PROJECT_TITLE:=${config.project}}"`,
+    `: "${"$"}{DRY_RUN:=0}"`,
+    `: "${"$"}{SKIP_PREFLIGHT:=0}"`,
+    "",
+    "print_command() {",
+    "  printf '+'",
+    `  printf ' %q' "${"$"}@"`,
+    "  printf '\\n'",
+    "}",
+    "",
+    "run() {",
+    `  print_command "${"$"}@"`,
+    "  if [[ \"${DRY_RUN}\" != \"1\" ]]; then",
+    `    "${"$"}@"`,
+    "  fi",
+    "}",
+    "",
+    "require_command() {",
+    "  if ! command -v \"$1\" >/dev/null 2>&1; then",
+    "    echo \"missing required command: $1\" >&2",
+    "    exit 1",
+    "  fi",
+    "}",
+    "",
+    "preflight() {",
+    "  if [[ \"${DRY_RUN}\" == \"1\" ]]; then",
+    "    echo \"dry-run: skipping gh/jq/auth preflight\"",
+    "    return 0",
+    "  fi",
+    "  if [[ \"${SKIP_PREFLIGHT}\" == \"1\" ]]; then",
+    "    echo \"preflight skipped by SKIP_PREFLIGHT=1\"",
+    "    return 0",
+    "  fi",
+    "  require_command gh",
+    "  require_command jq",
+    "  gh auth status >/dev/null",
+    "  gh api \"orgs/${ORG}\" >/dev/null",
+    "  local existing_title",
+    "  existing_title=\"$(gh project list --owner \"${ORG}\" --format json --jq '.projects[].title' 2>/dev/null | grep -Fx \"${PROJECT_TITLE}\" || true)\"",
+    "  if [[ -n \"${existing_title}\" ]]; then",
+    "    echo \"project already exists: ${PROJECT_TITLE}\" >&2",
+    "    exit 1",
+    "  fi",
+    "  echo \"checking repo access for " + repos.length + " repos\"",
+  ];
+
+  for (const repo of repos) {
+    lines.push(`  gh repo view "${"$"}{ORG}/${repo}" >/dev/null`);
+  }
+
+  lines.push(
+    "}",
+    "",
+    "preflight",
     "",
     "echo \"Creating project '${PROJECT_TITLE}' under org '${ORG}'\"",
-    "PROJECT_NUMBER=\"$(gh project create --owner \"${ORG}\" --title \"${PROJECT_TITLE}\" --format json | jq -r .number)\"",
+    "if [[ \"${DRY_RUN}\" == \"1\" ]]; then",
+    "  print_command gh project create --owner \"${ORG}\" --title \"${PROJECT_TITLE}\" --format json",
+    "  PROJECT_NUMBER=\"${PROJECT_NUMBER:-0}\"",
+    "else",
+    "  PROJECT_NUMBER=\"$(gh project create --owner \"${ORG}\" --title \"${PROJECT_TITLE}\" --format json | jq -r .number)\"",
+    "fi",
     "echo \"project number: ${PROJECT_NUMBER}\"",
     ""
-  ];
+  );
 
   for (const field of config.fields) {
     if (field.type === "single_select") {
-      const opts = field.options.map(quote).join(", ");
       lines.push(`echo "Adding field ${field.name} (${field.type})"`);
-      lines.push(`gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type SINGLE_SELECT --single-select-options ${field.options.map(quote).join(",")}`);
+      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type SINGLE_SELECT --single-select-options ${field.options.map(quote).join(",")}`);
     } else {
       lines.push(`echo "Adding field ${field.name} (${field.type})"`);
-      lines.push(`gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type TEXT`);
+      lines.push(`run gh project field-create "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --name ${quote(field.name)} --data-type TEXT`);
     }
   }
   lines.push("");
 
-  const labelSet = new Set();
+  const labelsByRepo = new Map();
   for (const item of config.items) {
-    for (const label of item.labels) {
-      labelSet.add(label);
-    }
+    if (!labelsByRepo.has(item.repo)) labelsByRepo.set(item.repo, new Set());
+    for (const label of item.labels) labelsByRepo.get(item.repo).add(label);
   }
-  for (const label of [...labelSet].sort()) {
-    lines.push(`gh label create ${quote(label)} --color BFD4F2 --description "Auto-generated from inventory" --repo "${"$"}{ORG}/${".github"}" || true`);
+  for (const [repo, labels] of [...labelsByRepo.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+    for (const label of [...labels].sort()) {
+      lines.push(`run gh label create ${quote(label)} --color BFD4F2 --description "Auto-generated from inventory" --repo "${"$"}{ORG}/${repo}" || true`);
+    }
   }
   lines.push("");
 
@@ -92,8 +152,13 @@ function buildApplyScript(config) {
     const labels = item.labels.join(",");
     const body = `Tracked by docs/repo-inventory.csv\\nRepo: ${item.repo}\\nTrack: ${item.track}\\nPriority: ${item.priority}\\n\\n${item.summary}`;
     lines.push(`echo "Filing issue: ${item.title}"`);
-    lines.push(`ISSUE_URL="$(gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)} | tail -1)"`);
-    lines.push(`gh project item-add "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --url "${"$"}{ISSUE_URL}"`);
+    lines.push("if [[ \"${DRY_RUN}\" == \"1\" ]]; then");
+    lines.push(`  print_command gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)}`);
+    lines.push(`  ISSUE_URL="https://github.com/${"$"}{ORG}/${item.repo}/issues/DRY-RUN"`);
+    lines.push("else");
+    lines.push(`  ISSUE_URL="$(gh issue create --repo "${"$"}{ORG}/${item.repo}" --title ${quote(item.title)} --body ${quote(body)} --label ${quote(labels)} | tail -1)"`);
+    lines.push("fi");
+    lines.push(`run gh project item-add "${"$"}{PROJECT_NUMBER}" --owner "${"$"}{ORG}" --url "${"$"}{ISSUE_URL}"`);
     lines.push("");
   }
 
@@ -102,50 +167,11 @@ function buildApplyScript(config) {
   return lines.join("\n");
 }
 
-function parseCsv(text) {
-  const cleaned = text.replace(/^﻿/, "");
-  const lines = cleaned.split(/\r?\n/).filter((line) => line.length);
-  if (!lines.length) return [];
-  const headers = splitCsvLine(lines[0]);
-  return lines.slice(1).map((line) => {
-    const cells = splitCsvLine(line);
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header.trim()] = (cells[index] || "").trim();
-    });
-    return row;
-  });
-}
-
-function splitCsvLine(line) {
-  const cells = [];
-  let current = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === "," && !inQuotes) {
-      cells.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  cells.push(current);
-  return cells;
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
 
-  const inventoryRows = parseCsv(await fs.readFile(options.inventory, "utf8"));
-  const issueRows = parseCsv(await fs.readFile(options.issues, "utf8"));
+  const inventoryRows = await readCsv(options.inventory);
+  const issueRows = await readCsv(options.issues);
 
   const inventoryByRepo = new Map();
   for (const row of inventoryRows) {
@@ -218,10 +244,10 @@ async function main() {
 
   const config = {
     org: "ai-webgpu-lab",
-    project: "AI WebGPU Lab Plan",
+    project: "AI WebGPU Lab — Master",
     description: "Issue-only Projects v2 board derived from docs/repo-inventory.csv and issues/initial-draft-issues-30.csv",
     fields: [
-      { name: "Status", type: "single_select", options: ["Backlog", "Ready", "In Progress", "In Review", "Done"] },
+      { name: "Status", type: "single_select", options: ["Backlog", "Ready", "In Progress", "Validating", "Blocked", "Done"] },
       { name: "Priority", type: "single_select", options: ["P0", "P1", "P2", "P3"] },
       { name: "Track", type: "single_select", options: views[1].columns },
       { name: "Type", type: "single_select", options: views[2].columns },

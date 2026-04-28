@@ -4,6 +4,7 @@ set -euo pipefail
 
 ORG="${1:-ai-webgpu-lab}"
 INVENTORY_FILE="${2:-docs/repo-inventory.csv}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "gh CLI is required." >&2
@@ -32,8 +33,8 @@ sync_label() {
     --force >/dev/null
 }
 
-while IFS=, read -r repo category purpose priority_group; do
-  if [[ "$repo" == "repo" ]]; then
+while IFS=$'\x1f' read -r repo category purpose priority_group; do
+  if [[ -z "$repo" ]]; then
     continue
   fi
 
@@ -57,4 +58,4 @@ while IFS=, read -r repo category purpose priority_group; do
   sync_label "$full_repo" "results-published" "1f883d" "Results have been published"
 
   echo "synced labels: $full_repo"
-done < "$INVENTORY_FILE"
+done < <(python3 "${SCRIPT_DIR}/lib/read-inventory.py" "${INVENTORY_FILE}")

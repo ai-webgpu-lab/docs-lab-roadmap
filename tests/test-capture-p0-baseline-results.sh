@@ -7,6 +7,20 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
+CAPTURE_SUITE="${AI_WEBGPU_LAB_CAPTURE_SUITE:-smoke}"
+if [[ "${AI_WEBGPU_LAB_FULL_CAPTURE_TESTS:-0}" == "1" ]]; then
+  CAPTURE_SUITE="full"
+fi
+
+case "${CAPTURE_SUITE}" in
+  smoke|full)
+    ;;
+  *)
+    echo "test failed: unknown AI_WEBGPU_LAB_CAPTURE_SUITE='${CAPTURE_SUITE}' (expected smoke|full)" >&2
+    exit 1
+    ;;
+esac
+
 fail() {
   echo "test failed: $1" >&2
   exit 1
@@ -103,6 +117,11 @@ assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/rep
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/reports/raw/03-cold-index-fallback.json" "\"fallback_triggered\": true"
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "## 8. WebGPU vs Fallback"
 assert_contains "${TMP_DIR}/out-embeddings/exp-embeddings-browser-throughput/RESULTS.md" "cold cache: docs/s"
+
+if [[ "${CAPTURE_SUITE}" == "smoke" ]]; then
+  echo "capture-p0 baseline smoke test passed"
+  exit 0
+fi
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
@@ -1413,6 +1432,8 @@ for entry in "${BENCHMARK_BATCH[@]}"; do
   assert_contains "${out_dir}/${repo}/reports/raw/10-${base}-${mode}.json" "\"capture_url_search\": \"?mode=${mode}\""
   assert_contains "${out_dir}/${repo}/RESULTS.md" "Real Adapter vs Deterministic"
 done
+
+echo "capture-p0 baseline full test passed"
 
 # Runtime family rollout: each repo gets deterministic + real-* runtime capture
 RUNTIME_BATCH=(

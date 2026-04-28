@@ -43,6 +43,16 @@ assert_contains "${REPO_OUTPUT}" "would capture 2 repos"
 assert_contains "${REPO_OUTPUT}" ".github (org, P0)"
 assert_contains "${REPO_OUTPUT}" "docs-lab-roadmap (docs, P0)"
 
+COMMA_INVENTORY="${TMP_DIR}/comma-inventory.csv"
+cat >"${COMMA_INVENTORY}" <<'CSV'
+repo,category,purpose,priority_group
+.github,org,"org templates, shared defaults",P0
+CSV
+
+COMMA_OUTPUT="$(bash "${REPO_ROOT}/scripts/capture-all-baselines.sh" --inventory "${COMMA_INVENTORY}" --dry-run --output-root "${TMP_DIR}/comma" 2>&1)"
+assert_contains "${COMMA_OUTPUT}" "would capture 1 repos"
+assert_contains "${COMMA_OUTPUT}" ".github (org, P0)"
+
 if bash "${REPO_ROOT}/scripts/capture-all-baselines.sh" --repo nonexistent-repo --dry-run --output-root "${TMP_DIR}/none" 2>/dev/null; then
   fail "expected non-zero exit when no repos match"
 fi

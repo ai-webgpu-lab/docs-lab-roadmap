@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readCsv } from "./lib/csv.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -199,18 +200,15 @@ async function checkDocsLabRoadmap() {
     record(`docs-lab-roadmap/schema:${file}`, exists, `exists=${exists}`);
   }
 
-  const inventoryText = await readText(path.join(REPO_ROOT, "docs/repo-inventory.csv"));
-  const lines = inventoryText.split(/\r?\n/).filter((line, index) => line.length && index > 0);
-  const realRepoCount = lines.length;
+  const inventoryRows = await readCsv(path.join(REPO_ROOT, "docs/repo-inventory.csv"));
+  const realRepoCount = inventoryRows.length;
   let p0 = 0;
   let p1 = 0;
   let p2 = 0;
   const categories = new Set();
-  for (const line of lines) {
-    const parts = line.split(",");
-    if (parts.length < 4) continue;
-    categories.add(parts[1].trim());
-    const priority = parts[3].trim();
+  for (const row of inventoryRows) {
+    categories.add(row.category);
+    const priority = row.priority_group;
     if (priority === "P0") p0 += 1;
     else if (priority === "P1") p1 += 1;
     else if (priority === "P2") p2 += 1;

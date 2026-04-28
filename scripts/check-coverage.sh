@@ -26,8 +26,9 @@ Runs the lab planning validators and coverage tests in a single pass:
   8. render-capabilities-matrix (markdown report at docs/CAPABILITIES-MATRIX.md)
 
 Options:
-  --preset smoke|full|strict  Apply a preset (smoke = lab-planning + status only,
-                              full = all 5 default steps, strict = full + bootstrap)
+  --preset smoke|full|strict  Apply a preset (smoke = lab-planning + sketch
+                              contract/conformance + dashboards,
+                              full = all default steps, strict = full + bootstrap)
   --skip-coverage          Skip family coverage checks (faster, schema-only)
   --skip-status            Skip integration status renderer
   --bootstrap              Also run bootstrap + full-inventory tests (slow)

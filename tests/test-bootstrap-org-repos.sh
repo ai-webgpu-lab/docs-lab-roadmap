@@ -61,6 +61,23 @@ assert_contains "${TMP_DIR}/out/shared-github-actions/README.md" "공통 인프�
 assert_contains "${TMP_DIR}/out/shared-github-actions/.github/workflows/reusable-results-guard.yml" "workflow_call"
 assert_contains "${TMP_DIR}/out/shared-github-actions/.github/workflows/reusable-pages-smoke.yml" "fallback_query"
 
+COMMA_INVENTORY="${TMP_DIR}/comma-inventory.csv"
+cat >"${COMMA_INVENTORY}" <<'CSV'
+repo,category,purpose,priority_group
+exp-comma-purpose,graphics,"comma, inside purpose",P1
+CSV
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${COMMA_INVENTORY}" \
+  --repo "exp-comma-purpose" \
+  --output-root "${TMP_DIR}/out-comma" \
+  --no-sync
+
+assert_contains "${TMP_DIR}/out-comma/exp-comma-purpose/public/app.js" 'purpose: "comma, inside purpose"'
+assert_contains "${TMP_DIR}/out-comma/exp-comma-purpose/public/app.js" 'priority: "P1"'
+node --check "${TMP_DIR}/out-comma/exp-comma-purpose/public/app.js"
+
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
   --inventory "${REPO_ROOT}/docs/repo-inventory.csv" \

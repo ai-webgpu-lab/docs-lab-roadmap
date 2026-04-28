@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "bash tests/run-all.sh --mode fast",
+    "test:full": "bash tests/run-all.sh --mode full",
     "test:capture-p0": "bash tests/test-capture-p0-baseline-results.sh",
+    "test:capture-p0:full": "AI_WEBGPU_LAB_CAPTURE_SUITE=full bash tests/test-capture-p0-baseline-results.sh",
     "test:render-results": "bash tests/test-render-results-summary.sh"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@ BAIL=0
 JSON=0
 FILTER=""
 TESTS_DIR_OVERRIDE=""
+MODE="fast"
 
 usage() {
   cat <<'EOF'
@@ -18,6 +19,9 @@ Usage: bash tests/run-all.sh [options]
 Runs every tests/test-*.sh in sequence and prints a pass/fail summary.
 
 Options:
+  --mode fast|full|nightly
+                       fast runs the default smoke suite; full/nightly enable
+                       long browser capture sweeps
   --filter <pattern>     Only run tests whose filename contains <pattern>
   --bail                 Stop at first failure
   --quiet                Suppress per-test progress (still prints the final summary)
@@ -32,6 +36,14 @@ while [[ $# -gt 0 ]]; do
     --filter)
       FILTER="$2"
       shift 2
+      ;;
+    --mode)
+      MODE="$2"
+      shift 2
+      ;;
+    --full)
+      MODE="full"
+      shift
       ;;
     --bail)
       BAIL=1
@@ -61,6 +73,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+case "${MODE}" in
+  fast|full|nightly)
+    ;;
+  *)
+    echo "unknown mode: ${MODE} (expected fast|full|nightly)" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
+
 TESTS_DIR="${TESTS_DIR_OVERRIDE:-${SCRIPT_DIR}}"
 
 TESTS=()
@@ -87,7 +109,12 @@ for test in "${TESTS[@]}"; do
   if [[ "${QUIET}" -eq 0 && "${JSON}" -eq 0 ]]; then
     echo "==> ${name}"
   fi
-  if log="$(bash "${test}" 2>&1)"; then
+  test_env=("AI_WEBGPU_LAB_CAPTURE_SUITE=smoke")
+  if [[ "${MODE}" != "fast" ]]; then
+    test_env=("AI_WEBGPU_LAB_CAPTURE_SUITE=full")
+  fi
+
+  if log="$(env "${test_env[@]}" bash "${test}" 2>&1)"; then
     PASSED+=("${name}")
   else
     FAILED+=("${name}")
@@ -115,7 +142,7 @@ if [[ "${JSON}" -eq 1 ]]; then
     printf '%s' "$s"
   }
 
-  out='{"total":'"${#TESTS[@]}"',"passed":'"${#PASSED[@]}"',"failed":'"${#FAILED[@]}"',"elapsed_seconds":'"${ELAPSED}"',"bail":'
+  out='{"total":'"${#TESTS[@]}"',"passed":'"${#PASSED[@]}"',"failed":'"${#FAILED[@]}"',"elapsed_seconds":'"${ELAPSED}"',"mode":"'"$(json_escape "${MODE}")"'","bail":'
   if [[ "${BAIL}" -eq 1 ]]; then out+='true'; else out+='false'; fi
   out+=',"filter":"'"$(json_escape "${FILTER}")"'","passed_names":['
   first=1
@@ -135,7 +162,7 @@ if [[ "${JSON}" -eq 1 ]]; then
   printf '%s\n' "${out}"
 else
   echo
-  echo "run-all summary: ${#PASSED[@]} passed, ${#FAILED[@]} failed, total=${#TESTS[@]} (${ELAPSED}s)"
+  echo "run-all summary: ${#PASSED[@]} passed, ${#FAILED[@]} failed, total=${#TESTS[@]} (${ELAPSED}s, mode=${MODE})"
   for name in "${FAILED[@]}"; do
     echo "  ❌ ${name}"
   done
