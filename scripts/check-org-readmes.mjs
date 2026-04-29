@@ -118,7 +118,9 @@ function expectedReadmeChecks(row, options) {
   if (row.repo === ".github") {
     return [
       { id: "root-dashboard", pattern: "## 조직 상태 대시보드" },
+      { id: "root-operations-badge", pattern: "actions/workflows/operations-check.yml/badge.svg?branch=main" },
       { id: "root-pages-status", pattern: "docs-lab-roadmap/docs/PAGES-STATUS.md" },
+      { id: "root-workflow-status", pattern: "docs-lab-roadmap/docs/WORKFLOW-STATUS.md" },
       { id: "root-integration-status", pattern: "docs-lab-roadmap/docs/INTEGRATION-STATUS.md" },
       { id: "root-sketch-metrics", pattern: "docs-lab-roadmap/docs/SKETCH-METRICS.md" }
     ];
@@ -147,7 +149,9 @@ function expectedProfileChecks(row) {
   if (row.repo !== ".github") return [];
   return [
     { id: "profile-live-status", pattern: "## Live Status" },
+    { id: "profile-operations-badge", pattern: "actions/workflows/operations-check.yml/badge.svg?branch=main" },
     { id: "profile-pages-status", pattern: "docs-lab-roadmap/docs/PAGES-STATUS.md" },
+    { id: "profile-workflow-status", pattern: "docs-lab-roadmap/docs/WORKFLOW-STATUS.md" },
     { id: "profile-integration-status", pattern: "docs-lab-roadmap/docs/INTEGRATION-STATUS.md" },
     { id: "profile-sketch-metrics", pattern: "docs-lab-roadmap/docs/SKETCH-METRICS.md" }
   ];

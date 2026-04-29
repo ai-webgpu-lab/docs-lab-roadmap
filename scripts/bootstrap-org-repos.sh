@@ -1910,6 +1910,10 @@ render_org_repo() {
   write_generated_readme "${dir}/README.md" <<'EOF'
 # ai-webgpu-lab/.github
 
+[![CI](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/ci.yml)
+[![Deploy GitHub Pages Demo](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/deploy-pages.yml)
+[![Operations Status Check](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml)
+
 `ai-webgpu-lab` 조직 전체에 적용되는 기본 커뮤니티 파일과 협업 규칙을 관리하는 저장소입니다. 각 개별 프로젝트에서 중복 관리하지 않아도 되도록 이슈 폼, PR 템플릿, 조직 프로필, 기본 리뷰 정책을 여기에서 통합 관리합니다.
 
 ## 저장소 역할
@@ -1931,6 +1935,7 @@ render_org_repo() {
 
 ## 조직 상태 대시보드
 - 전체 repo/Pages 상태: `docs-lab-roadmap/docs/PAGES-STATUS.md`
+- Actions/deploy/operations 상태: `docs-lab-roadmap/docs/WORKFLOW-STATUS.md`
 - 통합 sketch/adapter 상태: `docs-lab-roadmap/docs/INTEGRATION-STATUS.md`
 - sketch capabilities: `docs-lab-roadmap/docs/SKETCH-METRICS.md`
 - 조직 프로필은 `.github/profile/README.md`에서 관리합니다.
@@ -1976,6 +1981,10 @@ EOF
   write_generated_readme "${dir}/profile/README.md" <<'EOF'
 # AI WebGPU Lab
 
+[![CI](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/ci.yml)
+[![Deploy GitHub Pages Demo](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/deploy-pages.yml)
+[![Operations Status Check](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml)
+
 Browser-first research organization for WebGPU graphics, scientific visualization, and on-device AI workloads.
 
 ## Focus Areas
@@ -2000,6 +2009,7 @@ Browser-first research organization for WebGPU graphics, scientific visualizatio
 
 ## Live Status
 - Pages/demo status: `docs-lab-roadmap/docs/PAGES-STATUS.md`
+- Actions/deploy/operations status: `docs-lab-roadmap/docs/WORKFLOW-STATUS.md`
 - Integration status: `docs-lab-roadmap/docs/INTEGRATION-STATUS.md`
 - Sketch metrics: `docs-lab-roadmap/docs/SKETCH-METRICS.md`
 - Representative real-mode smoke targets: `bench-runtime-shootout`, `exp-three-webgpu-core`, `bench-renderer-shootout`, `app-blackhole-observatory`

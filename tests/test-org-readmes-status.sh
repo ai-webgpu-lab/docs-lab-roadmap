@@ -39,8 +39,8 @@ cat >"${FIXTURE}" <<'JSON'
 {
   "repos": {
     ".github": {
-      "readme": "# .github\n\n## 조직 상태 대시보드\n- docs-lab-roadmap/docs/PAGES-STATUS.md\n- docs-lab-roadmap/docs/INTEGRATION-STATUS.md\n- docs-lab-roadmap/docs/SKETCH-METRICS.md\n",
-      "profileReadme": "# AI WebGPU Lab\n\n## Live Status\n- docs-lab-roadmap/docs/PAGES-STATUS.md\n- docs-lab-roadmap/docs/INTEGRATION-STATUS.md\n- docs-lab-roadmap/docs/SKETCH-METRICS.md\n"
+      "readme": "# .github\n\n[![Operations Status Check](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml)\n\n## 조직 상태 대시보드\n- docs-lab-roadmap/docs/PAGES-STATUS.md\n- docs-lab-roadmap/docs/WORKFLOW-STATUS.md\n- docs-lab-roadmap/docs/INTEGRATION-STATUS.md\n- docs-lab-roadmap/docs/SKETCH-METRICS.md\n",
+      "profileReadme": "# AI WebGPU Lab\n\n[![Operations Status Check](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml/badge.svg?branch=main)](https://github.com/ai-webgpu-lab/docs-lab-roadmap/actions/workflows/operations-check.yml)\n\n## Live Status\n- docs-lab-roadmap/docs/PAGES-STATUS.md\n- docs-lab-roadmap/docs/WORKFLOW-STATUS.md\n- docs-lab-roadmap/docs/INTEGRATION-STATUS.md\n- docs-lab-roadmap/docs/SKETCH-METRICS.md\n"
     },
     "docs-lab-roadmap": {
       "readme": "# docs-lab-roadmap\n\n- docs/PAGES-STATUS.md\n- docs/README-STATUS.md\n- docs/WORKFLOW-STATUS.md\n- docs/PROJECT-STATUS.md\n- scripts/check-org-pages.mjs\n"
@@ -63,6 +63,25 @@ assert_contains "${OUTPUT}" "Healthy READMEs: 3 / 3"
 assert_contains "${OUTPUT}" "Root README present: 3 / 3"
 assert_contains "${OUTPUT}" "Organization profile gate: 3 / 3"
 assert_contains "${OUTPUT}" "No README drift detected."
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+fixture.repos[".github"].profileReadme = fixture.repos[".github"].profileReadme.replace("- docs-lab-roadmap/docs/WORKFLOW-STATUS.md\n", "");
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${BROKEN_FIXTURE}"
+
+if node "${REPO_ROOT}/scripts/check-org-readmes.mjs" \
+  --inventory "${INVENTORY}" \
+  --fixture "${BROKEN_FIXTURE}" \
+  --output "${BROKEN_OUTPUT}" \
+  --fail-on-error 2>"${BROKEN_STDERR}"; then
+  fail "expected organization profile workflow status drift to fail"
+fi
+
+assert_contains "${BROKEN_OUTPUT}" "Healthy READMEs: 2 / 3"
+assert_contains "${BROKEN_OUTPUT}" "profile-workflow-status"
+assert_contains "${BROKEN_STDERR}" "README status check failed"
 
 node -e '
 const fs = require("fs");
