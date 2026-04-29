@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -57,7 +57,7 @@ jobs:
           - runtime-batch
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -69,7 +69,7 @@ jobs:
         run: bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups "${{ matrix.capture_group }}" --quiet
       - name: Upload capture artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: capture-${{ matrix.capture_group }}
           path: ${{ runner.temp }}/capture-${{ matrix.capture_group }}

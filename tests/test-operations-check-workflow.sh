@@ -34,7 +34,8 @@ assert_contains "${WORKFLOW}" "node scripts/check-org-workflows.mjs --fail-on-er
 assert_contains "${WORKFLOW}" "node scripts/sync-project-fields.mjs --dry-run"
 assert_contains "${WORKFLOW}" "node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields"
 assert_contains "${WORKFLOW}" "bash tests/run-all.sh --mode fast --quiet"
-assert_contains "${WORKFLOW}" "actions/upload-artifact@v4"
+assert_contains "${WORKFLOW}" "actions/setup-node@v6"
+assert_contains "${WORKFLOW}" "actions/upload-artifact@v7"
 assert_contains "${WORKFLOW}" "docs/PAGES-STATUS.md"
 assert_contains "${WORKFLOW}" "docs/PROJECT-STATUS.md"
 
