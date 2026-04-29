@@ -60,7 +60,7 @@ bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture
 - `check-coverage --preset full`은 실제 validator/dashboard 경로를 한 번 실행해야 한다.
 - `check-org-pages`는 54개 저장소의 Pages 설정, 최신 deploy workflow, HTTP 200, 저장소 전용 demo surface, real sketch/adapter 원격 반영, 대표 real-mode URL을 확인해야 한다.
 - `check-org-readmes`는 54개 저장소의 README/profile README가 상태 dashboard 링크를 유지하는지 확인해야 한다.
-- `check-org-workflows`는 54개 저장소의 deploy workflow와 `docs-lab-roadmap` CI가 성공 상태인지 확인해야 한다.
+- `check-org-workflows`는 54개 저장소의 deploy workflow, `docs-lab-roadmap` CI, Operations workflow 최신 완료 run 상태를 리포트해야 한다.
 - `check-project-status`는 Master Project 존재 여부, seed issue/project item 연결, Project item field drift를 gate해야 한다.
 - full capture는 GitHub Actions matrix에서 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch`로 병렬 실행한다.
 - 로컬에서 baseline 전체를 한 번에 확인할 때는 호환 그룹 `baseline`을 사용할 수 있다.
@@ -124,7 +124,7 @@ node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --
 통과 기준:
 - `docs/PAGES-STATUS.md`에 54개 저장소가 모두 집계됨
 - `docs/README-STATUS.md`에 README/profile drift 상태가 모두 집계됨
-- `docs/WORKFLOW-STATUS.md`에 deploy workflow와 필수 CI 상태가 모두 집계됨
+- `docs/WORKFLOW-STATUS.md`에 deploy workflow, 필수 CI, Operations workflow 최신 완료 run 상태가 모두 집계됨
 - `docs/PROJECT-STATUS.md`에 Project, seed issue, Project item 연결, Project item field drift 상태가 집계됨
 - 모든 저장소가 GitHub Pages `workflow` source, 최신 `deploy-pages.yml` success, HTTP 200 상태임
 - 모든 저장소가 generic baseline이 아닌 repo-specific demo title을 노출함

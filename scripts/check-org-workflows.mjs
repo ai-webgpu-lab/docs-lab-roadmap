@@ -114,6 +114,10 @@ function latestRunByWorkflow(runs, workflowName) {
   return runs.find((run) => run.workflowName === workflowName) || null;
 }
 
+function latestCompletedRunByWorkflow(runs, workflowName) {
+  return runs.find((run) => run.workflowName === workflowName && run.status === "completed") || null;
+}
+
 function isSuccess(run) {
   return run?.status === "completed" && run?.conclusion === "success";
 }
@@ -154,6 +158,7 @@ function buildRecord(row, raw) {
     latestRun: raw.latestRun || null,
     deployRun: raw.deployRun || null,
     ciRun: raw.ciRun || null,
+    operationsRun: raw.operationsRun || null,
     healthy,
     gaps
   };
@@ -169,7 +174,8 @@ async function collectFixtureRecord(row, fixture) {
     deployWorkflowContent: entry.deployWorkflowContent || entry.workflowContent || "",
     latestRun: entry.latestRun || null,
     deployRun: entry.deployRun || null,
-    ciRun: entry.ciRun || null
+    ciRun: entry.ciRun || null,
+    operationsRun: entry.operationsRun || null
   });
 }
 
@@ -189,7 +195,8 @@ async function collectLiveRecord(row, options) {
     deployWorkflowContent: decodeBase64Content(deployWorkflow?.content || ""),
     latestRun: runList[0] || null,
     deployRun: latestRunByWorkflow(runList, "Deploy GitHub Pages Demo"),
-    ciRun: latestRunByWorkflow(runList, "CI")
+    ciRun: latestRunByWorkflow(runList, "CI"),
+    operationsRun: latestCompletedRunByWorkflow(runList, "Operations Status Check")
   });
 }
 
@@ -206,6 +213,8 @@ function summarize(records) {
   const workflowVersionCurrent = records.filter((record) => record.workflowVersionOk).length;
   const deploySuccess = records.filter((record) => isSuccess(record.deployRun)).length;
   const ciSuccess = records.filter((record) => record.repo !== "docs-lab-roadmap" || isSuccess(record.ciRun)).length;
+  const operationsRecords = records.filter((record) => record.repo === "docs-lab-roadmap");
+  const operationsSuccess = operationsRecords.filter((record) => isSuccess(record.operationsRun)).length;
   return {
     total: records.length,
     healthy,
@@ -213,7 +222,9 @@ function summarize(records) {
     deployWorkflowFiles,
     workflowVersionCurrent,
     deploySuccess,
-    ciSuccess
+    ciSuccess,
+    operationsTotal: operationsRecords.length,
+    operationsSuccess
   };
 }
 
@@ -244,10 +255,11 @@ function renderReport(records) {
     `- Pages action versions current: ${summary.workflowVersionCurrent} / ${summary.total}`,
     `- Latest Pages deploy success: ${summary.deploySuccess} / ${summary.total}`,
     `- Required CI success: ${summary.ciSuccess} / ${summary.total}`,
+    `- Operations check latest success: ${summary.operationsSuccess} / ${summary.operationsTotal}`,
     "",
     "## Repo Status",
-    "| Repo | Category | Priority | Deploy workflow | Pages actions | Latest deploy | Latest run | Required CI |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |"
+    "| Repo | Category | Priority | Deploy workflow | Pages actions | Latest deploy | Latest run | Required CI | Operations check |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"
   ];
 
   for (const record of records) {
@@ -258,7 +270,10 @@ function renderReport(records) {
     const ciCell = record.repo === "docs-lab-roadmap"
       ? `${statusIcon(isSuccess(record.ciRun))} ${runLabel(record.ciRun)}`
       : "—";
-    lines.push(`| ${escapeCell(record.repo)} | ${escapeCell(record.category)} | ${escapeCell(record.priority_group)} | ${escapeCell(deployWorkflowCell)} | ${escapeCell(versionCell)} | ${escapeCell(deployCell)} | ${escapeCell(latestCell)} | ${escapeCell(ciCell)} |`);
+    const operationsCell = record.repo === "docs-lab-roadmap"
+      ? `${statusIcon(isSuccess(record.operationsRun))} ${runLabel(record.operationsRun)}`
+      : "—";
+    lines.push(`| ${escapeCell(record.repo)} | ${escapeCell(record.category)} | ${escapeCell(record.priority_group)} | ${escapeCell(deployWorkflowCell)} | ${escapeCell(versionCell)} | ${escapeCell(deployCell)} | ${escapeCell(latestCell)} | ${escapeCell(ciCell)} | ${escapeCell(operationsCell)} |`);
   }
 
   lines.push("", "## Gaps");

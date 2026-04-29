@@ -45,7 +45,8 @@ cat >"${FIXTURE}" <<'JSON'
       "deployWorkflowContent": "uses: actions/configure-pages@v6\nuses: actions/upload-pages-artifact@v5\nuses: actions/deploy-pages@v5\n",
       "latestRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:02:00Z" },
       "deployRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:02:00Z" },
-      "ciRun": { "workflowName": "CI", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:01:00Z" }
+      "ciRun": { "workflowName": "CI", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:01:00Z" },
+      "operationsRun": { "workflowName": "Operations Status Check", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:05:00Z" }
     },
     "bench-runtime-shootout": {
       "url": "https://github.com/ai-webgpu-lab/bench-runtime-shootout",
@@ -72,7 +73,27 @@ assert_contains "${OUTPUT}" "deploy-pages.yml present: 2 / 2"
 assert_contains "${OUTPUT}" "Pages action versions current: 2 / 2"
 assert_contains "${OUTPUT}" "Latest Pages deploy success: 2 / 2"
 assert_contains "${OUTPUT}" "Required CI success: 2 / 2"
+assert_contains "${OUTPUT}" "Operations check latest success: 1 / 1"
+assert_contains "${OUTPUT}" "Operations Status Check completed/success"
 assert_contains "${OUTPUT}" "No workflow gaps detected."
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+fixture.repos["docs-lab-roadmap"].operationsRun.conclusion = "failure";
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${BROKEN_FIXTURE}"
+
+node "${REPO_ROOT}/scripts/check-org-workflows.mjs" \
+  --inventory "${INVENTORY}" \
+  --fixture "${BROKEN_FIXTURE}" \
+  --output "${BROKEN_OUTPUT}" \
+  --fail-on-error
+
+assert_contains "${BROKEN_OUTPUT}" "Healthy workflow gates: 2 / 2"
+assert_contains "${BROKEN_OUTPUT}" "Operations check latest success: 0 / 1"
+assert_contains "${BROKEN_OUTPUT}" "Operations Status Check completed/failure"
+assert_contains "${BROKEN_OUTPUT}" "No workflow gaps detected."
 
 node -e '
 const fs = require("fs");
