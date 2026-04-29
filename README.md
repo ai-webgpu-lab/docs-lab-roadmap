@@ -79,6 +79,7 @@
 - `docs/WORKFLOW-STATUS.md` — 자동 생성 dashboard (54 repo × Actions/deploy workflow + Operations workflow 상태)
 - `docs/PROJECT-STATUS.md` — 자동 생성 dashboard (Project/seeded issue/item/field 연결 상태)
 - `docs/GOAL-STATUS.md` — 자동 생성 dashboard (전체 목표, Phase gate, 잔여 실측/보고 산출물 상태)
+- `docs/RUNTIME-RECOMMENDATIONS.md` — Phase 3 runtime 실측/권고 기준과 첫 측정 queue
 - `docs/INTEGRATION-STATUS.md` — 자동 생성 dashboard (54 repo × 어댑터/스케치/scaffold 상태)
 - `docs/SKETCH-METRICS.md` — 자동 생성 dashboard (47 specific sketch × CDN/backend/capabilities)
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개

@@ -29,10 +29,11 @@
 - `docs/INTEGRATION-STATUS.md` — 54-repo 어댑터/스케치/scaffold 상태 자동 dashboard
 - `docs/SKETCH-METRICS.md` — 47개 specific real-*-sketch.js의 CDN/backend/capabilities 자동 dashboard
 - `docs/GOAL-STATUS.md` — Phase 0-3 목표, 운영 gate, 잔여 실측/보고 backlog 자동 dashboard
+- `docs/RUNTIME-RECOMMENDATIONS.md` — runtime 실측 프로토콜과 첫 권고 queue
 - `docs/09-runtime-integration-plan.md` — 4 family 어댑터 컨트랙트와 통합 계획
 - 인벤토리 54/54 deterministic harness, 어댑터 65 file (4 family × 47 repo + bench-* 듀얼 매핑)
 - 실제 통합 sketch 47/47 specific (Renderer 12 / Runtime 12 / App-surface 5 / Benchmark 18, 모두 100%)
-- 회귀 가드 78개 테스트 (4 family adapter contract + 47 sketch-specific stub injection + conformance + family coverage + bootstrap/full-inventory + status dashboards)
+- 회귀 가드 79개 테스트 (4 family adapter contract + 47 sketch-specific stub injection + conformance + family coverage + bootstrap/full-inventory + status dashboards + runtime recommendation doc)
 
 ## 가장 먼저 만들 저장소
 - `.github`
