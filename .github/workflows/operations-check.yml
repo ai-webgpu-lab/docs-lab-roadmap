@@ -77,6 +77,9 @@ jobs:
       - name: Check Project strict gate
         run: node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
 
+      - name: Render goal status gate
+        run: node scripts/render-goal-status.mjs --fail-on-error
+
       - name: Run fast test suite
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_fast_suite == 'true' }}
         run: bash tests/run-all.sh --mode fast --quiet
@@ -91,4 +94,5 @@ jobs:
             docs/README-STATUS.md
             docs/WORKFLOW-STATUS.md
             docs/PROJECT-STATUS.md
+            docs/GOAL-STATUS.md
           if-no-files-found: error

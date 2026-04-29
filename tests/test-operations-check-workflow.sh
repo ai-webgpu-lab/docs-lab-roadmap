@@ -35,6 +35,7 @@ assert_contains "${WORKFLOW}" "node scripts/check-org-readmes.mjs --fail-on-erro
 assert_contains "${WORKFLOW}" "node scripts/check-org-workflows.mjs --fail-on-error"
 assert_contains "${WORKFLOW}" "node scripts/sync-project-fields.mjs --dry-run"
 assert_contains "${WORKFLOW}" "node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields"
+assert_contains "${WORKFLOW}" "node scripts/render-goal-status.mjs --fail-on-error"
 assert_contains "${WORKFLOW}" "bash tests/run-all.sh --mode fast --quiet"
 assert_contains "${WORKFLOW}" "github.event_name == 'workflow_dispatch' && github.event.inputs.run_fast_suite == 'true'"
 assert_contains "${WORKFLOW}" '[[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.apply_project_fields }}" == "true" ]]'
@@ -42,5 +43,6 @@ assert_contains "${WORKFLOW}" "actions/setup-node@v6"
 assert_contains "${WORKFLOW}" "actions/upload-artifact@v7"
 assert_contains "${WORKFLOW}" "docs/PAGES-STATUS.md"
 assert_contains "${WORKFLOW}" "docs/PROJECT-STATUS.md"
+assert_contains "${WORKFLOW}" "docs/GOAL-STATUS.md"
 
 echo "operations-check-workflow test passed"

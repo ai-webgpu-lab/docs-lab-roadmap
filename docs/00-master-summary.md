@@ -25,13 +25,14 @@
 - `docs-*` 조직 문서 저장소
 
 ## 운영 toolchain (2026-04-27 기준)
-- `bash scripts/check-coverage.sh [--preset {smoke,full,strict}]` — 단일 entrypoint 6단계 검증 (lab-planning + adapter coverage + sketch family/conformance + integration-status + sketch-metrics; strict는 bootstrap 추가)
+- `bash scripts/check-coverage.sh [--preset {smoke,full,strict}]` — 단일 entrypoint 9단계 검증 (lab-planning + adapter coverage + sketch family/conformance + integration/sketch/capabilities/goal dashboards; strict는 bootstrap 추가)
 - `docs/INTEGRATION-STATUS.md` — 54-repo 어댑터/스케치/scaffold 상태 자동 dashboard
 - `docs/SKETCH-METRICS.md` — 47개 specific real-*-sketch.js의 CDN/backend/capabilities 자동 dashboard
+- `docs/GOAL-STATUS.md` — Phase 0-3 목표, 운영 gate, 잔여 실측/보고 backlog 자동 dashboard
 - `docs/09-runtime-integration-plan.md` — 4 family 어댑터 컨트랙트와 통합 계획
 - 인벤토리 54/54 deterministic harness, 어댑터 65 file (4 family × 47 repo + bench-* 듀얼 매핑)
 - 실제 통합 sketch 47/47 specific (Renderer 12 / Runtime 12 / App-surface 5 / Benchmark 18, 모두 100%)
-- 회귀 가드 70개 테스트 (4 family adapter contract + 47 sketch-specific stub injection + conformance + family coverage + bootstrap/full-inventory)
+- 회귀 가드 78개 테스트 (4 family adapter contract + 47 sketch-specific stub injection + conformance + family coverage + bootstrap/full-inventory + status dashboards)
 
 ## 가장 먼저 만들 저장소
 - `.github`

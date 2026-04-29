@@ -49,9 +49,10 @@
 - `scripts/render-results-summary.mjs` — `reports/raw/*.json`를 기반으로 저장소별 `RESULTS.md`를 다시 쓰는 스크립트
 - `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
 - `scripts/sync-org-repo-topics.sh` — 저장소 인벤토리 기준 토픽 동기화 스크립트
-- `scripts/check-coverage.sh` — 단일 entrypoint로 lab-planning + adapter coverage + sketch family/conformance + dashboard 6단계 검증 (`--preset {smoke,full,strict}`)
+- `scripts/check-coverage.sh` — 단일 entrypoint로 lab-planning + adapter coverage + sketch family/conformance + status dashboard 9단계 검증 (`--preset {smoke,full,strict}`)
 - `scripts/render-integration-status.mjs` — 54-repo 어댑터/스케치/scaffold 상태 dashboard 생성 (`docs/INTEGRATION-STATUS.md`)
 - `scripts/render-sketch-metrics.mjs` — 47개 specific sketch의 CDN/backend/capabilities 비교 dashboard 생성 (`docs/SKETCH-METRICS.md`)
+- `scripts/render-goal-status.mjs` — 프로젝트 목표/Phase 0-3/잔여 연구 산출물 상태 dashboard 생성 (`docs/GOAL-STATUS.md`)
 - `scripts/render-projects-config.mjs` — Projects v2 board + 시드 issue 30개 dry-render (`--apply <script.sh>`로 preflight/dry-run/reuse-project 지원 gh CLI 스크립트 emit)
 - `scripts/capture-all-baselines.sh` — 인벤토리 일괄 capture wrapper (priority/category/repo 필터, TSV + markdown summary)
 - `scripts/check-org-pages.mjs` — 54개 하위 repo의 GitHub Pages/deploy/HTTP/real-mode smoke 상태 리포트 생성 (`docs/PAGES-STATUS.md`)
@@ -77,6 +78,7 @@
 - `docs/README-STATUS.md` — 자동 생성 dashboard (54 repo × README/profile drift 상태)
 - `docs/WORKFLOW-STATUS.md` — 자동 생성 dashboard (54 repo × Actions/deploy workflow + Operations workflow 상태)
 - `docs/PROJECT-STATUS.md` — 자동 생성 dashboard (Project/seeded issue/item/field 연결 상태)
+- `docs/GOAL-STATUS.md` — 자동 생성 dashboard (전체 목표, Phase gate, 잔여 실측/보고 산출물 상태)
 - `docs/INTEGRATION-STATUS.md` — 자동 생성 dashboard (54 repo × 어댑터/스케치/scaffold 상태)
 - `docs/SKETCH-METRICS.md` — 자동 생성 dashboard (47 specific sketch × CDN/backend/capabilities)
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개
@@ -120,6 +122,7 @@ node scripts/check-project-status.mjs
 node scripts/sync-project-fields.mjs --dry-run
 node scripts/sync-project-fields.mjs
 node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
+node scripts/render-goal-status.mjs --fail-on-error
 gh workflow run operations-check.yml -f run_fast_suite=true -f apply_project_fields=false
 bash tests/run-all.sh --mode fast
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups renderer-batch

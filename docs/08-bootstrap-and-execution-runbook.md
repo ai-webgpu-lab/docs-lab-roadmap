@@ -51,6 +51,7 @@ node scripts/check-org-pages.mjs --fail-on-error
 node scripts/check-org-readmes.mjs --fail-on-error
 node scripts/check-org-workflows.mjs --fail-on-error
 node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
+node scripts/render-goal-status.mjs --fail-on-error
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups smoke --quiet
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups runtime-batch --quiet
 ```
@@ -62,6 +63,7 @@ bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture
 - `check-org-readmes`는 54개 저장소의 README/profile README가 상태 dashboard 링크를 유지하는지 확인해야 한다.
 - `check-org-workflows`는 54개 저장소의 deploy workflow, `docs-lab-roadmap` CI, Operations workflow 최신 완료 run 상태를 리포트해야 한다.
 - `check-project-status`는 Master Project 존재 여부, seed issue/project item 연결, Project item field drift를 gate해야 한다.
+- `render-goal-status`는 Phase 0-2 운영/확장 gate를 통과시키고 Phase 3 실측/보고 backlog를 명시해야 한다.
 - full capture는 GitHub Actions matrix에서 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch`로 병렬 실행한다.
 - 로컬에서 baseline 전체를 한 번에 확인할 때는 호환 그룹 `baseline`을 사용할 수 있다.
 - 실패 분석이 필요하면 `AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out`을 지정해 raw JSON, screenshots, logs를 보존한다.
@@ -85,6 +87,7 @@ gh workflow run operations-check.yml -f run_fast_suite=true -f apply_project_fie
 - fast suite 포함 검증은 `run_fast_suite=true`를 지정한 수동 실행에서만 수행해야 한다.
 - Project field drift를 복구할 때만 `apply_project_fields=true`로 수동 실행해야 한다.
 - 실행 결과 artifact `operations-status-dashboards`에 `PAGES-STATUS.md`, `README-STATUS.md`, `WORKFLOW-STATUS.md`, `PROJECT-STATUS.md`가 포함되어야 한다.
+- 목표 상태 dashboard `GOAL-STATUS.md`도 artifact에 포함되어 Phase 0-3 상태와 다음 실측 queue를 확인할 수 있어야 한다.
 - workflow가 org 전체 저장소와 Projects v2를 읽지 못하면 `AI_WEBGPU_LAB_ADMIN_TOKEN` secret 권한을 먼저 수정해야 한다.
 
 예시:
@@ -119,6 +122,7 @@ node scripts/check-org-readmes.mjs --fail-on-error
 node scripts/check-org-workflows.mjs --fail-on-error
 node scripts/sync-project-fields.mjs
 node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
+node scripts/render-goal-status.mjs --fail-on-error
 ```
 
 통과 기준:
@@ -126,6 +130,7 @@ node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --
 - `docs/README-STATUS.md`에 README/profile drift 상태가 모두 집계됨
 - `docs/WORKFLOW-STATUS.md`에 deploy workflow, 필수 CI, Operations workflow 최신 완료 run 상태가 모두 집계됨
 - `docs/PROJECT-STATUS.md`에 Project, seed issue, Project item 연결, Project item field drift 상태가 집계됨
+- `docs/GOAL-STATUS.md`에 전체 목표, Phase 0-3 상태, 다음 실측/보고 queue가 집계됨
 - 모든 저장소가 GitHub Pages `workflow` source, 최신 `deploy-pages.yml` success, HTTP 200 상태임
 - 모든 저장소가 generic baseline이 아닌 repo-specific demo title을 노출함
 - 실험/벤치/앱 저장소의 원격 `public/`에 기대한 `real-*-sketch.js`와 `*-adapter.js`가 존재함
