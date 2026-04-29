@@ -9,6 +9,7 @@
 - `node`, `npm` 설치 완료
 - `docs/repo-inventory.csv`와 `issues/initial-draft-issues-30.csv`가 최신 상태
 - GitHub organization `ai-webgpu-lab`에 저장소 생성 권한 보유
+- GitHub Actions 운영 점검용 `AI_WEBGPU_LAB_ADMIN_TOKEN` repository secret 설정 완료 (`repo`, `read:org`, Projects v2 접근 권한 필요)
 
 ## 권장 실행 순서
 ### 1. 계획 자산 정합성 검증
@@ -69,6 +70,23 @@ bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture
 ```bash
 AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out \
   bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups baseline-a --quiet
+```
+
+### 3.1 운영 점검 workflow
+```bash
+gh workflow run operations-check.yml -f run_fast_suite=true -f apply_project_fields=false
+```
+
+통과 기준:
+- `operations-check.yml`은 Pages/README/Workflow/Project strict gate를 한 번에 실행해야 한다.
+- 기본 실행은 `sync-project-fields --dry-run`만 수행하고 Project item field를 변경하지 않아야 한다.
+- Project field drift를 복구할 때만 `apply_project_fields=true`로 수동 실행해야 한다.
+- 실행 결과 artifact `operations-status-dashboards`에 `PAGES-STATUS.md`, `README-STATUS.md`, `WORKFLOW-STATUS.md`, `PROJECT-STATUS.md`가 포함되어야 한다.
+- workflow가 org 전체 저장소와 Projects v2를 읽지 못하면 `AI_WEBGPU_LAB_ADMIN_TOKEN` secret 권한을 먼저 수정해야 한다.
+
+예시:
+```bash
+gh workflow run operations-check.yml -f run_fast_suite=false -f apply_project_fields=true
 ```
 
 ### 4. GitHub Projects 적용 dry-run
@@ -204,5 +222,12 @@ bash scripts/seed-p0-baseline-results.sh --push
 - 인벤토리 CSV 오탈자
 - 시드 이슈 repo/type 불일치
 - `gh auth status` 실패
+- `AI_WEBGPU_LAB_ADMIN_TOKEN` secret 누락 또는 org/project 권한 부족
 - `docs/06` 대상 저장소와 시드 이슈 coverage 어긋남
 - 결과 스키마 복사 누락 또는 `RESULTS.md` 누락
+
+## 운영 gate 복구 순서
+1. Pages/README/Workflow dashboard가 실패하면 `node scripts/check-org-pages.mjs --fail-on-error`, `node scripts/check-org-readmes.mjs --fail-on-error`, `node scripts/check-org-workflows.mjs --fail-on-error`를 각각 실행해 실패 repo를 분리한다.
+2. Project field drift가 보이면 `node scripts/sync-project-fields.mjs --dry-run`으로 변경 범위를 확인한 뒤 `node scripts/sync-project-fields.mjs`를 실행한다.
+3. Project gate는 `node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields`가 통과할 때까지 issue 존재, item 연결, field 값을 순서대로 복구한다.
+4. 로컬 복구 후 `gh workflow run operations-check.yml -f run_fast_suite=true -f apply_project_fields=false`를 다시 실행해 org-level 상태를 확인한다.
