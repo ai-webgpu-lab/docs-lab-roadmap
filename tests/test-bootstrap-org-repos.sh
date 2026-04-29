@@ -969,7 +969,9 @@ assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## 작업 및
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "## 완료 기준"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "Fixed Scenario Runtime Shootout"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/app.js" "fixed-runtime-shootout"
-assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/deploy-pages@v4"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/configure-pages@v6"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/upload-pages-artifact@v5"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/deploy-pages@v5"
 node --check "${TMP_DIR}/out/bench-runtime-shootout/public/app.js"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
@@ -988,6 +990,7 @@ assert_not_contains "${TMP_DIR}/out-no-pages/bench-runtime-shootout/README.md" "
 
 printf 'sentinel\n' > "${TMP_DIR}/out/bench-runtime-shootout/README.md"
 printf 'legacy\n' > "${TMP_DIR}/out/bench-runtime-shootout/public/index.html"
+printf 'legacy workflow\n' > "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \
@@ -997,6 +1000,18 @@ bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
 
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "sentinel"
 assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "legacy"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "legacy workflow"
+
+bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
+  --mode local \
+  --inventory "${REPO_ROOT}/tests/fixtures/repo-inventory-sample.csv" \
+  --output-root "${TMP_DIR}/out" \
+  --no-sync \
+  --refresh-pages-workflow
+
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/README.md" "sentinel"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/public/index.html" "legacy"
+assert_contains "${TMP_DIR}/out/bench-runtime-shootout/.github/workflows/deploy-pages.yml" "actions/upload-pages-artifact@v5"
 
 bash "${REPO_ROOT}/scripts/bootstrap-org-repos.sh" \
   --mode local \

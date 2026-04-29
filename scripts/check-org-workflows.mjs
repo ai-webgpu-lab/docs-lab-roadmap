@@ -11,6 +11,11 @@ import { finalizeGeneratedMarkdown, GENERATED_AT_PLACEHOLDER } from "./lib/gener
 const execFileAsync = promisify(execFile);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
+const EXPECTED_WORKFLOW_ACTIONS = [
+  { id: "configure-pages-v6", pattern: "actions/configure-pages@v6" },
+  { id: "upload-pages-artifact-v5", pattern: "actions/upload-pages-artifact@v5" },
+  { id: "deploy-pages-v5", pattern: "actions/deploy-pages@v5" }
+];
 
 function parseArgs(argv) {
   const options = {
@@ -113,14 +118,29 @@ function isSuccess(run) {
   return run?.status === "completed" && run?.conclusion === "success";
 }
 
+function decodeBase64Content(content) {
+  if (!content) return "";
+  return Buffer.from(String(content).replace(/\s+/g, ""), "base64").toString("utf8");
+}
+
+function missingWorkflowActionVersions(content, workflowOk) {
+  if (!workflowOk) return EXPECTED_WORKFLOW_ACTIONS.map((check) => check.id);
+  return EXPECTED_WORKFLOW_ACTIONS
+    .filter((check) => !content.includes(check.pattern))
+    .map((check) => check.id);
+}
+
 function buildRecord(row, raw) {
   const deployOk = isSuccess(raw.deployRun);
   const ciRequired = row.repo === "docs-lab-roadmap";
   const ciOk = ciRequired ? isSuccess(raw.ciRun) : true;
   const workflowOk = raw.deployWorkflowFile === true;
-  const healthy = workflowOk && deployOk && ciOk;
+  const workflowVersionMissing = missingWorkflowActionVersions(raw.deployWorkflowContent || "", workflowOk);
+  const workflowVersionOk = workflowOk && workflowVersionMissing.length === 0;
+  const healthy = workflowOk && workflowVersionOk && deployOk && ciOk;
   const gaps = [];
   if (!workflowOk) gaps.push("missing-deploy-pages.yml");
+  if (!workflowVersionOk) gaps.push(...workflowVersionMissing);
   if (!deployOk) gaps.push("deploy-not-success");
   if (!ciOk) gaps.push("ci-not-success");
   return {
@@ -129,6 +149,8 @@ function buildRecord(row, raw) {
     defaultBranch: raw.defaultBranch || "",
     pushedAt: raw.pushedAt || "",
     deployWorkflowFile: workflowOk,
+    workflowVersionOk,
+    workflowVersionMissing,
     latestRun: raw.latestRun || null,
     deployRun: raw.deployRun || null,
     ciRun: raw.ciRun || null,
@@ -144,6 +166,7 @@ async function collectFixtureRecord(row, fixture) {
     defaultBranch: entry.defaultBranch || "main",
     pushedAt: entry.pushedAt || "",
     deployWorkflowFile: Boolean(entry.deployWorkflowFile),
+    deployWorkflowContent: entry.deployWorkflowContent || entry.workflowContent || "",
     latestRun: entry.latestRun || null,
     deployRun: entry.deployRun || null,
     ciRun: entry.ciRun || null
@@ -163,6 +186,7 @@ async function collectLiveRecord(row, options) {
     defaultBranch: repoInfo?.defaultBranchRef?.name || "",
     pushedAt: repoInfo?.pushedAt || "",
     deployWorkflowFile: Boolean(deployWorkflow),
+    deployWorkflowContent: decodeBase64Content(deployWorkflow?.content || ""),
     latestRun: runList[0] || null,
     deployRun: latestRunByWorkflow(runList, "Deploy GitHub Pages Demo"),
     ciRun: latestRunByWorkflow(runList, "CI")
@@ -179,6 +203,7 @@ async function collectRecords(inventory, options, fixture) {
 function summarize(records) {
   const healthy = records.filter((record) => record.healthy).length;
   const deployWorkflowFiles = records.filter((record) => record.deployWorkflowFile).length;
+  const workflowVersionCurrent = records.filter((record) => record.workflowVersionOk).length;
   const deploySuccess = records.filter((record) => isSuccess(record.deployRun)).length;
   const ciSuccess = records.filter((record) => record.repo !== "docs-lab-roadmap" || isSuccess(record.ciRun)).length;
   return {
@@ -186,6 +211,7 @@ function summarize(records) {
     healthy,
     unhealthy: records.length - healthy,
     deployWorkflowFiles,
+    workflowVersionCurrent,
     deploySuccess,
     ciSuccess
   };
@@ -215,22 +241,24 @@ function renderReport(records) {
     `- Inventory repos: ${summary.total}`,
     `- Healthy workflow gates: ${summary.healthy} / ${summary.total}`,
     `- deploy-pages.yml present: ${summary.deployWorkflowFiles} / ${summary.total}`,
+    `- Pages action versions current: ${summary.workflowVersionCurrent} / ${summary.total}`,
     `- Latest Pages deploy success: ${summary.deploySuccess} / ${summary.total}`,
     `- Required CI success: ${summary.ciSuccess} / ${summary.total}`,
     "",
     "## Repo Status",
-    "| Repo | Category | Priority | Deploy workflow | Latest deploy | Latest run | Required CI |",
-    "| --- | --- | --- | --- | --- | --- | --- |"
+    "| Repo | Category | Priority | Deploy workflow | Pages actions | Latest deploy | Latest run | Required CI |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |"
   ];
 
   for (const record of records) {
     const deployWorkflowCell = `${statusIcon(record.deployWorkflowFile)} ${record.deployWorkflowFile ? "present" : "missing"}`;
+    const versionCell = `${statusIcon(record.workflowVersionOk)} ${record.workflowVersionOk ? "current" : record.workflowVersionMissing.join(", ") || "missing"}`;
     const deployCell = `${statusIcon(isSuccess(record.deployRun))} ${runLabel(record.deployRun)}`;
     const latestCell = record.latestRun ? `${record.latestRun.workflowName}: ${record.latestRun.conclusion || record.latestRun.status}` : "missing";
     const ciCell = record.repo === "docs-lab-roadmap"
       ? `${statusIcon(isSuccess(record.ciRun))} ${runLabel(record.ciRun)}`
       : "—";
-    lines.push(`| ${escapeCell(record.repo)} | ${escapeCell(record.category)} | ${escapeCell(record.priority_group)} | ${escapeCell(deployWorkflowCell)} | ${escapeCell(deployCell)} | ${escapeCell(latestCell)} | ${escapeCell(ciCell)} |`);
+    lines.push(`| ${escapeCell(record.repo)} | ${escapeCell(record.category)} | ${escapeCell(record.priority_group)} | ${escapeCell(deployWorkflowCell)} | ${escapeCell(versionCell)} | ${escapeCell(deployCell)} | ${escapeCell(latestCell)} | ${escapeCell(ciCell)} |`);
   }
 
   lines.push("", "## Gaps");

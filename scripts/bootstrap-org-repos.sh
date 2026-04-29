@@ -12,6 +12,7 @@ RUN_SYNC=1
 RUN_PAGES=1
 REFRESH_README=0
 REFRESH_GENERATED=0
+REFRESH_PAGES_WORKFLOW=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -32,6 +33,7 @@ Options:
   --no-pages               Skip GitHub Pages demo scaffold/configuration
   --refresh-readme         Overwrite generated README files even if they already exist
   --refresh-generated      Overwrite generated demo/code scaffold files
+  --refresh-pages-workflow Overwrite generated deploy-pages.yml only
   -h, --help               Show help
 EOF
 }
@@ -76,6 +78,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --refresh-generated)
       REFRESH_GENERATED=1
+      shift
+      ;;
+    --refresh-pages-workflow)
+      REFRESH_PAGES_WORKFLOW=1
       shift
       ;;
     -h|--help)
@@ -368,6 +374,16 @@ write_generated_file() {
   local path="$1"
 
   if [[ "${REFRESH_GENERATED}" -eq 1 ]]; then
+    write_file "${path}"
+  else
+    write_file_if_missing "${path}"
+  fi
+}
+
+write_pages_workflow_file() {
+  local path="$1"
+
+  if [[ "${REFRESH_GENERATED}" -eq 1 || "${REFRESH_PAGES_WORKFLOW}" -eq 1 ]]; then
     write_file "${path}"
   else
     write_file_if_missing "${path}"
@@ -1687,7 +1703,7 @@ render();
 EOF
   fi
 
-  write_generated_file "${dir}/.github/workflows/deploy-pages.yml" <<'EOF'
+  write_pages_workflow_file "${dir}/.github/workflows/deploy-pages.yml" <<'EOF'
 name: Deploy GitHub Pages Demo
 
 on:
@@ -1713,10 +1729,10 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./public
           include-hidden-files: true
@@ -1730,7 +1746,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 EOF
 
   if has_repo_specific_pages_baseline "${repo}"; then

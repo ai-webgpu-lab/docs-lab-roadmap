@@ -42,6 +42,7 @@ cat >"${FIXTURE}" <<'JSON'
       "defaultBranch": "main",
       "pushedAt": "2026-04-29T10:00:00Z",
       "deployWorkflowFile": true,
+      "deployWorkflowContent": "uses: actions/configure-pages@v6\nuses: actions/upload-pages-artifact@v5\nuses: actions/deploy-pages@v5\n",
       "latestRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:02:00Z" },
       "deployRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:02:00Z" },
       "ciRun": { "workflowName": "CI", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:01:00Z" }
@@ -51,6 +52,7 @@ cat >"${FIXTURE}" <<'JSON'
       "defaultBranch": "main",
       "pushedAt": "2026-04-29T10:03:00Z",
       "deployWorkflowFile": true,
+      "deployWorkflowContent": "uses: actions/configure-pages@v6\nuses: actions/upload-pages-artifact@v5\nuses: actions/deploy-pages@v5\n",
       "latestRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:04:00Z" },
       "deployRun": { "workflowName": "Deploy GitHub Pages Demo", "status": "completed", "conclusion": "success", "createdAt": "2026-04-29T10:04:00Z" }
     }
@@ -67,6 +69,7 @@ node "${REPO_ROOT}/scripts/check-org-workflows.mjs" \
 assert_contains "${OUTPUT}" "# Workflow Status"
 assert_contains "${OUTPUT}" "Healthy workflow gates: 2 / 2"
 assert_contains "${OUTPUT}" "deploy-pages.yml present: 2 / 2"
+assert_contains "${OUTPUT}" "Pages action versions current: 2 / 2"
 assert_contains "${OUTPUT}" "Latest Pages deploy success: 2 / 2"
 assert_contains "${OUTPUT}" "Required CI success: 2 / 2"
 assert_contains "${OUTPUT}" "No workflow gaps detected."
@@ -89,6 +92,27 @@ fi
 
 assert_contains "${BROKEN_OUTPUT}" "Healthy workflow gates: 1 / 2"
 assert_contains "${BROKEN_OUTPUT}" "deploy-not-success"
+assert_contains "${BROKEN_STDERR}" "workflow status check failed"
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+fixture.repos["bench-runtime-shootout"].deployRun.conclusion = "success";
+fixture.repos["bench-runtime-shootout"].latestRun.conclusion = "success";
+fixture.repos["bench-runtime-shootout"].deployWorkflowContent = "uses: actions/configure-pages@v5\nuses: actions/upload-pages-artifact@v4\nuses: actions/deploy-pages@v4\n";
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${BROKEN_FIXTURE}"
+
+if node "${REPO_ROOT}/scripts/check-org-workflows.mjs" \
+  --inventory "${INVENTORY}" \
+  --fixture "${BROKEN_FIXTURE}" \
+  --output "${BROKEN_OUTPUT}" \
+  --fail-on-error 2>"${BROKEN_STDERR}"; then
+  fail "expected stale workflow action fixture to fail"
+fi
+
+assert_contains "${BROKEN_OUTPUT}" "Pages action versions current: 1 / 2"
+assert_contains "${BROKEN_OUTPUT}" "upload-pages-artifact-v5"
 assert_contains "${BROKEN_STDERR}" "workflow status check failed"
 
 STDOUT_OUTPUT="$(node "${REPO_ROOT}/scripts/check-org-workflows.mjs" --inventory "${INVENTORY}" --fixture "${FIXTURE}" --stdout)"

@@ -93,7 +93,7 @@
 - 인프라 계열 (`.github`, `shared-webgpu-capability`, `shared-bench-schema`, `shared-github-actions`, `docs-lab-roadmap`)의 전용 baseline은 `track`이 `infra` 또는 `docs`이고, deterministic 인벤토리 카운트(issue forms, helper exports, schema fields, workflows, doc/script counts)와 baseline readiness score를 같은 결과 스키마로 기록한다.
 - 위 7개 P0 workload 저장소의 전용 surface는 deterministic browser harness이며, 실제 runtime/model integration이 준비되면 같은 저장소 전용 Pages surface를 그대로 교체한다.
 - 전용 baseline이 없는 나머지 `exp-*`, `bench-*`, `app-*` 저장소는 아직 공통 probe 단계이며, 실제 runtime/model harness가 준비되면 전용 Pages surface로 교체한다.
-- GitHub Pages 배포는 custom workflow 방식으로 `actions/configure-pages@v5`, `actions/upload-pages-artifact@v4`, `actions/deploy-pages@v4`를 사용한다.
+- GitHub Pages 배포는 custom workflow 방식으로 `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`를 사용한다.
 - 기본 workflow는 `public/`의 baseline probe 정적 artifact를 그대로 배포한다.
 - Vite, React, Wasm bundling 등 실제 build가 필요한 저장소는 첫 runnable baseline 시점에 build job과 artifact path를 저장소별로 교체한다.
 - 공통 probe 페이지는 첫 runnable baseline이 준비되면 저장소 전용 데모 UI나 workload harness로 교체한다.
