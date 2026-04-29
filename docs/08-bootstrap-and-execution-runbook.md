@@ -79,7 +79,10 @@ gh workflow run operations-check.yml -f run_fast_suite=true -f apply_project_fie
 
 통과 기준:
 - `operations-check.yml`은 Pages/README/Workflow/Project strict gate를 한 번에 실행해야 한다.
-- 기본 실행은 `sync-project-fields --dry-run`만 수행하고 Project item field를 변경하지 않아야 한다.
+- 주간 schedule은 매주 일요일 19:37 UTC(월요일 04:37 KST)에 실행되어야 한다.
+- 주간 schedule은 `sync-project-fields --dry-run`만 수행하고 Project item field를 변경하지 않아야 한다.
+- 주간 schedule은 비용을 줄이기 위해 Chromium 설치와 fast suite를 실행하지 않아야 한다.
+- fast suite 포함 검증은 `run_fast_suite=true`를 지정한 수동 실행에서만 수행해야 한다.
 - Project field drift를 복구할 때만 `apply_project_fields=true`로 수동 실행해야 한다.
 - 실행 결과 artifact `operations-status-dashboards`에 `PAGES-STATUS.md`, `README-STATUS.md`, `WORKFLOW-STATUS.md`, `PROJECT-STATUS.md`가 포함되어야 한다.
 - workflow가 org 전체 저장소와 Projects v2를 읽지 못하면 `AI_WEBGPU_LAB_ADMIN_TOKEN` secret 권한을 먼저 수정해야 한다.

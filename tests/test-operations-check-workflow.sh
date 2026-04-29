@@ -24,6 +24,8 @@ assert_contains() {
 
 assert_contains "${WORKFLOW}" "name: Operations Status Check"
 assert_contains "${WORKFLOW}" "workflow_dispatch:"
+assert_contains "${WORKFLOW}" "schedule:"
+assert_contains "${WORKFLOW}" 'cron: "37 19 * * 0"'
 assert_contains "${WORKFLOW}" "run_fast_suite:"
 assert_contains "${WORKFLOW}" "apply_project_fields:"
 assert_contains "${WORKFLOW}" "AI_WEBGPU_LAB_ADMIN_TOKEN"
@@ -34,6 +36,8 @@ assert_contains "${WORKFLOW}" "node scripts/check-org-workflows.mjs --fail-on-er
 assert_contains "${WORKFLOW}" "node scripts/sync-project-fields.mjs --dry-run"
 assert_contains "${WORKFLOW}" "node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields"
 assert_contains "${WORKFLOW}" "bash tests/run-all.sh --mode fast --quiet"
+assert_contains "${WORKFLOW}" "github.event_name == 'workflow_dispatch' && github.event.inputs.run_fast_suite == 'true'"
+assert_contains "${WORKFLOW}" '[[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.apply_project_fields }}" == "true" ]]'
 assert_contains "${WORKFLOW}" "actions/setup-node@v6"
 assert_contains "${WORKFLOW}" "actions/upload-artifact@v7"
 assert_contains "${WORKFLOW}" "docs/PAGES-STATUS.md"

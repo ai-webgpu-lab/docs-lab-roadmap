@@ -19,6 +19,8 @@ on:
         options:
           - "false"
           - "true"
+  schedule:
+    - cron: "37 19 * * 0"
 
 permissions:
   contents: read
@@ -48,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Install Chromium
-        if: ${{ github.event.inputs.run_fast_suite == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_fast_suite == 'true' }}
         run: npx playwright install --with-deps chromium
 
       - name: Check GitHub API access
@@ -66,7 +68,7 @@ jobs:
 
       - name: Sync Project fields
         run: |
-          if [[ "${{ github.event.inputs.apply_project_fields }}" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.apply_project_fields }}" == "true" ]]; then
             node scripts/sync-project-fields.mjs
           else
             node scripts/sync-project-fields.mjs --dry-run
@@ -76,7 +78,7 @@ jobs:
         run: node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
 
       - name: Run fast test suite
-        if: ${{ github.event.inputs.run_fast_suite == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_fast_suite == 'true' }}
         run: bash tests/run-all.sh --mode fast --quiet
 
       - name: Upload generated status dashboards
