@@ -224,7 +224,7 @@ async function main() {
         `track:${row.track.toLowerCase()}`,
         `type:${row.type}`
       ],
-      project_field_status: "Backlog"
+      project_field_status: "Todo"
     };
   });
 
@@ -260,11 +260,12 @@ async function main() {
     project: "AI WebGPU Lab — Master",
     description: "Issue-only Projects v2 board derived from docs/repo-inventory.csv and issues/initial-draft-issues-30.csv",
     fields: [
-      { name: "Status", type: "single_select", options: ["Backlog", "Ready", "In Progress", "Validating", "Blocked", "Done"] },
+      { name: "Status", type: "single_select", options: ["Todo", "In Progress", "Done"] },
       { name: "Priority", type: "single_select", options: ["P0", "P1", "P2", "P3"] },
       { name: "Track", type: "single_select", options: views[1].columns },
-      { name: "Type", type: "single_select", options: views[2].columns },
-      { name: "Repo", type: "text" }
+      { name: "Category", type: "single_select", options: views[2].columns },
+      { name: "Seed Type", type: "single_select", options: views[2].columns },
+      { name: "Seed Repo", type: "text" }
     ],
     counts: {
       inventory_repos: inventoryRows.length,

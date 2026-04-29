@@ -49,7 +49,7 @@ bash scripts/check-coverage.sh --preset full --quiet
 node scripts/check-org-pages.mjs --fail-on-error
 node scripts/check-org-readmes.mjs --fail-on-error
 node scripts/check-org-workflows.mjs --fail-on-error
-node scripts/check-project-status.mjs
+node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups smoke --quiet
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups runtime-batch --quiet
 ```
@@ -60,7 +60,7 @@ bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture
 - `check-org-pages`는 54개 저장소의 Pages 설정, 최신 deploy workflow, HTTP 200, 저장소 전용 demo surface, real sketch/adapter 원격 반영, 대표 real-mode URL을 확인해야 한다.
 - `check-org-readmes`는 54개 저장소의 README/profile README가 상태 dashboard 링크를 유지하는지 확인해야 한다.
 - `check-org-workflows`는 54개 저장소의 deploy workflow와 `docs-lab-roadmap` CI가 성공 상태인지 확인해야 한다.
-- `check-project-status`는 Master Project 존재 여부와 seed issue/project item 연결 갭을 리포트해야 한다.
+- `check-project-status`는 Master Project 존재 여부, seed issue/project item 연결, Project item field drift를 gate해야 한다.
 - full capture는 GitHub Actions matrix에서 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch`로 병렬 실행한다.
 - 로컬에서 baseline 전체를 한 번에 확인할 때는 호환 그룹 `baseline`을 사용할 수 있다.
 - 실패 분석이 필요하면 `AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out`을 지정해 raw JSON, screenshots, logs를 보존한다.
@@ -75,6 +75,7 @@ AI_WEBGPU_LAB_CAPTURE_TMP_DIR=/tmp/capture-out \
 ```bash
 node scripts/render-projects-config.mjs --output tmp/projects-config.json --apply tmp/apply-projects.sh
 DRY_RUN=1 bash tmp/apply-projects.sh
+node scripts/sync-project-fields.mjs --dry-run
 ```
 
 통과 기준:
@@ -82,6 +83,7 @@ DRY_RUN=1 bash tmp/apply-projects.sh
 - 실제 적용 전 `gh auth status`와 org/repo 접근 권한이 충족됨
 - 기존 프로젝트를 재사용할 때는 `PROJECT_NUMBER=<number>` 또는 `REUSE_PROJECT=1`을 지정함
 - 기존 issue title이 발견되면 새 issue를 만들지 않고 기존 URL을 Projects item으로 연결함
+- `sync-project-fields --dry-run`이 Status/Priority/Track/Category/Seed Type/Seed Repo 필드의 생성 또는 수정 계획을 출력함
 
 예시:
 ```bash
@@ -94,19 +96,20 @@ REUSE_PROJECT=1 bash tmp/apply-projects.sh
 node scripts/check-org-pages.mjs --fail-on-error
 node scripts/check-org-readmes.mjs --fail-on-error
 node scripts/check-org-workflows.mjs --fail-on-error
-node scripts/check-project-status.mjs
+node scripts/sync-project-fields.mjs
+node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
 ```
 
 통과 기준:
 - `docs/PAGES-STATUS.md`에 54개 저장소가 모두 집계됨
 - `docs/README-STATUS.md`에 README/profile drift 상태가 모두 집계됨
 - `docs/WORKFLOW-STATUS.md`에 deploy workflow와 필수 CI 상태가 모두 집계됨
-- `docs/PROJECT-STATUS.md`에 Project, seed issue, Project item 연결 상태가 집계됨
+- `docs/PROJECT-STATUS.md`에 Project, seed issue, Project item 연결, Project item field drift 상태가 집계됨
 - 모든 저장소가 GitHub Pages `workflow` source, 최신 `deploy-pages.yml` success, HTTP 200 상태임
 - 모든 저장소가 generic baseline이 아닌 repo-specific demo title을 노출함
 - 실험/벤치/앱 저장소의 원격 `public/`에 기대한 `real-*-sketch.js`와 `*-adapter.js`가 존재함
 - 대표 real-mode URL `bench-runtime-shootout?mode=real-runtime`, `exp-three-webgpu-core?mode=real-three`, `bench-renderer-shootout?mode=real-benchmark`, `app-blackhole-observatory?mode=real-surface`가 HTTP 200을 반환함
-- Project seed issue/item은 아직 미적용일 수 있으므로, 강제 gate가 필요할 때만 `--fail-on-error --require-seeded-issues --require-project-items`를 함께 사용함
+- Project seed issue/item/field 값은 strict gate 대상이며 `--fail-on-error --require-seeded-issues --require-project-items --require-project-fields`가 통과해야 함
 
 ### 6. GitHub 조직 반영
 ```bash
@@ -116,6 +119,7 @@ bash scripts/bootstrap-org-repos.sh --refresh-generated --refresh-readme --no-sy
 bash scripts/sync-org-labels.sh
 bash scripts/sync-org-repo-topics.sh
 bash scripts/seed-org-issues.sh
+node scripts/sync-project-fields.mjs
 bash scripts/seed-p0-baseline-results.sh --push
 ```
 
@@ -123,7 +127,7 @@ bash scripts/seed-p0-baseline-results.sh --push
 - 모든 인벤토리 저장소 존재 또는 정상 생성
 - 공통 라벨과 토픽 적용 완료
 - 초기 이슈가 중복 없이 생성됨
-- Master Project에 이슈 연결 완료
+- Master Project에 이슈 연결과 item field 동기화 완료
 - demo 대상 저장소가 GitHub Pages `workflow` source로 설정됨
 - 기존 저장소 README가 최신 상세 포맷으로 갱신됨
 - 기존 저장소 baseline probe 자산이 최신 공통 포맷으로 갱신됨

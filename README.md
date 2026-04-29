@@ -52,7 +52,8 @@
 - `scripts/check-org-pages.mjs` — 54개 하위 repo의 GitHub Pages/deploy/HTTP/real-mode smoke 상태 리포트 생성 (`docs/PAGES-STATUS.md`)
 - `scripts/check-org-readmes.mjs` — 54개 하위 repo README drift 상태 리포트 생성 (`docs/README-STATUS.md`)
 - `scripts/check-org-workflows.mjs` — 54개 하위 repo Actions/deploy workflow 상태 리포트 생성 (`docs/WORKFLOW-STATUS.md`)
-- `scripts/check-project-status.mjs` — Master Project와 seed issue 연결 상태 리포트 생성 (`docs/PROJECT-STATUS.md`)
+- `scripts/check-project-status.mjs` — Master Project와 seed issue/item/필드 값 연결 상태 리포트 생성 (`docs/PROJECT-STATUS.md`)
+- `scripts/sync-project-fields.mjs` — 시드 issue의 Priority/Track/Category/Seed Type/Seed Repo 값을 GitHub Project item field로 동기화
 - `scripts/validate-infra-fixtures.mjs` — 5개 인프라 harness fixture vs 실제 surface drift 자동 검증 (67 checks, validate-lab-planning에서 hook)
 - `tests/run-all.sh` — `tests/test-*.sh` 실행 wrapper (`--mode fast|full|nightly`, `--capture-groups <list>`, `--filter <pattern>`, `--bail`, `--quiet` 지원, pass/fail 요약과 elapsed 출력)
 
@@ -70,7 +71,7 @@
 - `docs/PAGES-STATUS.md` — 자동 생성 dashboard (54 repo × Pages/deploy/HTTP/real-mode smoke 상태)
 - `docs/README-STATUS.md` — 자동 생성 dashboard (54 repo × README/profile drift 상태)
 - `docs/WORKFLOW-STATUS.md` — 자동 생성 dashboard (54 repo × Actions/deploy workflow 상태)
-- `docs/PROJECT-STATUS.md` — 자동 생성 dashboard (Project/seeded issue/item 연결 상태)
+- `docs/PROJECT-STATUS.md` — 자동 생성 dashboard (Project/seeded issue/item/field 연결 상태)
 - `docs/INTEGRATION-STATUS.md` — 자동 생성 dashboard (54 repo × 어댑터/스케치/scaffold 상태)
 - `docs/SKETCH-METRICS.md` — 자동 생성 dashboard (47 specific sketch × CDN/backend/capabilities)
 - `issues/initial-draft-issues-30.md` — 초기 draft issue 30개
@@ -111,6 +112,9 @@ node scripts/check-org-pages.mjs --fail-on-error
 node scripts/check-org-readmes.mjs --fail-on-error
 node scripts/check-org-workflows.mjs --fail-on-error
 node scripts/check-project-status.mjs
+node scripts/sync-project-fields.mjs --dry-run
+node scripts/sync-project-fields.mjs
+node scripts/check-project-status.mjs --fail-on-error --require-seeded-issues --require-project-items --require-project-fields
 bash tests/run-all.sh --mode fast
 bash tests/run-all.sh --mode full --filter capture-p0-baseline-results --capture-groups renderer-batch
 bash tests/run-all.sh --filter render-sketch-metrics --quiet
@@ -124,5 +128,5 @@ bash tests/run-all.sh --filter render-sketch-metrics --quiet
 기존 저장소의 baseline probe와 생성 자산까지 다시 쓰려면 `--refresh-generated` 옵션을 함께 사용합니다.
 `scripts/check-org-pages.mjs --fail-on-error`는 54개 하위 저장소의 GitHub Pages 설정, 최신 `deploy-pages.yml` 실행 결과, HTTP 200 응답, 저장소 전용 demo title, real sketch/adapter 파일, 대표 real-mode URL을 확인하고 `docs/PAGES-STATUS.md`를 갱신합니다.
 `tests/test-capture-p0-baseline-results.sh`는 기본적으로 대표 smoke subset만 실행합니다. 전체 browser capture sweep은 `AI_WEBGPU_LAB_CAPTURE_SUITE=full`로 실행하고, CI에서는 `smoke`, `baseline-a`, `baseline-b`, `baseline-c`, `baseline-d`, `real-adapters`, `renderer-batch`, `benchmark-batch`, `runtime-batch` 그룹을 matrix로 나눠 병렬 실행합니다. 로컬에서는 호환용 그룹 `baseline`으로 baseline-a~d를 한 번에 실행할 수 있습니다. 실패 분석용으로 `AI_WEBGPU_LAB_CAPTURE_TMP_DIR`를 지정하면 raw JSON, screenshots, logs가 삭제되지 않고 GitHub Actions artifact로 업로드됩니다. `scripts/seed-p0-baseline-results.sh`는 `tpl-webgpu-vanilla`, `tpl-webgpu-react`를 포함한 9개 browser-visible P0 baseline 저장소의 headless Chromium 결과를 캡처해 `reports/raw/`, `reports/screenshots/`, `reports/logs/`, `RESULTS.md`까지 한 번에 갱신할 수 있습니다. `scripts/capture-p0-baseline-results.mjs --repo-name <repo>`는 추가로 `exp-three-webgpu-core`, `exp-babylon-webgpu-core`, `exp-playcanvas-webgpu-core`, `exp-pixi-webgpu-2d`, `exp-luma-webgpu-viz`, `exp-deckgl-webgpu-readiness`, `exp-blackhole-three-singularity`, `exp-blackhole-kerr-engine`, `exp-blackhole-webgpu-fromscratch`, `exp-nbody-webgpu-core`, `exp-fluid-webgpu-core`, `exp-three-webgpu-particles-stress`, `bench-compute-stress-suite`, `bench-atomics-and-memory`, `bench-texture-upload-and-streaming`, `exp-reranker-browser`, `bench-embeddings-latency-quality`, `bench-reranker-latency`, `bench-rag-endtoend`, `bench-llm-prefill-decode`, `bench-stt-streaming-latency`, `bench-voice-roundtrip`, `bench-multimodal-latency`, `bench-diffusion-browser-shootout`, `bench-agent-step-latency`, `bench-webgpu-vs-wasm-parity`, `bench-blackhole-render-shootout`, `bench-renderer-shootout`, `exp-ort-webgpu-baseline`, `exp-webllm-browser-chat`, `exp-llm-worker-ux`, `exp-voice-assistant-local`, `exp-vlm-browser-multimodal`, `exp-diffusion-webgpu-browser`, `exp-browser-agent-local`, `app-private-rag-lab`, `app-local-chat-arena`, `app-voice-agent-lab`, `app-browser-image-lab`, `app-blackhole-observatory`, `.github`, `shared-webgpu-capability`, `shared-bench-schema`, `shared-github-actions`, `docs-lab-roadmap`의 전용 harness도 단건 캡처할 수 있습니다.
-Projects apply 스크립트는 실제 실행 전 `DRY_RUN=1`로 명령을 확인하고, 기존 프로젝트를 재사용하려면 `PROJECT_NUMBER=<number>` 또는 `REUSE_PROJECT=1`을 지정합니다. 기존 issue title이 발견되면 새 issue를 만들지 않고 해당 URL을 Projects item으로 추가합니다.
+Projects apply 스크립트는 실제 실행 전 `DRY_RUN=1`로 명령을 확인하고, 기존 프로젝트를 재사용하려면 `PROJECT_NUMBER=<number>` 또는 `REUSE_PROJECT=1`을 지정합니다. 기존 issue title이 발견되면 새 issue를 만들지 않고 해당 URL을 Projects item으로 추가합니다. Project item 연결 후 `scripts/sync-project-fields.mjs`로 Status/Priority/Track/Category/Seed Type/Seed Repo 값을 채우고, `check-project-status --require-project-fields`로 필드 drift까지 gate합니다.
 현재 `exp-embeddings-browser-throughput`, `exp-llm-chat-runtime-shootout`, `bench-runtime-shootout`는 동일 harness에서 `?mode=webgpu` / `?mode=fallback` pair를 수집해 `WebGPU vs fallback` 비교 섹션까지 자동 생성합니다.

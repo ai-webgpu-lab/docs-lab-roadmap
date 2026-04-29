@@ -31,8 +31,9 @@ assert_contains "${CONTENT}" '"project": "AI WebGPU Lab — Master"'
 assert_contains "${CONTENT}" '"inventory_repos": 54'
 assert_contains "${CONTENT}" '"seeded_issues": 30'
 assert_contains "${CONTENT}" '"P0": 13'
-assert_contains "${CONTENT}" '"Validating"'
-assert_contains "${CONTENT}" '"Blocked"'
+assert_contains "${CONTENT}" '"Todo"'
+assert_contains "${CONTENT}" '"Seed Repo"'
+assert_contains "${CONTENT}" '"Seed Type"'
 assert_contains "${CONTENT}" '"id": "by-priority"'
 assert_contains "${CONTENT}" '"id": "by-track"'
 assert_contains "${CONTENT}" '"id": "by-type"'
@@ -64,6 +65,7 @@ assert_contains "${APPLY_CONTENT}" "gh repo view"
 assert_contains "${APPLY_CONTENT}" "REUSE_PROJECT"
 assert_contains "${APPLY_CONTENT}" "gh issue list"
 assert_contains "${APPLY_CONTENT}" "Reusing issue:"
+assert_contains "${APPLY_CONTENT}" "Seed Repo"
 
 bash -n "${APPLY_FILE}" || fail "apply script has shell syntax errors"
 

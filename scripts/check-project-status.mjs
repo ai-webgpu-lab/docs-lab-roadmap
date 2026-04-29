@@ -11,6 +11,7 @@ import { finalizeGeneratedMarkdown, GENERATED_AT_PLACEHOLDER } from "./lib/gener
 const execFileAsync = promisify(execFile);
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
+const PROJECT_FIELD_NAMES = ["Status", "Priority", "Track", "Category", "Seed Type", "Seed Repo"];
 
 function parseArgs(argv) {
   const options = {
@@ -23,6 +24,7 @@ function parseArgs(argv) {
     failOnError: false,
     requireSeededIssues: false,
     requireProjectItems: false,
+    requireProjectFields: false,
     concurrency: 6,
     fixture: ""
   };
@@ -55,6 +57,8 @@ function parseArgs(argv) {
       options.requireSeededIssues = true;
     } else if (token === "--require-project-items") {
       options.requireProjectItems = true;
+    } else if (token === "--require-project-fields") {
+      options.requireProjectFields = true;
     } else if (token === "--concurrency") {
       options.concurrency = Number(argv[index + 1]);
       index += 1;
@@ -89,6 +93,7 @@ Options:
   --fail-on-error              Exit non-zero for project missing; combine with require flags for stricter gates
   --require-seeded-issues      Treat missing seeded issues as failures
   --require-project-items      Treat missing Project item links as failures
+  --require-project-fields     Treat stale Project field values as failures
   --concurrency <number>       Live issue check parallelism. Default: 6
   -h, --help                   Show help`);
 }
@@ -140,6 +145,36 @@ function projectItemUrls(items) {
   return urls;
 }
 
+function expectedProjectFields(issue) {
+  return {
+    Status: "Todo",
+    Priority: issue.priority,
+    Track: issue.track,
+    Category: issue.type,
+    "Seed Type": issue.type,
+    "Seed Repo": issue.repo
+  };
+}
+
+function projectFieldGaps(issue, fields) {
+  const expected = expectedProjectFields(issue);
+  const gaps = [];
+  for (const [name, expectedValue] of Object.entries(expected)) {
+    const actualValue = fields?.[name] || "";
+    if (actualValue !== expectedValue) {
+      gaps.push({ name, expected: expectedValue, actual: actualValue });
+    }
+  }
+  return gaps;
+}
+
+function fieldsFromFixture(url, fixture) {
+  if (!url) return {};
+  if (fixture.projectItemFields?.[url]) return fixture.projectItemFields[url];
+  const item = (fixture.projectItems || []).find((entry) => entry.url === url || entry.content?.url === url);
+  return item?.fields || {};
+}
+
 async function collectFixture(options, issueRows, fixture) {
   const project = fixture.project || null;
   const issueMap = new Map();
@@ -151,29 +186,75 @@ async function collectFixture(options, issueRows, fixture) {
     const exactKey = keyForIssue(issue.repo, issue.title);
     const entry = issueMap.get(exactKey) || issueMap.get(issue.title) || null;
     const url = entry?.url || "";
+    const fields = fieldsFromFixture(url, fixture);
+    const fieldGaps = projectFieldGaps(issue, fields);
     return {
       ...issue,
       found: Boolean(entry),
       url,
       state: entry?.state || "",
-      projectLinked: Boolean(url && itemUrls.has(url))
+      projectLinked: Boolean(url && itemUrls.has(url)),
+      projectFields: fields,
+      projectFieldsCurrent: Boolean(url && itemUrls.has(url) && fieldGaps.length === 0),
+      projectFieldGaps: fieldGaps
     };
   });
   return { project, issues, itemUrls };
+}
+
+async function collectLiveProjectItems(projectId) {
+  if (!projectId) return new Map();
+  const items = new Map();
+  let after = null;
+  do {
+    const args = [
+      "api",
+      "graphql",
+      "-F",
+      `project=${projectId}`,
+      "-f",
+      "query=query($project: ID!, $after: String) { node(id: $project) { ... on ProjectV2 { items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { id content { ... on Issue { title url repository { nameWithOwner } } } fieldValues(first: 50) { nodes { __typename ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } } ... on ProjectV2ItemFieldTextValue { text field { ... on ProjectV2Field { name } } } } } } } } } }"
+    ];
+    if (after) args.splice(4, 0, "-F", `after=${after}`);
+    const result = await ghJson(args);
+    const connection = result?.data?.node?.items || {};
+    for (const item of connection.nodes || []) {
+      const url = item.content?.url;
+      if (!url) continue;
+      const fields = {};
+      for (const value of item.fieldValues?.nodes || []) {
+        if (value.__typename === "ProjectV2ItemFieldSingleSelectValue" && value.field?.name) {
+          fields[value.field.name] = value.name || "";
+        } else if (value.__typename === "ProjectV2ItemFieldTextValue" && value.field?.name) {
+          fields[value.field.name] = value.text || "";
+        }
+      }
+      items.set(url, {
+        id: item.id,
+        title: item.content?.title || "",
+        repository: item.content?.repository?.nameWithOwner || "",
+        fields
+      });
+    }
+    after = connection.pageInfo?.hasNextPage ? connection.pageInfo.endCursor : null;
+  } while (after);
+  return items;
 }
 
 async function collectLiveProject(options) {
   const projectList = await optionalGhJson(["project", "list", "--owner", options.org, "--format", "json", "--limit", "100"]);
   const project = projectFromList(projectList, options.projectTitle);
   let itemUrls = new Set();
+  let itemDetails = new Map();
   if (project?.number) {
     const items = await optionalGhJson(["project", "item-list", String(project.number), "--owner", options.org, "--format", "json", "--limit", "1000"]);
     itemUrls = projectItemUrls(items || {});
+    itemDetails = await collectLiveProjectItems(project.id);
   }
-  return { project, itemUrls };
+  return { project, itemUrls, itemDetails };
 }
 
-async function collectLiveIssue(options, issue, itemUrls) {
+async function collectLiveIssue(options, issue, itemUrls, itemDetails) {
   const result = await optionalGhJson([
     "issue",
     "list",
@@ -189,24 +270,30 @@ async function collectLiveIssue(options, issue, itemUrls) {
     "title,url,state,number"
   ]);
   const exact = Array.isArray(result) ? result.find((entry) => entry.title === issue.title) : null;
+  const fields = exact?.url ? itemDetails.get(exact.url)?.fields || {} : {};
+  const fieldGaps = projectFieldGaps(issue, fields);
   return {
     ...issue,
     found: Boolean(exact),
     url: exact?.url || "",
     state: exact?.state || "",
-    projectLinked: Boolean(exact?.url && itemUrls.has(exact.url))
+    projectLinked: Boolean(exact?.url && itemUrls.has(exact.url)),
+    projectFields: fields,
+    projectFieldsCurrent: Boolean(exact?.url && itemUrls.has(exact.url) && fieldGaps.length === 0),
+    projectFieldGaps: fieldGaps
   };
 }
 
 async function collectLive(options, issueRows) {
-  const { project, itemUrls } = await collectLiveProject(options);
-  const issues = await mapLimit(issueRows, options.concurrency, (issue) => collectLiveIssue(options, issue, itemUrls));
+  const { project, itemUrls, itemDetails } = await collectLiveProject(options);
+  const issues = await mapLimit(issueRows, options.concurrency, (issue) => collectLiveIssue(options, issue, itemUrls, itemDetails));
   return { project, issues, itemUrls };
 }
 
 function summarize(project, issues, itemUrls) {
   const found = issues.filter((issue) => issue.found).length;
   const linked = issues.filter((issue) => issue.projectLinked).length;
+  const fieldsCurrent = issues.filter((issue) => issue.projectFieldsCurrent).length;
   const repos = new Set(issues.map((issue) => issue.repo));
   const reposWithIssues = new Set(issues.filter((issue) => issue.found).map((issue) => issue.repo));
   return {
@@ -218,6 +305,8 @@ function summarize(project, issues, itemUrls) {
     missingIssues: issues.length - found,
     projectItemsLinked: linked,
     projectItemsMissing: issues.length - linked,
+    projectFieldsCurrent: fieldsCurrent,
+    projectFieldsMissing: issues.length - fieldsCurrent,
     seededRepos: repos.size,
     reposWithIssues: reposWithIssues.size
   };
@@ -245,17 +334,20 @@ function renderReport(options, project, issues, itemUrls) {
     `- Seeded issue definitions: ${summary.totalIssues}`,
     `- Seeded issues found: ${summary.seededIssuesFound} / ${summary.totalIssues}`,
     `- Seeded issues linked to Project: ${summary.projectItemsLinked} / ${summary.totalIssues}`,
+    `- Project field values current: ${summary.projectFieldsCurrent} / ${summary.totalIssues}`,
+    `- Project fields checked: ${PROJECT_FIELD_NAMES.join(", ")}`,
     `- Seeded repos with issues: ${summary.reposWithIssues} / ${summary.seededRepos}`,
     "",
     "## Issue Status",
-    "| Repo | Priority | Track | Type | Issue | Project item | URL |",
-    "| --- | --- | --- | --- | --- | --- | --- |"
+    "| Repo | Priority | Track | Type | Issue | Project item | Fields | URL |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |"
   ];
 
   for (const issue of issues) {
     const issueCell = `${statusIcon(issue.found)} ${issue.found ? issue.state || "found" : "missing"}`;
     const projectCell = `${statusIcon(issue.projectLinked)} ${issue.projectLinked ? "linked" : "missing"}`;
-    lines.push(`| ${escapeCell(issue.repo)} | ${escapeCell(issue.priority)} | ${escapeCell(issue.track)} | ${escapeCell(issue.type)} | ${escapeCell(issueCell)} | ${escapeCell(projectCell)} | ${issue.url || "—"} |`);
+    const fieldsCell = `${statusIcon(issue.projectFieldsCurrent)} ${issue.projectFieldsCurrent ? "current" : "stale"}`;
+    lines.push(`| ${escapeCell(issue.repo)} | ${escapeCell(issue.priority)} | ${escapeCell(issue.track)} | ${escapeCell(issue.type)} | ${escapeCell(issueCell)} | ${escapeCell(projectCell)} | ${escapeCell(fieldsCell)} | ${issue.url || "—"} |`);
   }
 
   lines.push("", "## Gaps");
@@ -266,6 +358,12 @@ function renderReport(options, project, issues, itemUrls) {
   }
   for (const issue of issues.filter((entry) => entry.found && !entry.projectLinked)) {
     gaps.push(`- Issue not linked to Project: ${issue.url}`);
+  }
+  for (const issue of issues.filter((entry) => entry.projectLinked && !entry.projectFieldsCurrent)) {
+    const details = issue.projectFieldGaps
+      .map((gap) => `${gap.name} expected ${gap.expected || "—"} got ${gap.actual || "—"}`)
+      .join("; ");
+    gaps.push(`- Project fields stale for ${issue.url}: ${details}`);
   }
   if (gaps.length === 0) {
     lines.push("No Project or seeded issue gaps detected.");
@@ -295,6 +393,7 @@ function shouldFail(options, summary) {
   if (!summary.projectExists) return true;
   if (options.requireSeededIssues && summary.missingIssues > 0) return true;
   if (options.requireProjectItems && summary.projectItemsMissing > 0) return true;
+  if (options.requireProjectFields && summary.projectFieldsMissing > 0) return true;
   return false;
 }
 
@@ -309,7 +408,7 @@ async function main() {
   await writeReport(options, renderReport(options, project, issues, itemUrls));
   const summary = summarize(project, issues, itemUrls);
   if (shouldFail(options, summary)) {
-    console.error(`project status check failed: project_exists=${summary.projectExists}, missing_issues=${summary.missingIssues}, missing_items=${summary.projectItemsMissing}`);
+    console.error(`project status check failed: project_exists=${summary.projectExists}, missing_issues=${summary.missingIssues}, missing_items=${summary.projectItemsMissing}, stale_fields=${summary.projectFieldsMissing}`);
     process.exitCode = 1;
   }
 }

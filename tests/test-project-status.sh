@@ -52,6 +52,24 @@ cat >"${FIXTURE}" <<'JSON'
     "https://github.com/ai-webgpu-lab/bench-runtime-shootout/issues/1",
     "https://github.com/ai-webgpu-lab/exp-three-webgpu-core/issues/2"
   ],
+  "projectItemFields": {
+    "https://github.com/ai-webgpu-lab/bench-runtime-shootout/issues/1": {
+      "Status": "Todo",
+      "Priority": "P0",
+      "Track": "Bench",
+      "Category": "benchmark",
+      "Seed Type": "benchmark",
+      "Seed Repo": "bench-runtime-shootout"
+    },
+    "https://github.com/ai-webgpu-lab/exp-three-webgpu-core/issues/2": {
+      "Status": "Todo",
+      "Priority": "P1",
+      "Track": "Graphics",
+      "Category": "experiment",
+      "Seed Type": "experiment",
+      "Seed Repo": "exp-three-webgpu-core"
+    }
+  },
   "issues": {
     "[p0] Runtime baseline": {
       "url": "https://github.com/ai-webgpu-lab/bench-runtime-shootout/issues/1",
@@ -72,12 +90,15 @@ node "${REPO_ROOT}/scripts/check-project-status.mjs" \
   --output "${OUTPUT}" \
   --fail-on-error \
   --require-seeded-issues \
-  --require-project-items
+  --require-project-items \
+  --require-project-fields
 
 assert_contains "${OUTPUT}" "# Project Status"
 assert_contains "${OUTPUT}" "Project exists: yes (#1)"
 assert_contains "${OUTPUT}" "Seeded issues found: 2 / 2"
 assert_contains "${OUTPUT}" "Seeded issues linked to Project: 2 / 2"
+assert_contains "${OUTPUT}" "Project field values current: 2 / 2"
+assert_contains "${OUTPUT}" "Project fields checked: Status, Priority, Track, Category, Seed Type, Seed Repo"
 assert_contains "${OUTPUT}" "No Project or seeded issue gaps detected."
 
 node -e '
@@ -96,14 +117,39 @@ if node "${REPO_ROOT}/scripts/check-project-status.mjs" \
   --output "${BROKEN_OUTPUT}" \
   --fail-on-error \
   --require-seeded-issues \
-  --require-project-items 2>"${BROKEN_STDERR}"; then
+  --require-project-items \
+  --require-project-fields 2>"${BROKEN_STDERR}"; then
   fail "expected missing seeded issue fixture to fail"
 fi
 
 assert_contains "${BROKEN_OUTPUT}" "Seeded issues found: 1 / 2"
 assert_contains "${BROKEN_OUTPUT}" "Seeded issues linked to Project: 1 / 2"
+assert_contains "${BROKEN_OUTPUT}" "Project field values current: 1 / 2"
 assert_contains "${BROKEN_OUTPUT}" "Missing issue in \`exp-three-webgpu-core\`: [p1] Renderer follow-up"
 assert_contains "${BROKEN_STDERR}" "project status check failed"
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+fixture.projectItemFields["https://github.com/ai-webgpu-lab/bench-runtime-shootout/issues/1"]["Seed Repo"] = "wrong-repo";
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${BROKEN_FIXTURE}"
+
+if node "${REPO_ROOT}/scripts/check-project-status.mjs" \
+  --inventory "${INVENTORY}" \
+  --issues "${ISSUES}" \
+  --fixture "${BROKEN_FIXTURE}" \
+  --output "${BROKEN_OUTPUT}" \
+  --fail-on-error \
+  --require-seeded-issues \
+  --require-project-items \
+  --require-project-fields 2>"${BROKEN_STDERR}"; then
+  fail "expected stale Project field fixture to fail"
+fi
+
+assert_contains "${BROKEN_OUTPUT}" "Project field values current: 1 / 2"
+assert_contains "${BROKEN_OUTPUT}" "Project fields stale for https://github.com/ai-webgpu-lab/bench-runtime-shootout/issues/1: Seed Repo expected bench-runtime-shootout got wrong-repo"
+assert_contains "${BROKEN_STDERR}" "stale_fields=1"
 
 STDOUT_OUTPUT="$(node "${REPO_ROOT}/scripts/check-project-status.mjs" --inventory "${INVENTORY}" --issues "${ISSUES}" --fixture "${FIXTURE}" --stdout)"
 if ! grep -Fq "No Project or seeded issue gaps detected." <<<"${STDOUT_OUTPUT}"; then
