@@ -53,3 +53,7 @@ The current pending real-measurement queue is `bench-runtime-shootout`,
   `reports/logs/` instead, then link them via `artifacts.*` in the JSON.
 - Deterministic regression anchors stay in `tests/fixtures/results/`. Files
   here are exclusively real-browser captures with non-synthetic adapters.
+- The per-repo `.gitkeep` files exist only to keep the empty drop slots
+  tracked. Delete the `.gitkeep` in the same commit that adds the first
+  real JSON for that repo — it has served its purpose once measured
+  evidence lands.

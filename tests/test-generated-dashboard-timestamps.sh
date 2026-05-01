@@ -41,6 +41,7 @@ run_and_check_stability "scripts/render-integration-status.mjs" "${TMP_DIR}/inte
 run_and_check_stability "scripts/render-sketch-metrics.mjs" "${TMP_DIR}/sketch.md" "sketch metrics"
 run_and_check_stability "scripts/render-capabilities-matrix.mjs" "${TMP_DIR}/capabilities.md" "capabilities matrix"
 run_and_check_stability "scripts/render-goal-status.mjs" "${TMP_DIR}/goal.md" "goal status"
+run_and_check_stability "scripts/render-benchmark-summary.mjs" "${TMP_DIR}/benchmark.md" "benchmark summary"
 
 SOURCE_DATE_EPOCH=946684800 \
   node "${REPO_ROOT}/scripts/render-capabilities-matrix.mjs" --output "${TMP_DIR}/epoch.md" >/dev/null
