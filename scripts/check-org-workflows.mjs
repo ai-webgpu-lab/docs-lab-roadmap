@@ -16,6 +16,11 @@ const EXPECTED_WORKFLOW_ACTIONS = [
   { id: "upload-pages-artifact-v5", pattern: "actions/upload-pages-artifact@v5" },
   { id: "deploy-pages-v5", pattern: "actions/deploy-pages@v5" }
 ];
+const WORKFLOW_FILES = {
+  deploy: "deploy-pages.yml",
+  ci: "ci.yml",
+  operations: "operations-check.yml"
+};
 
 function parseArgs(argv) {
   const options = {
@@ -118,6 +123,14 @@ function latestCompletedRunByWorkflow(runs, workflowName) {
   return runs.find((run) => run.workflowName === workflowName && run.status === "completed") || null;
 }
 
+function firstRun(runs) {
+  return Array.isArray(runs) && runs.length > 0 ? runs[0] : null;
+}
+
+function firstCompletedRun(runs) {
+  return Array.isArray(runs) ? runs.find((run) => run.status === "completed") || null : null;
+}
+
 function isSuccess(run) {
   return run?.status === "completed" && run?.conclusion === "success";
 }
@@ -166,37 +179,54 @@ function buildRecord(row, raw) {
 
 async function collectFixtureRecord(row, fixture) {
   const entry = fixture.repos?.[row.repo] || {};
+  const runs = Array.isArray(entry.runs) ? entry.runs : [];
+  const deployRuns = Array.isArray(entry.deployRuns)
+    ? entry.deployRuns
+    : runs.filter((run) => run.workflowName === "Deploy GitHub Pages Demo");
+  const ciRuns = Array.isArray(entry.ciRuns)
+    ? entry.ciRuns
+    : runs.filter((run) => run.workflowName === "CI");
+  const operationsRuns = Array.isArray(entry.operationsRuns)
+    ? entry.operationsRuns
+    : runs.filter((run) => run.workflowName === "Operations Status Check");
   return buildRecord(row, {
     url: entry.url || "",
     defaultBranch: entry.defaultBranch || "main",
     pushedAt: entry.pushedAt || "",
     deployWorkflowFile: Boolean(entry.deployWorkflowFile),
     deployWorkflowContent: entry.deployWorkflowContent || entry.workflowContent || "",
-    latestRun: entry.latestRun || null,
-    deployRun: entry.deployRun || null,
-    ciRun: entry.ciRun || null,
-    operationsRun: entry.operationsRun || null
+    latestRun: entry.latestRun || firstRun(runs) || firstRun(deployRuns) || firstRun(ciRuns) || firstRun(operationsRuns),
+    deployRun: entry.deployRun || firstRun(deployRuns) || latestRunByWorkflow(runs, "Deploy GitHub Pages Demo"),
+    ciRun: entry.ciRun || firstRun(ciRuns) || latestRunByWorkflow(runs, "CI"),
+    operationsRun: entry.operationsRun || firstCompletedRun(operationsRuns) || latestCompletedRunByWorkflow(runs, "Operations Status Check")
   });
 }
 
 async function collectLiveRecord(row, options) {
   const fullRepo = `${options.org}/${row.repo}`;
-  const [repoInfo, deployWorkflow, runs] = await Promise.all([
+  const ciRequired = row.repo === "docs-lab-roadmap";
+  const [repoInfo, deployWorkflow, latestRuns, deployRuns, ciRuns, operationsRuns] = await Promise.all([
     optionalGhJson(["repo", "view", fullRepo, "--json", "url,defaultBranchRef,pushedAt"]),
     optionalGhJson(["api", `/repos/${fullRepo}/contents/.github/workflows/deploy-pages.yml`]),
-    optionalGhJson(["run", "list", "-R", fullRepo, "--limit", "10", "--json", "workflowName,status,conclusion,headSha,displayTitle,createdAt,url"])
+    optionalGhJson(["run", "list", "-R", fullRepo, "--limit", "1", "--json", "workflowName,status,conclusion,headSha,displayTitle,createdAt,url"]),
+    optionalGhJson(["run", "list", "-R", fullRepo, "-w", WORKFLOW_FILES.deploy, "--limit", "1", "--json", "workflowName,status,conclusion,headSha,displayTitle,createdAt,url"]),
+    ciRequired
+      ? optionalGhJson(["run", "list", "-R", fullRepo, "-w", WORKFLOW_FILES.ci, "--limit", "1", "--json", "workflowName,status,conclusion,headSha,displayTitle,createdAt,url"])
+      : Promise.resolve([]),
+    ciRequired
+      ? optionalGhJson(["run", "list", "-R", fullRepo, "-w", WORKFLOW_FILES.operations, "--limit", "10", "--json", "workflowName,status,conclusion,headSha,displayTitle,createdAt,url"])
+      : Promise.resolve([])
   ]);
-  const runList = Array.isArray(runs) ? runs : [];
   return buildRecord(row, {
     url: repoInfo?.url || "",
     defaultBranch: repoInfo?.defaultBranchRef?.name || "",
     pushedAt: repoInfo?.pushedAt || "",
     deployWorkflowFile: Boolean(deployWorkflow),
     deployWorkflowContent: decodeBase64Content(deployWorkflow?.content || ""),
-    latestRun: runList[0] || null,
-    deployRun: latestRunByWorkflow(runList, "Deploy GitHub Pages Demo"),
-    ciRun: latestRunByWorkflow(runList, "CI"),
-    operationsRun: latestCompletedRunByWorkflow(runList, "Operations Status Check")
+    latestRun: firstRun(latestRuns),
+    deployRun: firstRun(deployRuns),
+    ciRun: firstRun(ciRuns),
+    operationsRun: firstCompletedRun(operationsRuns)
   });
 }
 
@@ -212,7 +242,8 @@ function summarize(records) {
   const deployWorkflowFiles = records.filter((record) => record.deployWorkflowFile).length;
   const workflowVersionCurrent = records.filter((record) => record.workflowVersionOk).length;
   const deploySuccess = records.filter((record) => isSuccess(record.deployRun)).length;
-  const ciSuccess = records.filter((record) => record.repo !== "docs-lab-roadmap" || isSuccess(record.ciRun)).length;
+  const ciRecords = records.filter((record) => record.repo === "docs-lab-roadmap");
+  const ciSuccess = ciRecords.filter((record) => isSuccess(record.ciRun)).length;
   const operationsRecords = records.filter((record) => record.repo === "docs-lab-roadmap");
   const operationsSuccess = operationsRecords.filter((record) => isSuccess(record.operationsRun)).length;
   return {
@@ -222,6 +253,7 @@ function summarize(records) {
     deployWorkflowFiles,
     workflowVersionCurrent,
     deploySuccess,
+    ciTotal: ciRecords.length,
     ciSuccess,
     operationsTotal: operationsRecords.length,
     operationsSuccess
@@ -254,11 +286,13 @@ function renderReport(records) {
     `- deploy-pages.yml present: ${summary.deployWorkflowFiles} / ${summary.total}`,
     `- Pages action versions current: ${summary.workflowVersionCurrent} / ${summary.total}`,
     `- Latest Pages deploy success: ${summary.deploySuccess} / ${summary.total}`,
-    `- Required CI success: ${summary.ciSuccess} / ${summary.total}`,
-    `- Operations check latest success: ${summary.operationsSuccess} / ${summary.operationsTotal}`,
+    `- Required CI success: ${summary.ciSuccess} / ${summary.ciTotal}`,
+    `- Operations check latest success: ${summary.operationsSuccess} / ${summary.operationsTotal} (informational)`,
+    "",
+    "Operations check is reported as an informational self-check and is not included in the healthy workflow gate.",
     "",
     "## Repo Status",
-    "| Repo | Category | Priority | Deploy workflow | Pages actions | Latest deploy | Latest run | Required CI | Operations check |",
+    "| Repo | Category | Priority | Deploy workflow | Pages actions | Latest deploy | Latest run | Required CI | Operations check (info) |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"
   ];
 

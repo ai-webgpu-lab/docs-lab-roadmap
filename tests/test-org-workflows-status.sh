@@ -24,8 +24,10 @@ assert_contains() {
 INVENTORY="${TMP_DIR}/inventory.csv"
 FIXTURE="${TMP_DIR}/workflows-fixture.json"
 BROKEN_FIXTURE="${TMP_DIR}/workflows-fixture-broken.json"
+SCOPED_FIXTURE="${TMP_DIR}/workflows-fixture-scoped.json"
 OUTPUT="${TMP_DIR}/WORKFLOW-STATUS.md"
 BROKEN_OUTPUT="${TMP_DIR}/WORKFLOW-STATUS-broken.md"
+SCOPED_OUTPUT="${TMP_DIR}/WORKFLOW-STATUS-scoped.md"
 BROKEN_STDERR="${TMP_DIR}/broken.stderr"
 
 cat >"${INVENTORY}" <<'CSV'
@@ -72,10 +74,39 @@ assert_contains "${OUTPUT}" "Healthy workflow gates: 2 / 2"
 assert_contains "${OUTPUT}" "deploy-pages.yml present: 2 / 2"
 assert_contains "${OUTPUT}" "Pages action versions current: 2 / 2"
 assert_contains "${OUTPUT}" "Latest Pages deploy success: 2 / 2"
-assert_contains "${OUTPUT}" "Required CI success: 2 / 2"
-assert_contains "${OUTPUT}" "Operations check latest success: 1 / 1"
+assert_contains "${OUTPUT}" "Required CI success: 1 / 1"
+assert_contains "${OUTPUT}" "Operations check latest success: 1 / 1 (informational)"
+assert_contains "${OUTPUT}" "Operations check is reported as an informational self-check"
 assert_contains "${OUTPUT}" "Operations Status Check completed/success"
 assert_contains "${OUTPUT}" "No workflow gaps detected."
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const unrelatedRuns = Array.from({ length: 12 }, (_, index) => ({
+  workflowName: `Unrelated workflow ${index + 1}`,
+  status: "completed",
+  conclusion: "success",
+  createdAt: `2026-04-29T11:${String(index).padStart(2, "0")}:00Z`
+}));
+delete fixture.repos["bench-runtime-shootout"].latestRun;
+delete fixture.repos["bench-runtime-shootout"].deployRun;
+fixture.repos["bench-runtime-shootout"].runs = unrelatedRuns;
+fixture.repos["bench-runtime-shootout"].deployRuns = [
+  { workflowName: "Deploy GitHub Pages Demo", status: "completed", conclusion: "success", createdAt: "2026-04-29T10:04:00Z" }
+];
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${SCOPED_FIXTURE}"
+
+node "${REPO_ROOT}/scripts/check-org-workflows.mjs" \
+  --inventory "${INVENTORY}" \
+  --fixture "${SCOPED_FIXTURE}" \
+  --output "${SCOPED_OUTPUT}" \
+  --fail-on-error
+
+assert_contains "${SCOPED_OUTPUT}" "Healthy workflow gates: 2 / 2"
+assert_contains "${SCOPED_OUTPUT}" "Latest Pages deploy success: 2 / 2"
+assert_contains "${SCOPED_OUTPUT}" "Unrelated workflow 1: success"
 
 node -e '
 const fs = require("fs");
@@ -91,7 +122,7 @@ node "${REPO_ROOT}/scripts/check-org-workflows.mjs" \
   --fail-on-error
 
 assert_contains "${BROKEN_OUTPUT}" "Healthy workflow gates: 2 / 2"
-assert_contains "${BROKEN_OUTPUT}" "Operations check latest success: 0 / 1"
+assert_contains "${BROKEN_OUTPUT}" "Operations check latest success: 0 / 1 (informational)"
 assert_contains "${BROKEN_OUTPUT}" "Operations Status Check completed/failure"
 assert_contains "${BROKEN_OUTPUT}" "No workflow gaps detected."
 

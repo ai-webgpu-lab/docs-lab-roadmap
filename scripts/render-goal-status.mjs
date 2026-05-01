@@ -9,24 +9,93 @@ import { finalizeGeneratedMarkdown, GENERATED_AT_PLACEHOLDER } from "./lib/gener
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
 
-const P0_WORKLOAD_REPOS = new Set([
-  "exp-embeddings-browser-throughput",
-  "exp-llm-chat-runtime-shootout",
-  "exp-stt-whisper-webgpu",
-  "exp-rag-browser-pipeline",
-  "bench-runtime-shootout",
-  "bench-model-load-and-cache",
-  "bench-worker-isolation-and-ui-jank"
-]);
+const DEFAULT_GOAL_TARGETS = {
+  inventory: 54,
+  priorities: {
+    P0: 13,
+    P1: 19,
+    P2: 22
+  },
+  p0WorkloadRepos: [
+    "exp-embeddings-browser-throughput",
+    "exp-llm-chat-runtime-shootout",
+    "exp-stt-whisper-webgpu",
+    "exp-rag-browser-pipeline",
+    "bench-runtime-shootout",
+    "bench-model-load-and-cache",
+    "bench-worker-isolation-and-ui-jank"
+  ],
+  p0FoundationRepos: [
+    ".github",
+    "tpl-webgpu-vanilla",
+    "tpl-webgpu-react",
+    "shared-webgpu-capability",
+    "shared-bench-schema",
+    "docs-lab-roadmap"
+  ]
+};
 
-const P0_FOUNDATION_REPOS = new Set([
-  ".github",
-  "tpl-webgpu-vanilla",
-  "tpl-webgpu-react",
-  "shared-webgpu-capability",
-  "shared-bench-schema",
-  "docs-lab-roadmap"
-]);
+const PHASE3_ARTIFACTS = [
+  {
+    option: "runtimeRecommendations",
+    flag: "--runtime-recommendations",
+    name: "Runtime recommendation doc",
+    target: "docs/RUNTIME-RECOMMENDATIONS.md",
+    required: [
+      "# Runtime Recommendations",
+      "## Current Recommendation State",
+      "## Candidate Order",
+      "## Measurement Protocol",
+      "## Required Comparison Table",
+      "## Decision Rules",
+      "## Current Decision",
+      "deterministic-webgpu",
+      "deterministic-fallback"
+    ]
+  },
+  {
+    option: "benchmarkSummary",
+    flag: "--benchmark-summary",
+    name: "Benchmark summary v1",
+    target: "docs/BENCHMARK-SUMMARY.md",
+    required: [
+      "# Benchmark Summary",
+      "## Measurement Scope",
+      "## Environment Matrix",
+      "## Result Summary",
+      "## Raw Result Index",
+      "## Known Limitations"
+    ]
+  },
+  {
+    option: "multiBrowserResults",
+    flag: "--multi-browser-results",
+    name: "Multi-browser/device results",
+    target: "docs/MULTI-BROWSER-RESULTS.md",
+    required: [
+      "# Multi-Browser Results",
+      "## Browser Matrix",
+      "## Device Matrix",
+      "## Compatibility Notes",
+      "## Repro Steps",
+      "## Result Links"
+    ]
+  },
+  {
+    option: "reviewDecisions",
+    flag: "--review-decisions",
+    name: "Promote / Continue / Archive decisions",
+    target: "docs/PROMOTE-CONTINUE-ARCHIVE.md",
+    required: [
+      "# Promote / Continue / Archive",
+      "## Decision Summary",
+      "## Promote",
+      "## Continue",
+      "## Archive",
+      "## Review Evidence"
+    ]
+  }
+];
 
 function usage() {
   console.log(`Usage: node scripts/render-goal-status.mjs [options]
@@ -42,6 +111,12 @@ Options:
   --project-status <file>        Project status markdown. Default: docs/PROJECT-STATUS.md
   --integration-status <file>    Integration status markdown. Default: docs/INTEGRATION-STATUS.md
   --master-plan <file>           Master plan markdown. Default: docs/07-master-experiment-plan.md
+  --goal-targets <file>          Goal target config JSON. Default: docs/goal-targets.json
+  --runtime-recommendations <file>
+                                  Phase 3 runtime recommendation doc. Default: docs/RUNTIME-RECOMMENDATIONS.md
+  --benchmark-summary <file>     Phase 3 benchmark summary doc. Default: docs/BENCHMARK-SUMMARY.md
+  --multi-browser-results <file> Phase 3 browser/device result doc. Default: docs/MULTI-BROWSER-RESULTS.md
+  --review-decisions <file>      Phase 3 Promote/Continue/Archive doc. Default: docs/PROMOTE-CONTINUE-ARCHIVE.md
   --output <file>                Markdown output. Default: docs/GOAL-STATUS.md
   --stdout                       Print markdown instead of writing it
   --fail-on-error                Exit non-zero when Phase 0-2 gates are blocked
@@ -57,6 +132,11 @@ function parseArgs(argv) {
     projectStatus: path.join(REPO_ROOT, "docs/PROJECT-STATUS.md"),
     integrationStatus: path.join(REPO_ROOT, "docs/INTEGRATION-STATUS.md"),
     masterPlan: path.join(REPO_ROOT, "docs/07-master-experiment-plan.md"),
+    goalTargets: path.join(REPO_ROOT, "docs/goal-targets.json"),
+    runtimeRecommendations: path.join(REPO_ROOT, "docs/RUNTIME-RECOMMENDATIONS.md"),
+    benchmarkSummary: path.join(REPO_ROOT, "docs/BENCHMARK-SUMMARY.md"),
+    multiBrowserResults: path.join(REPO_ROOT, "docs/MULTI-BROWSER-RESULTS.md"),
+    reviewDecisions: path.join(REPO_ROOT, "docs/PROMOTE-CONTINUE-ARCHIVE.md"),
     output: path.join(REPO_ROOT, "docs/GOAL-STATUS.md"),
     stdout: false,
     failOnError: false
@@ -85,18 +165,27 @@ function parseArgs(argv) {
     } else if (token === "--master-plan") {
       options.masterPlan = path.resolve(argv[index + 1]);
       index += 1;
-    } else if (token === "--output") {
-      options.output = path.resolve(argv[index + 1]);
+    } else if (token === "--goal-targets") {
+      options.goalTargets = path.resolve(argv[index + 1]);
       index += 1;
-    } else if (token === "--stdout") {
-      options.stdout = true;
-    } else if (token === "--fail-on-error") {
-      options.failOnError = true;
-    } else if (token === "--help" || token === "-h") {
-      usage();
-      process.exit(0);
     } else {
-      throw new Error(`Unknown argument: ${token}`);
+      const artifact = PHASE3_ARTIFACTS.find((item) => item.flag === token);
+      if (artifact) {
+        options[artifact.option] = path.resolve(argv[index + 1]);
+        index += 1;
+      } else if (token === "--output") {
+        options.output = path.resolve(argv[index + 1]);
+        index += 1;
+      } else if (token === "--stdout") {
+        options.stdout = true;
+      } else if (token === "--fail-on-error") {
+        options.failOnError = true;
+      } else if (token === "--help" || token === "-h") {
+        usage();
+        process.exit(0);
+      } else {
+        throw new Error(`Unknown argument: ${token}`);
+      }
     }
   }
 
@@ -111,13 +200,26 @@ async function readText(file) {
   }
 }
 
-async function exists(file) {
-  try {
-    await fs.access(file);
-    return true;
-  } catch {
-    return false;
-  }
+async function readJson(file) {
+  const text = await fs.readFile(file, "utf8");
+  return JSON.parse(text);
+}
+
+async function readGoalTargets(file) {
+  const parsed = await readJson(file);
+  return {
+    inventory: Number(parsed.inventory ?? DEFAULT_GOAL_TARGETS.inventory),
+    priorities: {
+      ...DEFAULT_GOAL_TARGETS.priorities,
+      ...(parsed.priorities || {})
+    },
+    p0WorkloadRepos: Array.isArray(parsed.p0WorkloadRepos)
+      ? parsed.p0WorkloadRepos
+      : DEFAULT_GOAL_TARGETS.p0WorkloadRepos,
+    p0FoundationRepos: Array.isArray(parsed.p0FoundationRepos)
+      ? parsed.p0FoundationRepos
+      : DEFAULT_GOAL_TARGETS.p0FoundationRepos
+  };
 }
 
 function ratio(text, label) {
@@ -172,22 +274,48 @@ function renderMetricRow(name, value, target, ok) {
   return `| ${name} | ${value} | ${target} | ${icon(ok)} |`;
 }
 
+function escapeCell(value) {
+  return String(value ?? "").replace(/\|/gu, "\\|").replace(/\n/gu, " ");
+}
+
+async function inspectArtifact(options, artifact) {
+  const file = options[artifact.option];
+  const text = await readText(file);
+  const existsOnDisk = text.length > 0;
+  const missing = artifact.required.filter((pattern) => !text.includes(pattern));
+  return {
+    ...artifact,
+    file,
+    exists: existsOnDisk,
+    complete: existsOnDisk && missing.length === 0,
+    missing
+  };
+}
+
+function phase3ArtifactStatus(item) {
+  if (item.complete) return "✅ complete";
+  if (!item.exists) return "🟡 pending";
+  return "⚠ incomplete";
+}
+
 async function buildModel(options) {
-  const inventory = await readCsv(options.inventory);
-  const [pages, readmes, workflows, project, integration, masterPlan] = await Promise.all([
+  const [inventory, pages, readmes, workflows, project, integration, masterPlan, goalTargets, phase3Items] = await Promise.all([
+    readCsv(options.inventory),
     readText(options.pagesStatus),
     readText(options.readmeStatus),
     readText(options.workflowStatus),
     readText(options.projectStatus),
     readText(options.integrationStatus),
-    readText(options.masterPlan)
+    readText(options.masterPlan),
+    readGoalTargets(options.goalTargets),
+    Promise.all(PHASE3_ARTIFACTS.map((artifact) => inspectArtifact(options, artifact)))
   ]);
 
   const metrics = {
-    inventory: { current: inventory.length, total: 54 },
-    p0: { current: inventory.filter((row) => row.priority_group === "P0").length, total: 13 },
-    p1: { current: inventory.filter((row) => row.priority_group === "P1").length, total: 19 },
-    p2: { current: inventory.filter((row) => row.priority_group === "P2").length, total: 22 },
+    inventory: { current: inventory.length, total: goalTargets.inventory },
+    p0: { current: inventory.filter((row) => row.priority_group === "P0").length, total: Number(goalTargets.priorities.P0) },
+    p1: { current: inventory.filter((row) => row.priority_group === "P1").length, total: Number(goalTargets.priorities.P1) },
+    p2: { current: inventory.filter((row) => row.priority_group === "P2").length, total: Number(goalTargets.priorities.P2) },
     pagesHealthy: ratio(pages, "Healthy Pages"),
     pagesHttp: ratio(pages, "HTTP 200"),
     pagesDeploy: ratio(pages, "Latest deploy success"),
@@ -208,15 +336,12 @@ async function buildModel(options) {
     realSketchFiles: numberMetric(integration, "Total real-*-sketch.js files")
   };
 
-  const missingP0Workloads = hasAllRepos(inventory, P0_WORKLOAD_REPOS);
-  const missingP0Foundation = hasAllRepos(inventory, P0_FOUNDATION_REPOS);
+  const p0WorkloadRepos = new Set(goalTargets.p0WorkloadRepos);
+  const p0FoundationRepos = new Set(goalTargets.p0FoundationRepos);
+  const missingP0Workloads = hasAllRepos(inventory, p0WorkloadRepos);
+  const missingP0Foundation = hasAllRepos(inventory, p0FoundationRepos);
   const p0BaselineDocumented = masterPlan.includes("위 9개 browser-visible P0 baseline 저장소") &&
     masterPlan.includes("deterministic `webgpu`/`fallback` pair");
-
-  const runtimeRecommendationExists = await exists(path.join(REPO_ROOT, "docs/RUNTIME-RECOMMENDATIONS.md"));
-  const benchmarkSummaryExists = await exists(path.join(REPO_ROOT, "docs/BENCHMARK-SUMMARY.md"));
-  const reviewDecisionExists = await exists(path.join(REPO_ROOT, "docs/PROMOTE-CONTINUE-ARCHIVE.md"));
-  const multiBrowserResultsExists = await exists(path.join(REPO_ROOT, "docs/MULTI-BROWSER-RESULTS.md"));
 
   const phase0Blocked = !isComplete(metrics.inventory) ||
     !isComplete(metrics.pagesHealthy) ||
@@ -238,13 +363,6 @@ async function buildModel(options) {
     metrics.sketchGaps !== 0 ||
     metrics.scaffoldGaps !== 0;
 
-  const phase3Items = [
-    { name: "Runtime recommendation doc", complete: runtimeRecommendationExists, target: "docs/RUNTIME-RECOMMENDATIONS.md" },
-    { name: "Benchmark summary v1", complete: benchmarkSummaryExists, target: "docs/BENCHMARK-SUMMARY.md" },
-    { name: "Multi-browser/device results", complete: multiBrowserResultsExists, target: "docs/MULTI-BROWSER-RESULTS.md" },
-    { name: "Promote / Continue / Archive decisions", complete: reviewDecisionExists, target: "docs/PROMOTE-CONTINUE-ARCHIVE.md" }
-  ];
-
   return {
     inventory,
     metrics,
@@ -265,7 +383,7 @@ async function buildModel(options) {
         name: "Phase 1 — P0 Baseline",
         blocked: phase1Blocked,
         status: phaseStatus(phase1Blocked),
-        evidence: `P0 repos ${formatRatio(metrics.p0)}, P0 workloads ${P0_WORKLOAD_REPOS.size - missingP0Workloads.length}/${P0_WORKLOAD_REPOS.size}, documented capture baseline ${p0BaselineDocumented ? "yes" : "no"}`,
+        evidence: `P0 repos ${formatRatio(metrics.p0)}, P0 workloads ${p0WorkloadRepos.size - missingP0Workloads.length}/${p0WorkloadRepos.size}, documented capture baseline ${p0BaselineDocumented ? "yes" : "no"}`,
         next: phase1Blocked ? "Restore P0 workload/foundation coverage." : "Use P0 baselines as regression anchors for real measurements."
       },
       {
@@ -279,7 +397,7 @@ async function buildModel(options) {
         name: "Phase 3 — Research Portfolio",
         blocked: false,
         status: phaseStatus(false, !phase3Items.every((item) => item.complete)),
-        evidence: `${phase3Items.filter((item) => item.complete).length}/${phase3Items.length} decision/report artifacts present`,
+        evidence: `${phase3Items.filter((item) => item.complete).length}/${phase3Items.length} decision/report artifacts complete`,
         next: "Run real runtime/model/renderer measurements and publish recommendations."
       }
     ],
@@ -315,7 +433,9 @@ function renderReport(model) {
     ...model.phases.map(renderPhaseRow),
     "",
     "## Operating Metrics",
-    "| Metric | Current | Target | Gate |",
+    "Operations check is informational because the workflow reports on itself; Phase 0-2 gates do not block on this metric.",
+    "",
+    "| Metric | Current | Target | Status |",
     "| --- | ---: | ---: | --- |",
     renderMetricRow("Inventory repos", metrics.inventory.current, metrics.inventory.total, isComplete(metrics.inventory)),
     renderMetricRow("Healthy Pages", formatRatio(metrics.pagesHealthy), "all repos", isComplete(metrics.pagesHealthy)),
@@ -342,15 +462,22 @@ function renderReport(model) {
     ...model.categoryCounts.map(([name, count]) => `- ${name}: ${count}`),
     "",
     "## Research Execution Backlog",
-    "| Artifact | Status | Target |",
-    "| --- | --- | --- |",
-    ...model.phase3Items.map((item) => `| ${item.name} | ${item.complete ? "✅ present" : "🟡 pending"} | \`${item.target}\` |`),
+    "| Artifact | Status | Target | Required content gaps |",
+    "| --- | --- | --- | --- |",
+    ...model.phase3Items.map((item) => {
+      const gapText = item.complete
+        ? "none"
+        : item.exists
+          ? item.missing.join(", ")
+          : "file missing";
+      return `| ${escapeCell(item.name)} | ${phase3ArtifactStatus(item)} | \`${escapeCell(item.target)}\` | ${escapeCell(gapText)} |`;
+    }),
     "",
     "## Next Objective Queue",
     "1. Seed real runtime measurements in `bench-runtime-shootout` with cold/warm cache and deterministic baseline comparison.",
     "2. Add one browser AI workload measurement from `exp-embeddings-browser-throughput` or `exp-stt-whisper-webgpu`.",
     "3. Seed renderer measurements from `exp-three-webgpu-core` or `bench-renderer-shootout`.",
-    "4. Convert measured results into `RUNTIME-RECOMMENDATIONS.md`, `BENCHMARK-SUMMARY.md`, and Promote / Continue / Archive decisions.",
+    "4. Update `RUNTIME-RECOMMENDATIONS.md`, `BENCHMARK-SUMMARY.md`, and Promote / Continue / Archive decisions with measured result deltas.",
     "",
     "## Inputs",
     "- `docs/repo-inventory.csv`",
@@ -360,6 +487,7 @@ function renderReport(model) {
     "- `docs/PROJECT-STATUS.md`",
     "- `docs/INTEGRATION-STATUS.md`",
     "- `docs/07-master-experiment-plan.md`",
+    "- `docs/goal-targets.json`",
     ""
   ];
 

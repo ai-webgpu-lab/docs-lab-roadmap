@@ -1,0 +1,25 @@
+{
+  "inventory": 54,
+  "priorities": {
+    "P0": 13,
+    "P1": 19,
+    "P2": 22
+  },
+  "p0WorkloadRepos": [
+    "exp-embeddings-browser-throughput",
+    "exp-llm-chat-runtime-shootout",
+    "exp-stt-whisper-webgpu",
+    "exp-rag-browser-pipeline",
+    "bench-runtime-shootout",
+    "bench-model-load-and-cache",
+    "bench-worker-isolation-and-ui-jank"
+  ],
+  "p0FoundationRepos": [
+    ".github",
+    "tpl-webgpu-vanilla",
+    "tpl-webgpu-react",
+    "shared-webgpu-capability",
+    "shared-bench-schema",
+    "docs-lab-roadmap"
+  ]
+}
