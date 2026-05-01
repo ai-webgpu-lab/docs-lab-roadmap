@@ -33,7 +33,7 @@
 3. `shared-*` 저장소와 템플릿 저장소 상태 점검
 4. 우선순위 P0 저장소 메타데이터와 기본 문서 정렬
 5. GitHub Projects `AI WebGPU Lab — Master` 생성
-6. `bash scripts/seed-org-issues.sh`로 초기 30개 issue 등록
+6. `bash scripts/seed-org-issues.sh`로 조직 전체 27개 저장소에 30개 초기 issue 분산 등록 (이 docs-lab-roadmap repo 자체에는 1건만 등록되며, 나머지는 인벤토리의 다른 저장소로 라우팅됨)
 7. `docs/06-six-week-execution-plan.md` 기준으로 6주 스프린트 시작
 
 ## 운영 보조 파일
