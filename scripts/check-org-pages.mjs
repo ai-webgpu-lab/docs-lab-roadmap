@@ -32,25 +32,29 @@ const REAL_MODE_SMOKE_TARGETS = [
     repo: "bench-runtime-shootout",
     label: "Runtime adapter",
     query: "?mode=real-runtime",
-    family: "runtime"
+    family: "runtime",
+    activationMarker: "isRealRuntimeMode"
   },
   {
     repo: "exp-three-webgpu-core",
     label: "Renderer adapter",
     query: "?mode=real-three",
-    family: "renderer"
+    family: "renderer",
+    activationMarker: "isRealRendererMode"
   },
   {
     repo: "bench-renderer-shootout",
     label: "Benchmark adapter",
     query: "?mode=real-benchmark",
-    family: "benchmark"
+    family: "benchmark",
+    activationMarker: "isRealBenchmarkMode"
   },
   {
     repo: "app-blackhole-observatory",
     label: "App surface adapter",
     query: "?mode=real-surface",
-    family: "app-surface"
+    family: "app-surface",
+    activationMarker: "isRealSurfaceMode"
   }
 ];
 
@@ -206,6 +210,19 @@ async function fetchStatus(url, timeoutMs) {
     return response.status;
   } catch {
     return 0;
+  }
+}
+
+async function fetchText(url, timeoutMs) {
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!response.ok) return "";
+    return await response.text();
+  } catch {
+    return "";
   }
 }
 
@@ -365,26 +382,37 @@ function realModeUrl(record, query) {
 async function collectFixtureRealMode(recordByRepo, target, fixture) {
   const record = recordByRepo.get(target.repo);
   const entry = fixture.realModes?.[`${target.repo}${target.query}`] || {};
-  return buildRealModeResult(record, target, Number(entry.httpCode) || 0);
+  return buildRealModeResult(record, target, {
+    httpCode: Number(entry.httpCode) || 0,
+    appJs: entry.appJs || ""
+  });
 }
 
 async function collectLiveRealMode(recordByRepo, target, options) {
   const record = recordByRepo.get(target.repo);
-  if (!record) return buildRealModeResult(record, target, 0);
-  return buildRealModeResult(record, target, await fetchStatus(realModeUrl(record, target.query), options.timeoutMs));
+  if (!record) return buildRealModeResult(record, target, { httpCode: 0, appJs: "" });
+  const appJsUrl = new URL("app.js", record.pagesUrl).toString();
+  const [httpCode, appJs] = await Promise.all([
+    fetchStatus(realModeUrl(record, target.query), options.timeoutMs),
+    fetchText(appJsUrl, options.timeoutMs)
+  ]);
+  return buildRealModeResult(record, target, { httpCode, appJs });
 }
 
-function buildRealModeResult(record, target, httpCode) {
+function buildRealModeResult(record, target, raw) {
   const requiredFiles = [FAMILY_DEST_FILE[target.family], ADAPTER_DEST_FILE[target.family]].filter(Boolean);
   const missingFiles = record
     ? requiredFiles.filter((file) => !hasFile(record.publicFiles, file))
     : requiredFiles;
+  const appJs = raw.appJs || "";
+  const activationOk = appJs.includes(target.activationMarker) && appJs.includes('startsWith("real-")');
   return {
     ...target,
     url: record ? realModeUrl(record, target.query) : "",
-    httpCode,
+    httpCode: raw.httpCode,
     missingFiles,
-    passed: Number(httpCode) === 200 && missingFiles.length === 0
+    activationOk,
+    passed: Number(raw.httpCode) === 200 && missingFiles.length === 0 && activationOk
   };
 }
 
@@ -471,15 +499,16 @@ function renderReport(records, realModes) {
   lines.push(
     "",
     "## Real Mode Smoke",
-    "Representative smoke checks verify that the query URL returns HTTP 200 and the matching real sketch/adapter files are present in the remote `public/` tree.",
+    "Representative smoke checks verify that the query URL returns HTTP 200, matching real sketch/adapter files are present, and the deployed app bundle contains the expected real-mode activation marker.",
     "",
-    "| Repo | Mode | HTTP | Asset gate | URL |",
-    "| --- | --- | --- | --- | --- |"
+    "| Repo | Mode | HTTP | Asset gate | Activation marker | URL |",
+    "| --- | --- | --- | --- | --- | --- |"
   );
   for (const result of realModes) {
     const httpCell = `${statusIcon(result.httpCode === 200)} ${result.httpCode}`;
     const assetCell = result.missingFiles.length === 0 ? "✅ present" : `⚠ missing ${result.missingFiles.join(", ")}`;
-    lines.push(`| ${escapeCell(result.repo)} | ${escapeCell(`${result.label} ${result.query}`)} | ${escapeCell(httpCell)} | ${escapeCell(assetCell)} | ${result.url} |`);
+    const activationCell = result.activationOk ? `✅ ${result.activationMarker}` : `⚠ missing ${result.activationMarker}`;
+    lines.push(`| ${escapeCell(result.repo)} | ${escapeCell(`${result.label} ${result.query}`)} | ${escapeCell(httpCell)} | ${escapeCell(assetCell)} | ${escapeCell(activationCell)} | ${result.url} |`);
   }
 
   const gaps = records.filter((record) => !record.healthy);
@@ -491,7 +520,11 @@ function renderReport(records, realModes) {
       lines.push(`- \`${record.repo}\`: ${record.gaps.join(", ")}`);
     }
     for (const result of realModes.filter((entry) => !entry.passed)) {
-      const detail = result.missingFiles.length ? `missing ${result.missingFiles.join(", ")}` : `HTTP ${result.httpCode}`;
+      const detail = result.missingFiles.length
+        ? `missing ${result.missingFiles.join(", ")}`
+        : result.activationOk
+          ? `HTTP ${result.httpCode}`
+          : `missing activation marker ${result.activationMarker}`;
       lines.push(`- \`${result.repo}${result.query}\`: ${detail}`);
     }
   }

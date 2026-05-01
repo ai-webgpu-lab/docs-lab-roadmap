@@ -35,6 +35,16 @@ EOF
   chmod +x "${path}"
 }
 
+make_node_pass_script() {
+  local path="$1"
+  local name="$2"
+  cat >"${path}" <<EOF
+#!/usr/bin/env node
+console.log("${name}");
+EOF
+  chmod +x "${path}"
+}
+
 make_render_script() {
   local path="$1"
   local title="$2"
@@ -56,11 +66,14 @@ make_pass_script "${fixture_tests}/test-adapter-family-coverage.sh" "adapter fix
 make_pass_script "${fixture_tests}/test-real-sketch-family-coverage.sh" "family fixture"
 make_pass_script "${fixture_tests}/test-real-sketch-conformance.sh" "conformance fixture"
 make_pass_script "${fixture_tests}/test-real-sketch-contract.sh" "contract fixture"
+make_node_pass_script "${fixture_scripts}/validate-result-schema.mjs" "schema fixture"
+make_pass_script "${fixture_tests}/test-phase3-report-docs.sh" "phase3 fixture"
 make_pass_script "${fixture_tests}/test-bootstrap-org-repos.sh" "bootstrap fixture"
 make_pass_script "${fixture_tests}/test-bootstrap-org-repos-full-inventory.sh" "bootstrap full fixture"
 make_render_script "${fixture_scripts}/render-integration-status.mjs" "Integration Status"
 make_render_script "${fixture_scripts}/render-sketch-metrics.mjs" "Sketch Metrics"
 make_render_script "${fixture_scripts}/render-capabilities-matrix.mjs" "Capabilities Matrix"
+make_render_script "${fixture_scripts}/render-benchmark-summary.mjs" "Benchmark Summary"
 make_render_script "${fixture_scripts}/render-goal-status.mjs" "Goal Status"
 
 run_fixture() {
@@ -76,25 +89,28 @@ assert_contains "${OUTPUT}" "==> adapter-family-coverage"
 assert_contains "${OUTPUT}" "==> real-sketch-family-coverage"
 assert_contains "${OUTPUT}" "==> real-sketch-conformance"
 assert_contains "${OUTPUT}" "==> real-sketch-contract"
+assert_contains "${OUTPUT}" "==> validate-result-schema"
 assert_contains "${OUTPUT}" "==> render-integration-status"
 assert_contains "${OUTPUT}" "==> render-sketch-metrics"
 assert_contains "${OUTPUT}" "==> render-capabilities-matrix"
+assert_contains "${OUTPUT}" "==> render-benchmark-summary"
+assert_contains "${OUTPUT}" "==> phase3-report-docs"
 assert_contains "${OUTPUT}" "==> render-goal-status"
-assert_contains "${OUTPUT}" "check-coverage summary: 9 passed, 0 failed"
+assert_contains "${OUTPUT}" "check-coverage summary: 12 passed, 0 failed"
 
 # --quiet mode should suppress step headers.
 QUIET_OUTPUT="$(run_fixture --quiet 2>&1)"
 if grep -Fq -e "==> validate-lab-planning" <<<"${QUIET_OUTPUT}"; then
   fail "quiet mode should not print step headers"
 fi
-assert_contains "${QUIET_OUTPUT}" "check-coverage summary: 9 passed, 0 failed"
+assert_contains "${QUIET_OUTPUT}" "check-coverage summary: 12 passed, 0 failed"
 
 # --skip-coverage should drop the real-sketch-family step.
 SKIP_OUTPUT="$(run_fixture --skip-coverage 2>&1)"
 if grep -Fq -e "real-sketch-family-coverage" <<<"${SKIP_OUTPUT}"; then
   fail "--skip-coverage should drop the family-coverage step"
 fi
-assert_contains "${SKIP_OUTPUT}" "check-coverage summary: 8 passed, 0 failed"
+assert_contains "${SKIP_OUTPUT}" "check-coverage summary: 11 passed, 0 failed"
 
 # --skip-status should drop the generated dashboard steps.
 SKIP_STATUS_OUTPUT="$(run_fixture --skip-status 2>&1)"
@@ -110,7 +126,13 @@ fi
 if grep -Fq -e "render-goal-status" <<<"${SKIP_STATUS_OUTPUT}"; then
   fail "--skip-status should drop the goal-status step"
 fi
-assert_contains "${SKIP_STATUS_OUTPUT}" "check-coverage summary: 5 passed, 0 failed"
+if grep -Fq -e "render-benchmark-summary" <<<"${SKIP_STATUS_OUTPUT}"; then
+  fail "--skip-status should drop the benchmark-summary step"
+fi
+if grep -Fq -e "phase3-report-docs" <<<"${SKIP_STATUS_OUTPUT}"; then
+  fail "--skip-status should drop the phase3-report-docs step"
+fi
+assert_contains "${SKIP_STATUS_OUTPUT}" "check-coverage summary: 6 passed, 0 failed"
 
 # Status + metrics + capabilities docs should exist after fixture run.
 [[ -f "${fixture_root}/docs/INTEGRATION-STATUS.md" ]] || fail "docs/INTEGRATION-STATUS.md not produced"
@@ -119,12 +141,14 @@ assert_contains "$(cat "${fixture_root}/docs/INTEGRATION-STATUS.md")" "# Integra
 assert_contains "$(cat "${fixture_root}/docs/SKETCH-METRICS.md")" "# Sketch Metrics"
 [[ -f "${fixture_root}/docs/CAPABILITIES-MATRIX.md" ]] || fail "docs/CAPABILITIES-MATRIX.md not produced"
 assert_contains "$(cat "${fixture_root}/docs/CAPABILITIES-MATRIX.md")" "# Capabilities Matrix"
+[[ -f "${fixture_root}/docs/BENCHMARK-SUMMARY.md" ]] || fail "docs/BENCHMARK-SUMMARY.md not produced"
+assert_contains "$(cat "${fixture_root}/docs/BENCHMARK-SUMMARY.md")" "# Benchmark Summary"
 [[ -f "${fixture_root}/docs/GOAL-STATUS.md" ]] || fail "docs/GOAL-STATUS.md not produced"
 assert_contains "$(cat "${fixture_root}/docs/GOAL-STATUS.md")" "# Goal Status"
 
-# --preset smoke skips adapter-family + real-sketch-family (7 steps remain).
+# --preset smoke skips adapter-family + real-sketch-family (10 steps remain).
 SMOKE_OUTPUT="$(run_fixture --preset smoke 2>&1)"
-assert_contains "${SMOKE_OUTPUT}" "check-coverage summary: 7 passed, 0 failed"
+assert_contains "${SMOKE_OUTPUT}" "check-coverage summary: 10 passed, 0 failed"
 if grep -Fq -e "==> adapter-family-coverage" <<<"${SMOKE_OUTPUT}"; then
   fail "smoke preset should skip adapter-family-coverage"
 fi
@@ -132,17 +156,19 @@ if grep -Fq -e "==> real-sketch-family-coverage" <<<"${SMOKE_OUTPUT}"; then
   fail "smoke preset should skip real-sketch-family-coverage"
 fi
 assert_contains "${SMOKE_OUTPUT}" "==> real-sketch-contract"
+assert_contains "${SMOKE_OUTPUT}" "==> validate-result-schema"
 assert_contains "${SMOKE_OUTPUT}" "==> render-capabilities-matrix"
+assert_contains "${SMOKE_OUTPUT}" "==> render-benchmark-summary"
 assert_contains "${SMOKE_OUTPUT}" "==> render-goal-status"
 
-# --preset full == default (9 steps), strict adds bootstrap checks (11 steps).
+# --preset full == default (12 steps), strict adds bootstrap checks (14 steps).
 FULL_OUTPUT="$(run_fixture --preset full 2>&1)"
-assert_contains "${FULL_OUTPUT}" "check-coverage summary: 9 passed, 0 failed"
+assert_contains "${FULL_OUTPUT}" "check-coverage summary: 12 passed, 0 failed"
 
 STRICT_OUTPUT="$(run_fixture --preset strict 2>&1)"
 assert_contains "${STRICT_OUTPUT}" "==> bootstrap-org-repos"
 assert_contains "${STRICT_OUTPUT}" "==> bootstrap-org-repos-full-inventory"
-assert_contains "${STRICT_OUTPUT}" "check-coverage summary: 11 passed, 0 failed"
+assert_contains "${STRICT_OUTPUT}" "check-coverage summary: 14 passed, 0 failed"
 
 # unknown preset should fail.
 if run_fixture --preset bogus >/dev/null 2>&1; then

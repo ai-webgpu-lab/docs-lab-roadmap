@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "repo": "bench-runtime-shootout",
+    "commit": "rtm1234",
+    "timestamp": "2026-05-01T01:00:24.000Z",
+    "owner": "ai-webgpu-lab",
+    "track": "benchmark",
+    "scenario": "runtime-benchmark-transformersjs-style-fallback",
+    "notes": "deterministic fixture; cacheState=cold; executionMode=fallback; fixedPrompt=true; outputBudget=96",
+    "capture_context": {
+      "tool": "playwright-chromium",
+      "browser_name": "Chromium",
+      "browser_version": "146.0",
+      "headless": true,
+      "captured_at": "2026-05-01T01:00:25.000Z",
+      "captured_by": "test-runner"
+    }
+  },
+  "environment": {
+    "browser": {
+      "name": "Chromium",
+      "version": "146.0"
+    },
+    "os": {
+      "name": "Linux",
+      "version": "unknown"
+    },
+    "device": {
+      "name": "Linux x86_64",
+      "class": "desktop-mid",
+      "cpu": "8 threads",
+      "memory_gb": 16,
+      "power_mode": "plugged"
+    },
+    "gpu": {
+      "adapter": "wasm-fallback-simulated",
+      "required_features": [],
+      "limits": {}
+    },
+    "backend": "wasm",
+    "fallback_triggered": true,
+    "worker_mode": "main",
+    "cache_state": "cold"
+  },
+  "workload": {
+    "kind": "llm-chat",
+    "name": "fixed-scenario-runtime-shootout",
+    "input_profile": "shared-prompt-96-output-budget",
+    "model_id": "transformersjs-style"
+  },
+  "metrics": {
+    "common": {
+      "time_to_interactive_ms": 680.8,
+      "init_ms": 612.3,
+      "success_rate": 1,
+      "peak_memory_note": "16 GB reported by browser",
+      "error_type": ""
+    },
+    "llm": {
+      "ttft_ms": 646.4,
+      "prefill_tok_per_sec": 48.2,
+      "decode_tok_per_sec": 17.3,
+      "turn_latency_ms": 5890.6
+    }
+  },
+  "status": "success",
+  "artifacts": {
+    "screenshots": [
+      "./reports/screenshots/03-runtime-fallback-cold.png"
+    ],
+    "raw_logs": [
+      "./reports/logs/03-runtime-fallback-cold.log"
+    ],
+    "deploy_url": "https://ai-webgpu-lab.github.io/bench-runtime-shootout/"
+  }
+}

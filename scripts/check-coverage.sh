@@ -23,10 +23,13 @@ Runs the lab planning validators and coverage tests in a single pass:
   3. real-sketch-family-coverage (47 family-mapped repos x sketch files)
   4. real-sketch-conformance (each real-*-sketch.js exports connect/build/load)
   5. real-sketch-contract (per-family registry/method/query-gate contract)
-  6. render-integration-status (markdown report at docs/INTEGRATION-STATUS.md)
-  7. render-sketch-metrics (markdown report at docs/SKETCH-METRICS.md)
-  8. render-capabilities-matrix (markdown report at docs/CAPABILITIES-MATRIX.md)
-  9. render-goal-status (markdown report at docs/GOAL-STATUS.md)
+  6. validate-result-schema (Phase 3 raw JSON result contract)
+  7. render-integration-status (markdown report at docs/INTEGRATION-STATUS.md)
+  8. render-sketch-metrics (markdown report at docs/SKETCH-METRICS.md)
+  9. render-capabilities-matrix (markdown report at docs/CAPABILITIES-MATRIX.md)
+  10. render-benchmark-summary (markdown report at docs/BENCHMARK-SUMMARY.md)
+  11. phase3-report-docs (Phase 3 report structure checks)
+  12. render-goal-status (markdown report at docs/GOAL-STATUS.md)
 
 Options:
   --preset smoke|full|strict  Apply a preset (smoke = lab-planning + sketch
@@ -134,11 +137,14 @@ fi
 
 step "real-sketch-conformance" bash "${TEST_ROOT}/test-real-sketch-conformance.sh"
 step "real-sketch-contract" bash "${TEST_ROOT}/test-real-sketch-contract.sh"
+step "validate-result-schema" node "${SCRIPT_ROOT}/validate-result-schema.mjs" --quiet
 
 if [[ "${INCLUDE_INTEGRATION_STATUS}" -eq 1 ]]; then
   step "render-integration-status" node "${SCRIPT_ROOT}/render-integration-status.mjs" --output "${REPO_ROOT}/docs/INTEGRATION-STATUS.md"
   step "render-sketch-metrics" node "${SCRIPT_ROOT}/render-sketch-metrics.mjs" --output "${REPO_ROOT}/docs/SKETCH-METRICS.md"
   step "render-capabilities-matrix" node "${SCRIPT_ROOT}/render-capabilities-matrix.mjs" --output "${REPO_ROOT}/docs/CAPABILITIES-MATRIX.md"
+  step "render-benchmark-summary" node "${SCRIPT_ROOT}/render-benchmark-summary.mjs" --output "${REPO_ROOT}/docs/BENCHMARK-SUMMARY.md"
+  step "phase3-report-docs" bash "${TEST_ROOT}/test-phase3-report-docs.sh"
   step "render-goal-status" node "${SCRIPT_ROOT}/render-goal-status.mjs" --output "${REPO_ROOT}/docs/GOAL-STATUS.md" --fail-on-error
 fi
 

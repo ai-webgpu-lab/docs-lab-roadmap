@@ -47,9 +47,11 @@
 - `scripts/seed-p0-baseline-results.sh` — 9개 browser-visible P0 baseline 저장소를 clone/update한 뒤 baseline 결과를 실제 저장소에 커밋/푸시하는 오케스트레이션 스크립트
 - `scripts/validate-lab-planning.sh` — 인벤토리/이슈/실행 계획 문서 정합성 검증 스크립트
 - `scripts/render-results-summary.mjs` — `reports/raw/*.json`를 기반으로 저장소별 `RESULTS.md`를 다시 쓰는 스크립트
+- `scripts/render-benchmark-summary.mjs` — committed raw result fixtures를 `docs/BENCHMARK-SUMMARY.md`로 렌더링
+- `scripts/validate-result-schema.mjs` — Phase 3 `reports/raw/*.json` 최소 스키마 검증
 - `scripts/sync-org-labels.sh` — 조직 기본 라벨 동기화 스크립트
 - `scripts/sync-org-repo-topics.sh` — 저장소 인벤토리 기준 토픽 동기화 스크립트
-- `scripts/check-coverage.sh` — 단일 entrypoint로 lab-planning + adapter coverage + sketch family/conformance + status dashboard 9단계 검증 (`--preset {smoke,full,strict}`)
+- `scripts/check-coverage.sh` — 단일 entrypoint로 lab-planning + adapter coverage + sketch family/conformance + result schema + status dashboard 12단계 검증 (`--preset {smoke,full,strict}`)
 - `scripts/render-integration-status.mjs` — 54-repo 어댑터/스케치/scaffold 상태 dashboard 생성 (`docs/INTEGRATION-STATUS.md`)
 - `scripts/render-sketch-metrics.mjs` — 47개 specific sketch의 CDN/backend/capabilities 비교 dashboard 생성 (`docs/SKETCH-METRICS.md`)
 - `scripts/render-goal-status.mjs` — 프로젝트 목표/Phase 0-3/잔여 연구 산출물 상태 dashboard 생성 (`docs/GOAL-STATUS.md`)
@@ -74,6 +76,7 @@
 - `docs/07-master-experiment-plan.md` — 전체 실험/부트스트랩 마스터 계획
 - `docs/08-bootstrap-and-execution-runbook.md` — 실제 운영 순서와 phase gate 체크리스트
 - `docs/09-runtime-integration-plan.md` — 4 family 어댑터 컨트랙트와 47개 specific real-*-sketch.js의 통합 계획
+- `docs/RESULT-SCHEMA.md` — Phase 3 raw result JSON 최소 스키마
 - `docs/PAGES-STATUS.md` — 자동 생성 dashboard (54 repo × Pages/deploy/HTTP/real-mode smoke 상태)
 - `docs/README-STATUS.md` — 자동 생성 dashboard (54 repo × README/profile drift 상태)
 - `docs/WORKFLOW-STATUS.md` — 자동 생성 dashboard (54 repo × Actions/deploy workflow + Operations workflow 상태)

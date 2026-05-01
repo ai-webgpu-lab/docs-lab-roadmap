@@ -68,3 +68,31 @@ assert_contains "${TMP_DIR}/compare/RESULTS.md" "exp-embeddings-browser-throughp
 assert_contains "${TMP_DIR}/compare/RESULTS.md" "## 8. WebGPU vs Fallback"
 assert_contains "${TMP_DIR}/compare/RESULTS.md" "cold cache: docs/s webgpu=180, fallback=78"
 assert_contains "${TMP_DIR}/compare/RESULTS.md" "warm cache: docs/s webgpu=315, fallback=142"
+
+mkdir -p \
+  "${TMP_DIR}/runtime/reports/raw" \
+  "${TMP_DIR}/runtime/reports/screenshots" \
+  "${TMP_DIR}/runtime/reports/logs"
+
+cp "${REPO_ROOT}/tests/fixtures/results/bench-runtime-shootout/01-runtime-webgpu-cold.json" "${TMP_DIR}/runtime/reports/raw/01-runtime-webgpu-cold.json"
+cp "${REPO_ROOT}/tests/fixtures/results/bench-runtime-shootout/02-runtime-webgpu-warm.json" "${TMP_DIR}/runtime/reports/raw/02-runtime-webgpu-warm.json"
+cp "${REPO_ROOT}/tests/fixtures/results/bench-runtime-shootout/03-runtime-fallback-cold.json" "${TMP_DIR}/runtime/reports/raw/03-runtime-fallback-cold.json"
+cp "${REPO_ROOT}/tests/fixtures/results/bench-runtime-shootout/04-runtime-fallback-warm.json" "${TMP_DIR}/runtime/reports/raw/04-runtime-fallback-warm.json"
+touch "${TMP_DIR}/runtime/reports/screenshots/01-runtime-webgpu-cold.png"
+touch "${TMP_DIR}/runtime/reports/screenshots/02-runtime-webgpu-warm.png"
+touch "${TMP_DIR}/runtime/reports/screenshots/03-runtime-fallback-cold.png"
+touch "${TMP_DIR}/runtime/reports/screenshots/04-runtime-fallback-warm.png"
+touch "${TMP_DIR}/runtime/reports/logs/01-runtime-webgpu-cold.log"
+touch "${TMP_DIR}/runtime/reports/logs/02-runtime-webgpu-warm.log"
+touch "${TMP_DIR}/runtime/reports/logs/03-runtime-fallback-cold.log"
+touch "${TMP_DIR}/runtime/reports/logs/04-runtime-fallback-warm.log"
+
+node "${REPO_ROOT}/scripts/render-results-summary.mjs" --repo-dir "${TMP_DIR}/runtime"
+
+assert_contains "${TMP_DIR}/runtime/RESULTS.md" "bench-runtime-shootout"
+assert_contains "${TMP_DIR}/runtime/RESULTS.md" "Runtime Benchmark Winner: ORT WebGPU-style / WebGPU"
+assert_contains "${TMP_DIR}/runtime/RESULTS.md" "decode tok/s: webgpu=36.8, fallback=17.3"
+assert_contains "${TMP_DIR}/runtime/RESULTS.md" "TTFT: webgpu=418.6 ms, fallback=646.4 ms"
+assert_contains "${TMP_DIR}/runtime/RESULTS.md" "./reports/raw/04-runtime-fallback-warm.json"
+
+echo "render-results-summary test passed"

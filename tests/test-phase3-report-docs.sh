@@ -27,6 +27,7 @@ assert_contains() {
 BENCHMARK_DOC="${REPO_ROOT}/docs/BENCHMARK-SUMMARY.md"
 BROWSER_DOC="${REPO_ROOT}/docs/MULTI-BROWSER-RESULTS.md"
 DECISION_DOC="${REPO_ROOT}/docs/PROMOTE-CONTINUE-ARCHIVE.md"
+SCHEMA_DOC="${REPO_ROOT}/docs/RESULT-SCHEMA.md"
 
 assert_file "${BENCHMARK_DOC}"
 assert_contains "${BENCHMARK_DOC}" "# Benchmark Summary"
@@ -63,5 +64,12 @@ assert_contains "${DECISION_DOC}" "No workload is promoted yet"
 assert_contains "${DECISION_DOC}" "bench-runtime-shootout"
 assert_contains "${DECISION_DOC}" "docs/BENCHMARK-SUMMARY.md"
 assert_contains "${DECISION_DOC}" "docs/MULTI-BROWSER-RESULTS.md"
+
+assert_file "${SCHEMA_DOC}"
+assert_contains "${SCHEMA_DOC}" "# Result Schema"
+assert_contains "${SCHEMA_DOC}" "## Required Top-Level Fields"
+assert_contains "${SCHEMA_DOC}" '## Required `metrics.common` Fields'
+assert_contains "${SCHEMA_DOC}" "metrics.llm"
+assert_contains "${SCHEMA_DOC}" "node scripts/validate-result-schema.mjs"
 
 echo "phase3-report-docs test passed"

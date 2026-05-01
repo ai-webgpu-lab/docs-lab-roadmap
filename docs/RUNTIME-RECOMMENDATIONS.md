@@ -38,6 +38,25 @@ Each runtime recommendation entry must include:
 | Summary | `RESULTS.md` update with deterministic and real rows |
 | Failure note | Download, memory, adapter, timeout, CORS, or unsupported feature |
 
+## `bench-runtime-shootout` Capture Protocol
+The first real runtime capture should use the existing GitHub Pages route
+`?mode=real-runtime` and keep deterministic fixture rows side by side with real
+runtime rows.
+
+| Output | Scenario | Cache | Backend | Required file |
+| --- | --- | --- | --- | --- |
+| Real WebGPU cold | `real-runtime-webgpu-cold` | cold | WebGPU | `reports/raw/real-runtime-webgpu-cold.json` |
+| Real WebGPU warm | `real-runtime-webgpu-warm` | warm | WebGPU | `reports/raw/real-runtime-webgpu-warm.json` |
+| Real fallback cold | `real-runtime-fallback-cold` | cold | fallback/WASM | `reports/raw/real-runtime-fallback-cold.json` |
+| Real fallback warm | `real-runtime-fallback-warm` | warm | fallback/WASM | `reports/raw/real-runtime-fallback-warm.json` |
+
+Each file must pass `node scripts/validate-result-schema.mjs --file <path>` and
+must include `metrics.llm.ttft_ms`, `metrics.llm.prefill_tok_per_sec`,
+`metrics.llm.decode_tok_per_sec`, and `metrics.llm.turn_latency_ms`. After the
+four files are captured, run `node scripts/render-results-summary.mjs` in the
+measured repo and then update `docs/BENCHMARK-SUMMARY.md` with
+`node scripts/render-benchmark-summary.mjs`.
+
 ## Required Comparison Table
 Every measured runtime repo should keep this table shape in `RESULTS.md` or a
 track-specific summary:

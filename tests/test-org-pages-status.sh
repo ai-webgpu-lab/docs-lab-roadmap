@@ -24,9 +24,12 @@ assert_contains() {
 INVENTORY="${TMP_DIR}/inventory.csv"
 FIXTURE="${TMP_DIR}/pages-fixture.json"
 BROKEN_FIXTURE="${TMP_DIR}/pages-fixture-broken.json"
+BROKEN_MARKER_FIXTURE="${TMP_DIR}/pages-fixture-broken-marker.json"
 OUTPUT="${TMP_DIR}/PAGES-STATUS.md"
 BROKEN_OUTPUT="${TMP_DIR}/PAGES-STATUS-broken.md"
+BROKEN_MARKER_OUTPUT="${TMP_DIR}/PAGES-STATUS-broken-marker.md"
 BROKEN_STDERR="${TMP_DIR}/broken.stderr"
+BROKEN_MARKER_STDERR="${TMP_DIR}/broken-marker.stderr"
 
 cat >"${INVENTORY}" <<'CSV'
 repo,category,purpose,priority_group
@@ -102,10 +105,10 @@ cat >"${FIXTURE}" <<'JSON'
     }
   },
   "realModes": {
-    "bench-runtime-shootout?mode=real-runtime": { "httpCode": 200 },
-    "exp-three-webgpu-core?mode=real-three": { "httpCode": 200 },
-    "bench-renderer-shootout?mode=real-benchmark": { "httpCode": 200 },
-    "app-blackhole-observatory?mode=real-surface": { "httpCode": 200 }
+    "bench-runtime-shootout?mode=real-runtime": { "httpCode": 200, "appJs": "const isRealRuntimeMode = requestedMode.startsWith(\"real-\");" },
+    "exp-three-webgpu-core?mode=real-three": { "httpCode": 200, "appJs": "const isRealRendererMode = requestedMode.startsWith(\"real-\");" },
+    "bench-renderer-shootout?mode=real-benchmark": { "httpCode": 200, "appJs": "const isRealBenchmarkMode = requestedMode.startsWith(\"real-\");" },
+    "app-blackhole-observatory?mode=real-surface": { "httpCode": 200, "appJs": "const isRealSurfaceMode = requestedMode.startsWith(\"real-\");" }
   }
 }
 JSON
@@ -121,6 +124,8 @@ assert_contains "${OUTPUT}" "Healthy Pages: 5 / 5"
 assert_contains "${OUTPUT}" "HTTP 200: 5 / 5"
 assert_contains "${OUTPUT}" "Real sketch/adapter coverage: 4 / 4"
 assert_contains "${OUTPUT}" "Representative real-mode smoke: 4 / 4"
+assert_contains "${OUTPUT}" "Activation marker"
+assert_contains "${OUTPUT}" "isRealRuntimeMode"
 assert_contains "${OUTPUT}" "bench-runtime-shootout Fixed Scenario Runtime Benchmark"
 assert_contains "${OUTPUT}" "bench-renderer-shootout Renderer Shootout"
 assert_contains "${OUTPUT}" "No blocking gaps detected."
@@ -143,6 +148,25 @@ fi
 assert_contains "${BROKEN_OUTPUT}" "Healthy Pages: 4 / 5"
 assert_contains "${BROKEN_OUTPUT}" 'missing renderer-adapter.js'
 assert_contains "${BROKEN_STDERR}" "pages status check failed"
+
+node -e '
+const fs = require("fs");
+const fixture = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+fixture.realModes["bench-runtime-shootout?mode=real-runtime"].appJs = "const requestedMode = \"real-runtime\";";
+fs.writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2));
+' "${FIXTURE}" "${BROKEN_MARKER_FIXTURE}"
+
+if node "${REPO_ROOT}/scripts/check-org-pages.mjs" \
+  --inventory "${INVENTORY}" \
+  --fixture "${BROKEN_MARKER_FIXTURE}" \
+  --output "${BROKEN_MARKER_OUTPUT}" \
+  --fail-on-error 2>"${BROKEN_MARKER_STDERR}"; then
+  fail "expected missing activation marker fixture to fail"
+fi
+
+assert_contains "${BROKEN_MARKER_OUTPUT}" "Representative real-mode smoke: 3 / 4"
+assert_contains "${BROKEN_MARKER_OUTPUT}" "missing activation marker isRealRuntimeMode"
+assert_contains "${BROKEN_MARKER_STDERR}" "pages status check failed"
 
 STDOUT_OUTPUT="$(node "${REPO_ROOT}/scripts/check-org-pages.mjs" --inventory "${INVENTORY}" --fixture "${FIXTURE}" --stdout)"
 if ! grep -Fq "Representative real-mode smoke: 4 / 4" <<<"${STDOUT_OUTPUT}"; then
